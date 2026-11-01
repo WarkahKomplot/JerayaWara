@@ -4,7 +4,7 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
 [![Tests](https://img.shields.io/badge/Vitest-100%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
-[![PWA](https://img.shields.io/badge/PWA-v5%20Offline-blueviolet?style=for-the-badge)](https://warkahkomplot.github.io/JerayaWara/)
+[![PWA](https://img.shields.io/badge/PWA-v6%20Offline-blueviolet?style=for-the-badge)](https://warkahkomplot.github.io/JerayaWara/)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)

@@ -86,6 +86,26 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     coordinates: [100.434, 5.322],
     evSpecs: { operator: 'ChargEV', maxKw: 120, plugs: ['CCS2'] }
   },
+  {
+    id: 'amenity-gurun-ev',
+    name: 'Gentari 200kW DC Fast Charger R&R Gurun (Arah Utara)',
+    type: 'ev_fast_charger',
+    brand: 'Gentari',
+    expressway: 'PLUS E1',
+    kmMarker: 'KM 80',
+    coordinates: [100.478, 5.820],
+    evSpecs: { operator: 'Gentari', maxKw: 200, plugs: ['CCS2'] }
+  },
+  {
+    id: 'amenity-tapah-south-tnb-ev',
+    name: 'TNB Electron 150kW DC Fast Charger R&R Tapah (Arah Selatan)',
+    type: 'ev_fast_charger',
+    brand: 'TNB Electron',
+    expressway: 'PLUS E1',
+    kmMarker: 'KM 332',
+    coordinates: [101.299, 4.019],
+    evSpecs: { operator: 'TNB Electron', maxKw: 150, plugs: ['CCS2'] }
+  },
 
   // PLUS E2 (Southern Route)
   {
@@ -136,6 +156,26 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     evSpecs: { operator: 'DC Handal', maxKw: 200, plugs: ['CCS2'] }
   },
   {
+    id: 'amenity-ayer-keroh-north-tnb-ev',
+    name: 'TNB Electron 180kW DC Fast Charger R&R Ayer Keroh (Arah Utara)',
+    type: 'ev_fast_charger',
+    brand: 'TNB Electron',
+    expressway: 'PLUS E2',
+    kmMarker: 'KM 205',
+    coordinates: [102.262, 2.382],
+    evSpecs: { operator: 'TNB Electron', maxKw: 180, plugs: ['CCS2'] }
+  },
+  {
+    id: 'amenity-tangkak-shell-ev',
+    name: 'Shell Recharge 180kW HPC R&R Tangkak (Arah Selatan)',
+    type: 'ev_fast_charger',
+    brand: 'Shell Recharge',
+    expressway: 'PLUS E2',
+    kmMarker: 'KM 165',
+    coordinates: [102.540, 2.270],
+    evSpecs: { operator: 'Shell Recharge', maxKw: 180, plugs: ['CCS2'] }
+  },
+  {
     id: 'amenity-machap-petronas',
     name: 'Petronas R&R Machap (Arah Selatan)',
     type: 'petronas',
@@ -145,6 +185,16 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     coordinates: [103.265, 1.885]
   },
   {
+    id: 'amenity-machap-tnb-ev',
+    name: 'TNB Electron 150kW DC Fast Charger R&R Machap (Arah Selatan)',
+    type: 'ev_fast_charger',
+    brand: 'TNB Electron',
+    expressway: 'PLUS E2',
+    kmMarker: 'KM 74',
+    coordinates: [103.266, 1.886],
+    evSpecs: { operator: 'TNB Electron', maxKw: 150, plugs: ['CCS2'] }
+  },
+  {
     id: 'amenity-pagoh-caltex',
     name: 'Caltex R&R Pagoh (Arah Selatan)',
     type: 'caltex',
@@ -152,6 +202,35 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     expressway: 'PLUS E2',
     kmMarker: 'KM 135',
     coordinates: [102.775, 2.150]
+  },
+
+  // Klang Valley Urban Expressways (LDP, DUKE, KESAS)
+  {
+    id: 'amenity-sunway-serene-gentari',
+    name: 'Gentari 350kW DC Ultra-Fast Charger XPark Sunway Serene',
+    type: 'ev_fast_charger',
+    brand: 'Gentari',
+    expressway: 'LDP E11',
+    coordinates: [101.610, 3.090],
+    evSpecs: { operator: 'Gentari', maxKw: 350, plugs: ['CCS2'] }
+  },
+  {
+    id: 'amenity-bamboo-hills-dc-handal',
+    name: 'DC Handal 200kW Fast Charger Bamboo Hills',
+    type: 'ev_fast_charger',
+    brand: 'DC Handal',
+    expressway: 'DUKE E33',
+    coordinates: [101.680, 3.195],
+    evSpecs: { operator: 'DC Handal', maxKw: 200, plugs: ['CCS2'] }
+  },
+  {
+    id: 'amenity-kinrara-chargev',
+    name: 'ChargEV 60kW DC Fast Charger R&R Kinrara',
+    type: 'ev_fast_charger',
+    brand: 'ChargEV',
+    expressway: 'KESAS E5',
+    coordinates: [101.645, 3.055],
+    evSpecs: { operator: 'ChargEV', maxKw: 60, plugs: ['CCS2'] }
   },
 
   // Karak & LPT E8 (East Coast Route)
@@ -191,6 +270,25 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     expressway: 'LPT E8',
     kmMarker: 'KM 220',
     coordinates: [103.110, 3.710]
+  },
+  {
+    id: 'amenity-gambang-west-gentari-ev',
+    name: 'Gentari 120kW DC Fast Charger R&R Gambang (Arah Barat)',
+    type: 'ev_fast_charger',
+    brand: 'Gentari',
+    expressway: 'LPT E8',
+    kmMarker: 'KM 220',
+    coordinates: [103.112, 3.712],
+    evSpecs: { operator: 'Gentari', maxKw: 120, plugs: ['CCS2'] }
+  },
+  {
+    id: 'amenity-paka-north-tnb-ev',
+    name: 'TNB Electron 100kW DC Fast Charger R&R Paka (Arah Utara)',
+    type: 'ev_fast_charger',
+    brand: 'TNB Electron',
+    expressway: 'LPT2',
+    coordinates: [103.425, 4.630],
+    evSpecs: { operator: 'TNB Electron', maxKw: 100, plugs: ['CCS2'] }
   }
 ];
 
