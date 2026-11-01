@@ -1,17 +1,108 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
-  <rect width="192" height="192" rx="42" fill="#090d16"/>
-  <rect x="8" y="8" width="176" height="176" rx="36" fill="url(#grad)" stroke="#1e293b" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="192" height="192">
   <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1e3a8a"/>
-      <stop offset="100%" stop-color="#0f172a"/>
+    <!-- Background Gradient -->
+    <linearGradient id="jw-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329" />
+      <stop offset="50%" stop-color="#070c18" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Outer Border Glow -->
+    <linearGradient id="jw-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#1e293b" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.5" />
+    </linearGradient>
+
+    <!-- Horizon Sun / Navigation Aura -->
+    <radialGradient id="jw-horizon-glow" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45" />
+      <stop offset="40%" stop-color="#2563eb" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Highway Surface Gradient -->
+    <linearGradient id="jw-road" x1="50%" y1="100%" x2="50%" y2="35%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+
+    <!-- Highway Guardrails Glow -->
+    <linearGradient id="jw-rail-left" x1="0%" y1="100%" x2="50%" y2="40%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="jw-rail-right" x1="100%" y1="100%" x2="50%" y2="40%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+
+    <!-- Arrow Left Facet -->
+    <linearGradient id="jw-arrow-l" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+
+    <!-- Arrow Right Facet -->
+    <linearGradient id="jw-arrow-r" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+
+    <!-- Compass Gold Star Accent -->
+    <linearGradient id="jw-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
   </defs>
-  <!-- Road Lines -->
-  <path d="M96 150 L96 42" stroke="#475569" stroke-width="28" stroke-linecap="round"/>
-  <path d="M96 150 L96 42" stroke="#38bdf8" stroke-width="14" stroke-linecap="round"/>
-  <path d="M96 130 L96 60" stroke="#ffffff" stroke-width="4" stroke-dasharray="8,8"/>
-  <!-- Navigation Arrow Pin -->
-  <polygon points="96,40 76,82 96,72 116,82" fill="#facc15" stroke="#ffffff" stroke-width="2"/>
-</svg>
 
+  <!-- Base App Squircle Badge -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#jw-bg)" stroke="url(#jw-border)" stroke-width="6" />
+
+  <!-- Atmospheric Glow at Horizon -->
+  <circle cx="256" cy="200" r="170" fill="url(#jw-horizon-glow)" />
+
+  <!-- Road Horizon Line Curve -->
+  <path d="M 60 270 Q 256 220 452 270" stroke="#1e293b" stroke-width="2" fill="none" opacity="0.6" />
+
+  <!-- The Highway ('Jeraya') in 3D Perspective -->
+  <path d="M 120 456 L 244 206 L 268 206 L 392 456 Z" fill="url(#jw-road)" />
+
+  <!-- Left Glowing Highway Edge Barrier -->
+  <path d="M 120 456 L 244 206" stroke="url(#jw-rail-left)" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Right Glowing Highway Edge Barrier -->
+  <path d="M 392 456 L 268 206" stroke="url(#jw-rail-right)" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Outer Neon Lane Guides -->
+  <path d="M 172 456 L 249 208" stroke="#38bdf8" stroke-width="3" opacity="0.5" />
+  <path d="M 340 456 L 263 208" stroke="#60a5fa" stroke-width="3" opacity="0.5" />
+
+  <!-- Highway Center Golden Lane Dashes -->
+  <line x1="256" y1="450" x2="256" y2="400" stroke="url(#jw-gold)" stroke-width="10" stroke-linecap="round" />
+  <line x1="256" y1="375" x2="256" y2="335" stroke="url(#jw-gold)" stroke-width="8" stroke-linecap="round" />
+  <line x1="256" y1="315" x2="256" y2="285" stroke="url(#jw-gold)" stroke-width="6" stroke-linecap="round" />
+  <line x1="256" y1="270" x2="256" y2="248" stroke="url(#jw-gold)" stroke-width="5" stroke-linecap="round" />
+  <line x1="256" y1="237" x2="256" y2="222" stroke="url(#jw-gold)" stroke-width="4" stroke-linecap="round" />
+  <line x1="256" y1="214" x2="256" y2="206" stroke="url(#jw-gold)" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Dynamic Speed Arc Wings -->
+  <path d="M 100 340 C 130 250 190 190 240 180" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.4" />
+  <path d="M 412 340 C 382 250 322 190 272 180" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.4" />
+
+  <!-- Navigational Arrow / Delta Apex ('Wara') -->
+  <polygon points="256,92 190,208 256,182" fill="url(#jw-arrow-l)" filter="drop-shadow(0 4px 12px rgba(37,99,235,0.5))" />
+  <polygon points="256,92 256,182 322,208" fill="url(#jw-arrow-r)" filter="drop-shadow(0 4px 12px rgba(37,99,235,0.5))" />
+
+  <!-- Center Arrow Spine Highlight -->
+  <line x1="256" y1="92" x2="256" y2="182" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.9" />
+
+  <!-- Beacon Spark / North Star at Nav Tip -->
+  <circle cx="256" cy="88" r="14" fill="url(#jw-gold)" />
+  <circle cx="256" cy="88" r="7" fill="#ffffff" />
+
+  <!-- 4-Point Golden Star Sparkle -->
+  <path d="M 256 60 Q 256 88 284 88 Q 256 88 256 116 Q 256 88 228 88 Q 256 88 256 60 Z" fill="#ffffff" opacity="0.95" />
+</svg>

@@ -7,6 +7,7 @@ import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
 import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
+import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
 
 import { useGeolocation } from './hooks/useGeolocation';
 import { useDeviceTheme } from './hooks/useDeviceTheme';
@@ -138,9 +139,7 @@ export function App() {
           <div className="flex items-center justify-between gap-2">
             {/* Logo & App Title */}
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md">
-                <span className="text-base font-black text-white">JW</span>
-              </div>
+              <JerayaWaraLogo size={36} />
               <div>
                 <h1 className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
                   JerayaWara
