@@ -58,6 +58,7 @@ export function App() {
 
   // Proximity Geofencing: Throttled check to avoid excessive DB queries and memory churn
   useEffect(() => {
+    let isMounted = true;
     if (!coords) return;
 
     const now = Date.now();
@@ -75,17 +76,20 @@ export function App() {
     lastCheckedTimeRef.current = now;
 
     regionManager.handleProximityGeofence(coords).then(triggered => {
-      if (triggered.length > 0) {
+      if (isMounted && triggered.length > 0) {
         setAutoDownloadNotice(`Approaching boundary — Auto-downloading ${triggered.join(', ')} pack`);
         if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
         noticeTimerRef.current = setTimeout(() => {
-          setAutoDownloadNotice(null);
-          noticeTimerRef.current = null;
+          if (isMounted) {
+            setAutoDownloadNotice(null);
+            noticeTimerRef.current = null;
+          }
         }, 5000);
       }
     });
 
     return () => {
+      isMounted = false;
       if (noticeTimerRef.current) {
         clearTimeout(noticeTimerRef.current);
         noticeTimerRef.current = null;

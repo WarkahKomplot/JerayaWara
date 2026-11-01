@@ -4,10 +4,11 @@ import App from './App';
 import './index.css';
 
 // Register PWA Service Worker
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator && (import.meta.env.PROD || process.env.NODE_ENV === 'production')) {
   window.addEventListener('load', () => {
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(swUrl)
       .then(reg => {
         console.log('JerayaWara PWA Service Worker registered:', reg.scope);
       })

@@ -7,9 +7,12 @@ export function useWakeLock(autoEnableOnMount: boolean = true) {
   const [isScreenAwakeEnabled, setIsScreenAwakeEnabled] = useState(autoEnableOnMount);
 
   useEffect(() => {
+    let isMounted = true;
     const unsubscribe = wakeLockService.subscribe((active, type) => {
-      setIsLocked(active);
-      setLockType(type);
+      if (isMounted) {
+        setIsLocked(active);
+        setLockType(type);
+      }
     });
 
     if (autoEnableOnMount) {
@@ -17,6 +20,7 @@ export function useWakeLock(autoEnableOnMount: boolean = true) {
     }
 
     return () => {
+      isMounted = false;
       unsubscribe();
     };
   }, [autoEnableOnMount]);

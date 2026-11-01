@@ -10,16 +10,24 @@ import { TurnStep } from '../services/routing/types';
 export function useVoiceNavigation() {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('jerayawara_voice_enabled');
-      return stored !== null ? stored === 'true' : true;
+      try {
+        const stored = localStorage.getItem('jerayawara_voice_enabled');
+        return stored !== null ? stored === 'true' : true;
+      } catch {
+        // Fallback for private browsing / restricted sandboxes
+      }
     }
     return true;
   });
 
   const [voiceLanguage, setVoiceLanguageState] = useState<VoiceLanguage>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('jerayawara_voice_lang');
-      return stored === 'en' ? 'en' : 'ms';
+      try {
+        const stored = localStorage.getItem('jerayawara_voice_lang');
+        return stored === 'en' ? 'en' : 'ms';
+      } catch {
+        // Fallback for private browsing / restricted sandboxes
+      }
     }
     return 'ms';
   });
@@ -29,7 +37,11 @@ export function useVoiceNavigation() {
   const setVoiceLanguage = useCallback((lang: VoiceLanguage) => {
     setVoiceLanguageState(lang);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('jerayawara_voice_lang', lang);
+      try {
+        localStorage.setItem('jerayawara_voice_lang', lang);
+      } catch {
+        // Ignore quota/private browsing errors
+      }
     }
     speakNavigationVoice(
       lang === 'ms' ? 'Bahasa Melayu dipilih.' : 'English voice selected.',
@@ -46,7 +58,11 @@ export function useVoiceNavigation() {
     setIsVoiceEnabled(prev => {
       const next = !prev;
       if (typeof window !== 'undefined') {
-        localStorage.setItem('jerayawara_voice_enabled', String(next));
+        try {
+          localStorage.setItem('jerayawara_voice_enabled', String(next));
+        } catch {
+          // Ignore quota/private browsing errors
+        }
       }
       if (next) {
         speakNavigationVoice(

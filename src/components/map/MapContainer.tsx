@@ -38,6 +38,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [isFollowMode, setIsFollowMode] = useState(false);
   const [currentBearing, setCurrentBearing] = useState(0);
   const rotateRafRef = useRef<number | null>(null);
+  const lastCameraCenterRef = useRef<[number, number]>([0, 0]);
+  const lastCameraBearingRef = useRef<number>(-1);
 
   // Initialize Map
   useEffect(() => {
@@ -156,13 +158,23 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     // Follow camera while navigating when follow mode is active
     if (isNavigating && isFollowMode) {
-      mapRef.current.easeTo({
-        center: userLocation,
-        bearing: heading,
-        pitch: is3D ? 58 : 0,
-        zoom: 16.5,
-        duration: 800
-      });
+      const [prevLng, prevLat] = lastCameraCenterRef.current;
+      const dLng = Math.abs(userLocation[0] - prevLng);
+      const dLat = Math.abs(userLocation[1] - prevLat);
+      const dBearing = Math.abs(heading - lastCameraBearingRef.current);
+
+      // Only re-ease camera if moved > ~2.5m or heading changed >= 3 degrees to prevent idle battery drain & jitter
+      if (dLng > 0.000025 || dLat > 0.000025 || dBearing >= 3) {
+        lastCameraCenterRef.current = userLocation;
+        lastCameraBearingRef.current = heading;
+        mapRef.current.easeTo({
+          center: userLocation,
+          bearing: heading,
+          pitch: is3D ? 58 : 0,
+          zoom: 16.5,
+          duration: 700
+        });
+      }
     }
   }, [userLocation, heading, isNavigating, isFollowMode, is3D]);
 
@@ -322,6 +334,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const handleResetBearing = () => mapRef.current?.resetNorth();
   const handleRecenter = () => {
     setIsFollowMode(true);
+    lastCameraCenterRef.current = userLocation;
+    lastCameraBearingRef.current = heading;
     if (mapRef.current) {
       mapRef.current.flyTo({
         center: userLocation,
