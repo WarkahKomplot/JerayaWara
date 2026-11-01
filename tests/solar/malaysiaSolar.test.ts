@@ -20,8 +20,14 @@ describe('Malaysia Astronomical Solar Calculation', () => {
     const testDate = new Date('2026-11-01T08:00:00+08:00');
     const klResult = calculateMalaysiaSolarTimes(testDate, [101.693, 3.141]);
 
-    const sunriseHour = klResult.sunrise.getHours();
-    const sunsetHour = klResult.sunset.getHours();
+    const sunriseHour = parseInt(
+      new Intl.DateTimeFormat('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', hour12: false }).format(klResult.sunrise),
+      10
+    );
+    const sunsetHour = parseInt(
+      new Intl.DateTimeFormat('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', hour12: false }).format(klResult.sunset),
+      10
+    );
 
     expect(sunriseHour).toBeGreaterThanOrEqual(6);
     expect(sunriseHour).toBeLessThanOrEqual(7);

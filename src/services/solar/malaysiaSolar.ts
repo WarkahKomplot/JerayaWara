@@ -63,25 +63,23 @@ export function calculateMalaysiaSolarTimes(
   const clampedCosH = Math.max(-1, Math.min(1, cosH));
   const haMinutes = (Math.acos(clampedCosH) * (180 / Math.PI) / 15) * 60;
 
-  // Malaysia Standard Time (MYT) offset is UTC+8 (+480 minutes)
-  // If the device environment has a different local offset, align to local time
-  const localOffsetMinutes = -date.getTimezoneOffset();
-  const solarNoonMinutes = 720 - (4 * lng) - eqtime + localOffsetMinutes;
+  // Day starts at UTC midnight of the target date
+  const utcMidnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  // Solar noon in UTC
+  const noonUtcMs = utcMidnight + (720 - (4 * lng) - eqtime) * 60 * 1000;
 
-  const sunriseMinutes = solarNoonMinutes - haMinutes;
-  const sunsetMinutes = solarNoonMinutes + haMinutes;
+  const sunrise = new Date(noonUtcMs - haMinutes * 60 * 1000);
+  const sunset = new Date(noonUtcMs + haMinutes * 60 * 1000);
 
-  const sunrise = new Date(date);
-  sunrise.setHours(Math.floor(sunriseMinutes / 60), Math.floor(sunriseMinutes % 60), 0, 0);
-
-  const sunset = new Date(date);
-  sunset.setHours(Math.floor(sunsetMinutes / 60), Math.floor(sunsetMinutes % 60), 0, 0);
-
-  const currentMinutes = date.getHours() * 60 + date.getMinutes();
-  const isDaytime = currentMinutes >= sunriseMinutes && currentMinutes < sunsetMinutes;
+  const isDaytime = date.getTime() >= sunrise.getTime() && date.getTime() < sunset.getTime();
 
   const formatTime = (d: Date) => {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleTimeString('en-MY', {
+      timeZone: 'Asia/Kuala_Lumpur',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   const isEastMalaysia = lng > 109.0;
