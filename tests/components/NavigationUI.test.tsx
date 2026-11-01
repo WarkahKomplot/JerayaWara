@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import React from 'react';
 import { TurnBanner } from '../../src/components/navigation/TurnBanner';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';

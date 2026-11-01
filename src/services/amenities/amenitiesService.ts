@@ -1,4 +1,4 @@
-import { EnRouteAmenity, EnRouteAmenityWithDistance } from './types';
+import { EnRouteAmenityWithDistance } from './types';
 import { MALAYSIA_EXPRESSWAY_AMENITIES } from './expresswayAmenitiesData';
 
 function haversineDistanceKm(

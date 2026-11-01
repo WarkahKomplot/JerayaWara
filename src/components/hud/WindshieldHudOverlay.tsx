@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUp, ArrowRight, ArrowLeft, ArrowUpRight, ArrowUpLeft, CornerUpRight, CornerUpLeft, Compass } from 'lucide-react';
+import { ArrowUp, ArrowRight, ArrowLeft, ArrowUpRight, ArrowUpLeft, CornerUpRight, Compass } from 'lucide-react';
 
 export interface WindshieldHudOverlayProps {
   speed: number;

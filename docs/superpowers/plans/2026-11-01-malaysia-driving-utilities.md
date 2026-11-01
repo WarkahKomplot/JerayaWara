@@ -742,3 +742,4 @@ git push origin main
 3. **Type consistency**: `EnRouteAmenityWithDistance`, `FloodHotspot`, `MotorcycleShelter`, `FavoriteDestination` types are aligned across services, components, and tests.
 4. **Review Focus**: Windshield mirror transform, rain mode toggling, EV charger category filtering, and GPX 1.1 XML generation are all backed by dedicated unit tests in Tasks 1, 2, 3, and 6.
 5. **Proportion**: Balanced and focused on actionable implementation steps without bloat.
+

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Home, Briefcase, Palmtree, Plus } from 'lucide-react';
+import { Home, Briefcase, Palmtree } from 'lucide-react';
 import { FavoriteDestination, getFavorites } from '../../services/favorites/favoritesStore';
 
 export interface FavoritesQuickChipsProps {

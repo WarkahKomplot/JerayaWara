@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
 import { WindshieldHudOverlay } from '../../src/components/hud/WindshieldHudOverlay';
 
 describe('Windshield HUD Mirror Mode', () => {
