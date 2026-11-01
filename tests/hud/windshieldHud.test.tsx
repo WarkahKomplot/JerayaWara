@@ -30,7 +30,7 @@ describe('Windshield HUD Mirror Mode', () => {
         speedLimit={90}
         isNavigating={true}
         currentInstruction={{
-          maneuver: 'turn-right',
+          maneuver: 'turn_right',
           distanceMeters: 650,
           instruction: 'Belok Kanan ke Jalan Bukit'
         }}

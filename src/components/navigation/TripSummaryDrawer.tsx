@@ -160,10 +160,10 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
       </div>
 
       {/* En-Route Services Card (Petrol, EV, Shelters) */}
-      {amenities && amenities.length > 0 && (
+      {((amenities && amenities.length > 0) || shelter) && (
         <div className="mt-3">
           <EnRouteServicesCard
-            amenities={amenities}
+            amenities={amenities || []}
             activeCategory={activeCat}
             onSelectCategory={cat => {
               setActiveCat(cat);

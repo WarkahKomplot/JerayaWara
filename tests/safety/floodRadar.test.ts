@@ -27,3 +27,4 @@ describe('Banjir Kilat (Flash Flood) Safety Radar', () => {
     expect(detected).toBeNull();
   });
 });
+

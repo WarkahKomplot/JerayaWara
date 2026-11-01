@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUp, ArrowRight, ArrowLeft, ArrowUpRight, ArrowUpLeft, CornerUpRight, Compass } from 'lucide-react';
+import { ArrowUp, ArrowRight, ArrowLeft, CornerUpRight, Compass } from 'lucide-react';
 
 export interface WindshieldHudOverlayProps {
   speed: number;
@@ -34,17 +34,22 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = ({
   };
 
   const getManeuverIcon = (maneuver?: string) => {
-    switch (maneuver) {
-      case 'turn-right':
+    const norm = (maneuver || '').toLowerCase().replace(/-/g, '_');
+    switch (norm) {
+      case 'turn_right':
+      case 'slight_right':
+      case 'exit_right':
+      case 'fork_right':
         return <ArrowRight className="h-16 w-16 text-cyan-400 stroke-[3]" />;
-      case 'turn-left':
+      case 'turn_left':
+      case 'slight_left':
+      case 'exit_left':
+      case 'fork_left':
         return <ArrowLeft className="h-16 w-16 text-cyan-400 stroke-[3]" />;
-      case 'turn-slight-right':
-        return <ArrowUpRight className="h-16 w-16 text-cyan-400 stroke-[3]" />;
-      case 'turn-slight-left':
-        return <ArrowUpLeft className="h-16 w-16 text-cyan-400 stroke-[3]" />;
-      case 'uturn-right':
+      case 'u_turn':
       case 'uturn':
+      case 'uturn_right':
+      case 'uturn_left':
         return <CornerUpRight className="h-16 w-16 text-cyan-400 stroke-[3]" />;
       default:
         return <ArrowUp className="h-16 w-16 text-cyan-400 stroke-[3]" />;

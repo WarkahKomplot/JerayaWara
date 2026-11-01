@@ -37,3 +37,4 @@ describe('Favorites & GPX Route Export Engine', () => {
     expect(afterDelete.some(f => f.id === 'fav-home')).toBe(false);
   });
 });
+

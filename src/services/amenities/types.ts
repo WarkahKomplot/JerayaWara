@@ -23,3 +23,4 @@ export interface EnRouteAmenity {
 export interface EnRouteAmenityWithDistance extends EnRouteAmenity {
   distanceKm: number;
 }
+

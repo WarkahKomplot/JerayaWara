@@ -13,13 +13,14 @@ export function exportRouteToGPX(
     .replace(/>/g, '&gt;');
 
   const nowIso = new Date().toISOString();
+  const baseTimeMs = Date.now() - (coordinates.length * 30000);
 
   let trackPointsXml = '';
   for (let i = 0; i < coordinates.length; i++) {
     const [lon, lat] = coordinates[i];
     const timeIso = timestamps && timestamps[i]
       ? new Date(timestamps[i]).toISOString()
-      : nowIso;
+      : new Date(baseTimeMs + i * 30000).toISOString();
 
     trackPointsXml += `      <trkpt lat="${lat}" lon="${lon}">\n        <time>${timeIso}</time>\n      </trkpt>\n`;
   }
@@ -56,3 +57,4 @@ export function downloadGPXFile(filename: string, gpxContent: string): void {
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 }
+

@@ -42,3 +42,4 @@ export async function saveFavorite(
 export async function deleteFavorite(id: string): Promise<void> {
   await favoritesDb.favorites.delete(id);
 }
+

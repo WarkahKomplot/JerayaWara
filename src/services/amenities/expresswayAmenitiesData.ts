@@ -193,3 +193,4 @@ export const MALAYSIA_EXPRESSWAY_AMENITIES: EnRouteAmenity[] = [
     coordinates: [103.110, 3.710]
   }
 ];
+

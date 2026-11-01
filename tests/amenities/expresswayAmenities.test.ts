@@ -40,3 +40,4 @@ describe('Expressway En-Route Amenities Service', () => {
     expect(evOnly.every(a => a.type === 'ev_fast_charger')).toBe(true);
   });
 });
+

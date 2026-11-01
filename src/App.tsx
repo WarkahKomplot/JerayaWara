@@ -30,6 +30,7 @@ import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
 import { getUpcomingAmenities } from './services/amenities/amenitiesService';
 import { findNearbyMotorcycleShelter } from './services/amenities/motorcycleSheltersData';
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
+import { saveFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves } from 'lucide-react';
 
@@ -48,6 +49,7 @@ export function App() {
 
   // Windshield HUD Mode state
   const [isHudOpen, setIsHudOpen] = useState(false);
+  const [favRefreshKey, setFavRefreshKey] = useState(0);
 
   // Turn-by-Turn Voice Navigation Engine
   const {
@@ -276,6 +278,22 @@ export function App() {
     downloadGPXFile(filename, gpxContent);
   };
 
+  const handleAddFavorite = async (category: 'home' | 'work' | 'balik_kampung') => {
+    const labels = {
+      home: { title: 'Rumah', subtitle: 'Lokasi Rumah Ditanda GPS' },
+      work: { title: 'Tempat Kerja', subtitle: 'Lokasi Pejabat Ditanda GPS' },
+      balik_kampung: { title: 'Balik Kampung', subtitle: 'Lokasi Kampung Ditanda GPS' }
+    };
+    await saveFavorite({
+      id: `fav-${category}`,
+      category,
+      title: labels[category].title,
+      subtitle: `${coords[1].toFixed(4)}°N, ${coords[0].toFixed(4)}°E`,
+      coordinates: coords
+    });
+    setFavRefreshKey(k => k + 1);
+  };
+
   // Turn-by-Turn Voice Guidance Trigger: Speaks upcoming turn when step updates
   useEffect(() => {
     if (isNavigating && activeRoute && activeRoute.steps[currentStepIndex]) {
@@ -451,6 +469,8 @@ export function App() {
             ) : (
               <div className="space-y-2">
                 <FavoritesQuickChips
+                  refreshTrigger={favRefreshKey}
+                  onAddFavorite={handleAddFavorite}
                   onSelectFavorite={fav =>
                     handleSelectDestination({
                       id: fav.id,
@@ -550,7 +570,10 @@ export function App() {
               aesAlert={nearbyAESAlert}
               lang={voiceLanguage}
               isNavigating={isNavigating}
-              onOpenHud={() => setIsHudOpen(true)}
+              onOpenHud={() => {
+                requestLock();
+                setIsHudOpen(true);
+              }}
               onToggleRain={() =>
                 setManualRainMode(prev => (prev === null ? !(weather?.isRaining ?? false) : !prev))
               }

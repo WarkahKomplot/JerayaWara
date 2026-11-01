@@ -29,3 +29,4 @@ describe('Motorcycle Rain Shelter Radar', () => {
     expect(detected).toBeNull();
   });
 });
+

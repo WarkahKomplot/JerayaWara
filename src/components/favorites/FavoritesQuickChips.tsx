@@ -5,17 +5,19 @@ import { FavoriteDestination, getFavorites } from '../../services/favorites/favo
 export interface FavoritesQuickChipsProps {
   onSelectFavorite: (fav: FavoriteDestination) => void;
   onAddFavorite?: (category: 'home' | 'work' | 'balik_kampung') => void;
+  refreshTrigger?: number;
 }
 
 export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
   onSelectFavorite,
-  onAddFavorite
+  onAddFavorite,
+  refreshTrigger = 0
 }) => {
   const [favorites, setFavorites] = useState<FavoriteDestination[]>([]);
 
   useEffect(() => {
     getFavorites().then(setFavorites);
-  }, []);
+  }, [refreshTrigger]);
 
   const getFavByCategory = (category: 'home' | 'work' | 'balik_kampung') => {
     return favorites.find(f => f.category === category);
