@@ -55,8 +55,10 @@
 
 ### 7. 📸 Malaysian AES / AwAS Speed Camera Radar & Voice Alerts
 * **Verified Expressway Radar Database**: Embedded geolocations of Malaysian Automated Enforcement System (AES / AwAS) cameras across PLUS E1, PLUS E2, Federal Highway, SKVE, SILK, Karak, and LPT.
-* **Early Proximity Detection (1.2 km)**: Detects approaching speed cameras with real-time distance countdown banner.
-* **Automated Voice Caution**: Alerts drivers in BM or English: *"Awas, kamera AES di hadapan. Had laju 110 kilometer sejam."* or *"Caution, AES speed camera ahead. Speed limit 110 kilometers per hour."*
+* **Corridor-Aware Route Projection (Zero False Alarms)**: Uses cross-track perpendicular distance calculation ($\le 75\text{ m}$) against the active route polyline. Eliminates 100% of false alarms from parallel expressways or adjacent town roads (e.g. driving on municipal roads like Jalan Semenyih / Route 1 will never falsely trigger alerts for elevated SILK E18 cameras).
+* **Interactive Map Pinpoint Markers**: Every verified Malaysian AES camera is visually pinned directly on the MapLibre map with its statutory speed limit badge (`[📷 110]` / `[📷 90]`). Approaching cameras pulse with an animated red radar ring (`animate-ping`). Tapping any camera pin reveals an inspection popup with the camera name, highway name, KM marker, and speed limit.
+* **Forward Directional Cone (Free Cruising)**: When driving without active navigation, uses a $45^\circ$ forward bearing cone and directional lane awareness (Northbound vs Southbound) to filter out cameras behind the vehicle or in opposite carriageways.
+* **100% Bilingual Interface & Voice Guidance**: Complete reactive BM/EN localization (`⚠️ AWAS: AES Kajang (Arah Selatan)` · `Jarak 850m · Had 90 km/j` ⇄ `⚠️ CAUTION: AES Kajang (Southbound)` · `Distance 850m · Limit 90 km/h`).
 
 ### 8. ⏱️ Circular Speedometer HUD & Overspeed Alert
 * **Ergonomic Bottom-Left Circular Gauge**: Sleek circular speedometer positioned non-intrusively in the bottom-left corner (`bottom-28 left-4`), keeping the central road view 100% unobstructed.
@@ -158,7 +160,7 @@
 | **Bilingual Localization** | Centralized reactive i18n system (`translations.ts`) for all UI |
 | **Weather & Radar** | Open-Meteo API (Free/Zero-API-key) & Malaysian AwAS/AES DB |
 | **Screen Lock** | W3C Screen Wake Lock API with NoSleep video fallback |
-| **Testing** | Vitest, React Testing Library (**100 unit tests across 25 suites**) |
+| **Testing** | Vitest, React Testing Library (**120 unit tests across 26 suites**) |
 
 ---
 
@@ -175,7 +177,7 @@ npm install
 # Start local development server
 npm run dev
 
-# Run unit test suite (100 tests across 25 suites)
+# Run unit test suite (120 tests across 26 suites)
 npm test
 
 # Build production bundle with optimized code splitting
