@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Home, Briefcase, Palmtree } from 'lucide-react';
-import { FavoriteDestination, getFavorites } from '../../services/favorites/favoritesStore';
+import { Home, Briefcase, Palmtree, X } from 'lucide-react';
+import { FavoriteDestination, getFavorites, deleteFavorite } from '../../services/favorites/favoritesStore';
 
 export interface FavoritesQuickChipsProps {
   onSelectFavorite: (fav: FavoriteDestination) => void;
   onAddFavorite?: (category: 'home' | 'work' | 'balik_kampung') => void;
+  onRemoveFavorite?: (id: string, category: 'home' | 'work' | 'balik_kampung') => void;
   refreshTrigger?: number;
 }
 
 export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
   onSelectFavorite,
   onAddFavorite,
+  onRemoveFavorite,
   refreshTrigger = 0
 }) => {
   const [favorites, setFavorites] = useState<FavoriteDestination[]>([]);
@@ -21,6 +23,13 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
 
   const getFavByCategory = (category: 'home' | 'work' | 'balik_kampung') => {
     return favorites.find(f => f.category === category);
+  };
+
+  const handleRemove = async (e: React.MouseEvent, existing: FavoriteDestination, category: 'home' | 'work' | 'balik_kampung') => {
+    e.stopPropagation();
+    await deleteFavorite(existing.id);
+    setFavorites(prev => prev.filter(f => f.id !== existing.id));
+    onRemoveFavorite?.(existing.id, category);
   };
 
   const chips: {
@@ -52,15 +61,29 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
 
         if (existing) {
           return (
-            <button
+            <div
               key={category}
-              type="button"
-              onClick={() => onSelectFavorite(existing)}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-slate-900/90 border border-slate-700/70 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-slate-800 transition-all active:scale-95"
+              className="flex items-center rounded-xl bg-slate-900/90 border border-slate-700/70 shadow-md group transition-all"
             >
-              {icon}
-              <span>{label}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelectFavorite(existing)}
+                className="flex items-center gap-1.5 whitespace-nowrap pl-3 pr-1.5 py-1.5 text-xs font-bold text-white hover:text-sky-300 transition-all active:scale-95"
+              >
+                {icon}
+                <span>{label}</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleRemove(e, existing, category)}
+                data-testid={`remove-fav-${category}`}
+                aria-label={`Reset ${label}`}
+                title={`Reset ${label}`}
+                className="p-1.5 mr-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors active:scale-90"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
           );
         }
 

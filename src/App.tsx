@@ -30,7 +30,7 @@ import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
 import { getUpcomingAmenities } from './services/amenities/amenitiesService';
 import { findNearbyMotorcycleShelter } from './services/amenities/motorcycleSheltersData';
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
-import { saveFavorite } from './services/favorites/favoritesStore';
+import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves } from 'lucide-react';
 
@@ -294,6 +294,11 @@ export function App() {
     setFavRefreshKey(k => k + 1);
   };
 
+  const handleRemoveFavorite = async (id: string) => {
+    await deleteFavorite(id);
+    setFavRefreshKey(k => k + 1);
+  };
+
   // Turn-by-Turn Voice Guidance Trigger: Speaks upcoming turn when step updates
   useEffect(() => {
     if (isNavigating && activeRoute && activeRoute.steps[currentStepIndex]) {
@@ -324,6 +329,16 @@ export function App() {
                   <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[9px] font-bold text-sky-400 border border-blue-500/30">
                     MY
                   </span>
+                  <button
+                    type="button"
+                    onClick={toggleVoiceLanguage}
+                    data-testid="header-language-toggle"
+                    aria-label={`Tukar Bahasa / Switch Language (${voiceLanguage.toUpperCase()})`}
+                    className="ml-1 flex items-center gap-1 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 px-2 py-0.5 text-[9px] font-black text-amber-300 transition-all active:scale-95 shadow-sm"
+                    title={voiceLanguage === 'ms' ? 'Tukar ke English (EN)' : 'Tukar ke Bahasa Melayu (BM)'}
+                  >
+                    <span>{voiceLanguage === 'ms' ? 'BM' : 'EN'}</span>
+                  </button>
                 </h1>
                 <div className="flex items-center gap-1 text-[10px] text-slate-400">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${isGpsLocked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
@@ -471,6 +486,7 @@ export function App() {
                 <FavoritesQuickChips
                   refreshTrigger={favRefreshKey}
                   onAddFavorite={handleAddFavorite}
+                  onRemoveFavorite={handleRemoveFavorite}
                   onSelectFavorite={fav =>
                     handleSelectDestination({
                       id: fav.id,
