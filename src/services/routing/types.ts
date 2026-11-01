@@ -1,5 +1,5 @@
 import { VehicleClass } from '../toll/types';
-import { TrafficAnalysis, HighwayCamera } from '../traffic/types';
+import { TrafficAnalysis } from '../traffic/types';
 
 export type ManeuverType =
   | 'straight'
@@ -35,6 +35,5 @@ export interface RouteResult {
   profile: VehicleClass;
   destinationName?: string;
   traffic?: TrafficAnalysis;
-  cameras?: HighwayCamera[];
 }
 

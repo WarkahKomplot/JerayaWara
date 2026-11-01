@@ -4,9 +4,7 @@ import { TurnBanner } from '../../src/components/navigation/TurnBanner';
 import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
-import { HighwayCCTVModal } from '../../src/components/traffic/HighwayCCTVModal';
 import { RouteResult } from '../../src/services/routing/types';
-import { HighwayCamera } from '../../src/services/traffic/types';
 
 describe('Navigation UI Components', () => {
   it('renders turn instruction and lane guidance accurately', () => {
@@ -124,21 +122,8 @@ describe('Navigation UI Components', () => {
         reason: 'Waktu Puncak Petang di PLUS E2',
         colorHex: '#ef4444',
         corridorsDetected: ['PLUS E2']
-      },
-      cameras: [
-        {
-          id: 'e2-bangi',
-          title: 'Persimpangan Bandar Baru Bangi (KM 289.4)',
-          highway: 'PLUS E2',
-          direction: 'Both',
-          coordinates: [101.765, 2.894],
-          imageUrl: 'https://example.com/bangi.jpg',
-          source: 'PLUS'
-        }
-      ]
+      }
     };
-
-    const handleOpenCCTV = vi.fn();
 
     render(
       <TripSummaryDrawer
@@ -146,53 +131,44 @@ describe('Navigation UI Components', () => {
         tollBreakdown={null}
         onOpenTolls={() => {}}
         onEndNavigation={() => {}}
-        onOpenCCTV={handleOpenCCTV}
       />
     );
 
     // Verify traffic condition badge
     expect(screen.getByText(/Sesak Waktu Puncak/i)).toBeDefined();
     expect(screen.getByText(/\+17m/i)).toBeDefined();
-
-    // Verify CCTV button
-    const cctvBtn = screen.getByText(/1 Cams/i);
-    expect(cctvBtn).toBeDefined();
-
-    fireEvent.click(cctvBtn);
-    expect(handleOpenCCTV).toHaveBeenCalledTimes(1);
   });
 
-  it('renders HighwayCCTVModal with camera feed cards and handles closing', () => {
-    const mockCameras: HighwayCamera[] = [
-      {
-        id: 'cam-1',
-        title: 'Plaza Tol Sungai Besi (Arah Utara)',
-        highway: 'PLUS E2',
-        km: 'KM 309.8',
-        direction: 'Northbound',
-        coordinates: [101.7126, 3.0531],
-        imageUrl: 'https://example.com/sgbesi.jpg',
-        source: 'PLUS'
-      }
-    ];
-
-    const handleClose = vi.fn();
+  it('renders TurnBanner with voice toggle and bilingual BM/EN language toggle', () => {
+    const handleToggleVoice = vi.fn();
+    const handleToggleLang = vi.fn();
 
     render(
-      <HighwayCCTVModal
-        isOpen={true}
-        onClose={handleClose}
-        cameras={mockCameras}
-        destinationName="Seremban"
+      <TurnBanner
+        instruction="Belok ke kanan ke Jalan Bukit"
+        distanceMeters={200}
+        maneuver="turn_right"
+        speedLimit={80}
+        currentSpeed={45}
+        isVoiceEnabled={true}
+        onToggleVoice={handleToggleVoice}
+        voiceLanguage="ms"
+        onToggleVoiceLanguage={handleToggleLang}
       />
     );
 
-    expect(screen.getByText(/Kamera Lebuhraya Live/i)).toBeDefined();
-    expect(screen.getAllByText(/Plaza Tol Sungai Besi/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/PLUS E2/i).length).toBeGreaterThan(0);
+    // Verify voice buttons
+    const langBtn = screen.getByTitle(/Tukar bahasa suara/i);
+    expect(langBtn).toBeDefined();
+    expect(screen.getByText('BM')).toBeDefined();
 
-    const closeBtn = screen.getByTitle(/Tutup/i);
-    fireEvent.click(closeBtn);
-    expect(handleClose).toHaveBeenCalledTimes(1);
+    fireEvent.click(langBtn);
+    expect(handleToggleLang).toHaveBeenCalledTimes(1);
+
+    const muteBtn = screen.getByTitle(/Matikan Suara/i);
+    expect(muteBtn).toBeDefined();
+
+    fireEvent.click(muteBtn);
+    expect(handleToggleVoice).toHaveBeenCalledTimes(1);
   });
 });

@@ -12,16 +12,3 @@ export interface TrafficAnalysis {
   corridorsDetected: string[];
 }
 
-export interface HighwayCamera {
-  id: string;
-  title: string;
-  highway: string;
-  km?: string;
-  direction: 'Northbound' | 'Southbound' | 'Eastbound' | 'Westbound' | 'Both';
-  coordinates: [number, number]; // [lng, lat]
-  imageUrl: string;
-  fallbackUrl?: string;
-  portalUrl?: string;
-  source: 'LLM' | 'PLUS' | 'ITIS' | 'JKR';
-}
-

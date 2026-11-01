@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Camera } from 'lucide-react';
+import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
 
@@ -11,7 +11,6 @@ export interface TripSummaryDrawerProps {
   isFoldable?: boolean;
   onSelectStep?: (index: number) => void;
   currentStepIndex?: number;
-  onOpenCCTV?: () => void;
 }
 
 export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
@@ -21,8 +20,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
   onEndNavigation,
   isFoldable = false,
   onSelectStep,
-  currentStepIndex = 0,
-  onOpenCCTV
+  currentStepIndex = 0
 }) => {
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
 
@@ -110,56 +108,30 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
           )}
         </div>
 
-        {/* Action Badges Row (Tolls & Live CCTV) */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {/* Live Highway CCTV Button */}
-          {route.cameras && route.cameras.length > 0 && onOpenCCTV && (
-            <button
-              onClick={onOpenCCTV}
-              className="flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-all active:scale-95 border bg-sky-500/15 border-sky-500/40 text-sky-400 hover:bg-sky-500/25"
-              title="Lihat Suapan Kamera CCTV Lebuhraya"
-            >
-              <div className="relative">
-                <Camera className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+        {/* Toll Cost Badge Button */}
+        {tollBreakdown && (
+          <button
+            onClick={onOpenTolls}
+            className={`flex items-center gap-2 rounded-2xl px-3.5 py-2.5 transition-all active:scale-95 border self-start sm:self-auto ${
+              tollBreakdown.totalCost > 0
+                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25'
+                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
+            }`}
+          >
+            <CreditCard className="h-4 w-4" />
+            <div className="text-left">
+              <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                Toll Fares
               </div>
-              <div className="text-left">
-                <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
-                  CCTV Live
-                </div>
-                <div className="text-xs font-black">
-                  {route.cameras.length} Cams
-                </div>
+              <div className="text-xs font-black">
+                {tollBreakdown.totalCost > 0
+                  ? `RM ${tollBreakdown.totalCost.toFixed(2)}`
+                  : 'Free'}
               </div>
-              <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-            </button>
-          )}
-
-          {/* Toll Cost Badge Button */}
-          {tollBreakdown && (
-            <button
-              onClick={onOpenTolls}
-              className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-all active:scale-95 border ${
-                tollBreakdown.totalCost > 0
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25'
-                  : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
-              }`}
-            >
-              <CreditCard className="h-4 w-4" />
-              <div className="text-left">
-                <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
-                  Toll Fares
-                </div>
-                <div className="text-xs font-black">
-                  {tollBreakdown.totalCost > 0
-                    ? `RM ${tollBreakdown.totalCost.toFixed(2)}`
-                    : 'Free'}
-                </div>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-            </button>
-          )}
-        </div>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+          </button>
+        )}
       </div>
 
       {/* Expandable Step-by-Step Road Itinerary */}

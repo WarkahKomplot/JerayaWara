@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   generateVoiceInstruction,
   speakNavigationVoice,
-  isVoiceGuidanceSupported
+  isVoiceGuidanceSupported,
+  VoiceLanguage
 } from '../services/voice/voiceService';
 import { TurnStep } from '../services/routing/types';
 
@@ -15,7 +16,31 @@ export function useVoiceNavigation() {
     return true;
   });
 
+  const [voiceLanguage, setVoiceLanguageState] = useState<VoiceLanguage>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('jerayawara_voice_lang');
+      return stored === 'en' ? 'en' : 'ms';
+    }
+    return 'ms';
+  });
+
   const lastSpokenKeyRef = useRef<string>('');
+
+  const setVoiceLanguage = useCallback((lang: VoiceLanguage) => {
+    setVoiceLanguageState(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('jerayawara_voice_lang', lang);
+    }
+    speakNavigationVoice(
+      lang === 'ms' ? 'Bahasa Melayu dipilih.' : 'English voice selected.',
+      isVoiceEnabled,
+      lang
+    );
+  }, [isVoiceEnabled]);
+
+  const toggleVoiceLanguage = useCallback(() => {
+    setVoiceLanguage(voiceLanguage === 'ms' ? 'en' : 'ms');
+  }, [voiceLanguage, setVoiceLanguage]);
 
   const toggleVoice = useCallback(() => {
     setIsVoiceEnabled(prev => {
@@ -24,7 +49,11 @@ export function useVoiceNavigation() {
         localStorage.setItem('jerayawara_voice_enabled', String(next));
       }
       if (next) {
-        speakNavigationVoice('Panduan suara diaktifkan.', true);
+        speakNavigationVoice(
+          voiceLanguage === 'ms' ? 'Panduan suara diaktifkan.' : 'Voice guidance enabled.',
+          true,
+          voiceLanguage
+        );
       } else {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           window.speechSynthesis.cancel();
@@ -32,39 +61,39 @@ export function useVoiceNavigation() {
       }
       return next;
     });
-  }, []);
+  }, [voiceLanguage]);
 
   const announceStart = useCallback(
     (destinationName?: string) => {
-      const key = `start-${destinationName}`;
+      const key = `start-${destinationName}-${voiceLanguage}`;
       if (lastSpokenKeyRef.current === key) return;
       lastSpokenKeyRef.current = key;
-      const text = generateVoiceInstruction('start', undefined, destinationName);
-      speakNavigationVoice(text, isVoiceEnabled);
+      const text = generateVoiceInstruction('start', undefined, destinationName, voiceLanguage);
+      speakNavigationVoice(text, isVoiceEnabled, voiceLanguage);
     },
-    [isVoiceEnabled]
+    [isVoiceEnabled, voiceLanguage]
   );
 
   const announceStep = useCallback(
     (step: TurnStep, index: number) => {
-      const key = `step-${index}-${step.id || step.instruction}`;
+      const key = `step-${index}-${step.id || step.instruction}-${voiceLanguage}`;
       if (lastSpokenKeyRef.current === key) return;
       lastSpokenKeyRef.current = key;
-      const text = generateVoiceInstruction('turn', step);
-      speakNavigationVoice(text, isVoiceEnabled);
+      const text = generateVoiceInstruction('turn', step, undefined, voiceLanguage);
+      speakNavigationVoice(text, isVoiceEnabled, voiceLanguage);
     },
-    [isVoiceEnabled]
+    [isVoiceEnabled, voiceLanguage]
   );
 
   const announceArrive = useCallback(
     (destinationName?: string) => {
-      const key = `arrive-${destinationName}`;
+      const key = `arrive-${destinationName}-${voiceLanguage}`;
       if (lastSpokenKeyRef.current === key) return;
       lastSpokenKeyRef.current = key;
-      const text = generateVoiceInstruction('arrive', undefined, destinationName);
-      speakNavigationVoice(text, isVoiceEnabled);
+      const text = generateVoiceInstruction('arrive', undefined, destinationName, voiceLanguage);
+      speakNavigationVoice(text, isVoiceEnabled, voiceLanguage);
     },
-    [isVoiceEnabled]
+    [isVoiceEnabled, voiceLanguage]
   );
 
   // Reset spoken memory when navigation stops
@@ -85,7 +114,10 @@ export function useVoiceNavigation() {
 
   return {
     isVoiceEnabled,
+    voiceLanguage,
     toggleVoice,
+    setVoiceLanguage,
+    toggleVoiceLanguage,
     announceStart,
     announceStep,
     announceArrive,
