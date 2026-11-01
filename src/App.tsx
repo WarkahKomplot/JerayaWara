@@ -50,8 +50,8 @@ export function App() {
   }, [coords]);
 
   // Handle destination selection from search or map click
-  const handleSelectDestination = (item: SearchItem) => {
-    const route = calculateRoute(coords, item.coordinates, vehicleMode, item.title);
+  const handleSelectDestination = async (item: SearchItem) => {
+    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
     setActiveRoute(route);
     const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
     setTollBreakdown(tolls);
@@ -74,11 +74,11 @@ export function App() {
   };
 
   // Recalculate if user changes mode mid-route
-  const handleModeChange = (mode: VehicleClass) => {
+  const handleModeChange = async (mode: VehicleClass) => {
     setVehicleMode(mode);
     if (activeRoute) {
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
-      const reRoute = calculateRoute(coords, dest, mode, activeRoute.destinationName);
+      const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
       setActiveRoute(reRoute);
       setTollBreakdown(calculateRouteTolls(reRoute.tollPlazaKeys, mode));
     }
