@@ -100,10 +100,16 @@ export function App() {
   // does not recompute distance arrays every single second
   const radarCoordKey = `${coords[0].toFixed(4)},${coords[1].toFixed(4)}`;
 
-  // AES Speed Camera Alert (within 1.2 km threshold)
+  // AES Speed Camera Alert (corridor-aware when navigating, directional when free cruising)
   const nearbyAESAlert = useMemo(() => {
-    return findNearbyAESCamera(coords, 1.2);
-  }, [radarCoordKey]);
+    return findNearbyAESCamera({
+      userCoord: coords,
+      routePolyline: isNavigating && activeRoute ? activeRoute.coordinates : undefined,
+      heading,
+      speedKmH,
+      thresholdKm: 1.0
+    });
+  }, [radarCoordKey, isNavigating, activeRoute, heading, speedKmH]);
 
   // Banjir Kilat (Flash Flood) Blackspot Radar
   const nearbyFloodHotspot = useMemo(() => {
@@ -127,16 +133,19 @@ export function App() {
   useEffect(() => {
     const now = Date.now();
     if (nearbyAESAlert && isVoiceEnabled) {
-      const alertKey = `${nearbyAESAlert.camera.id}-${nearbyAESAlert.camera.speedLimitKmH}`;
+      const alertKey = `${nearbyAESAlert.camera.id}-${nearbyAESAlert.camera.speedLimitKmH}-${voiceLanguage}`;
       const isNewTarget = lastWarnedAESRef.current !== alertKey;
       const isCooldownElapsed = now - lastWarnedAESTimeRef.current > 180000;
 
       if (isNewTarget || isCooldownElapsed) {
         lastWarnedAESRef.current = alertKey;
         lastWarnedAESTimeRef.current = now;
+        const cameraName = voiceLanguage === 'ms'
+          ? nearbyAESAlert.camera.name
+          : (nearbyAESAlert.camera.nameEn || nearbyAESAlert.camera.name);
         const msg = voiceLanguage === 'ms'
-          ? `Perhatian: Kamera AES di hadapan. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
-          : `Caution: Speed camera ahead. Speed limit ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`;
+          ? `Perhatian: Kamera AES di hadapan. ${cameraName}. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
+          : `Caution: Speed camera ahead. ${cameraName}. Speed limit ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`;
         speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
       }
     }
@@ -617,6 +626,7 @@ export function App() {
               isNavigating={isNavigating}
               focusStepCoord={focusStepCoord}
               lang={voiceLanguage}
+              aesAlert={nearbyAESAlert}
             />
 
             {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}

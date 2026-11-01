@@ -5,6 +5,7 @@ import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
 import { Language } from '../../services/i18n/translations';
+import { MALAYSIA_AES_CAMERAS, NearbyAESAlert } from '../../services/traffic/aesCameraData';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
@@ -15,6 +16,7 @@ export interface MapContainerProps {
   isNavigating?: boolean;
   focusStepCoord?: [number, number] | null;
   lang?: Language;
+  aesAlert?: NearbyAESAlert | null;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -25,12 +27,14 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   onMapClick,
   isNavigating = false,
   focusStepCoord = null,
-  lang = 'ms'
+  lang = 'ms',
+  aesAlert = null
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const aesMarkersRef = useRef<maplibregl.Marker[]>([]);
   const puckHeadingElRef = useRef<HTMLElement | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
@@ -106,6 +110,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         destinationMarkerRef.current.remove();
         destinationMarkerRef.current = null;
       }
+      if (aesMarkersRef.current) {
+        aesMarkersRef.current.forEach(m => m.remove());
+        aesMarkersRef.current = [];
+      }
       if (markerRef.current) {
         markerRef.current.remove();
         markerRef.current = null;
@@ -158,6 +166,75 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       duration: 800
     });
   }, [focusStepCoord]);
+
+  // Pinpoint AES Speed Cameras on Map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing markers
+    aesMarkersRef.current.forEach(m => m.remove());
+    aesMarkersRef.current = [];
+
+    MALAYSIA_AES_CAMERAS.forEach(cam => {
+      const isAlerted = aesAlert?.camera.id === cam.id;
+      const camEl = document.createElement('div');
+      camEl.className = 'group relative flex flex-col items-center cursor-pointer select-none';
+      camEl.style.zIndex = isAlerted ? '40' : '20';
+
+      const localizedName = lang === 'ms' ? cam.name : (cam.nameEn || cam.name);
+      const speedLimitLabel = `${cam.speedLimitKmH}`;
+
+      camEl.innerHTML = `
+        <div class="relative flex items-center justify-center">
+          ${
+            isAlerted
+              ? '<div class="absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>'
+              : ''
+          }
+          <div class="flex h-8 w-8 items-center justify-center rounded-xl ${
+            isAlerted
+              ? 'bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse'
+              : 'bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40'
+          } text-white transition-all transform hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="${
+              isAlerted ? 'text-white' : 'text-red-400'
+            }">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+          </div>
+        </div>
+        <div class="mt-0.5 rounded-full bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-black font-mono text-amber-300 border border-amber-400/50 shadow">
+          ${speedLimitLabel}
+        </div>
+      `;
+
+      const popup = new maplibregl.Popup({ offset: 20, closeButton: false })
+        .setHTML(`
+          <div style="font-family: system-ui, sans-serif; font-size: 11px; padding: 3px; min-width: 140px;">
+            <div style="font-weight: 800; color: #ef4444; text-transform: uppercase;">📷 ${localizedName}</div>
+            <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">${cam.highway} · ${cam.km}</div>
+            <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-top: 2px;">
+              ${lang === 'ms' ? 'Had Laju' : 'Speed Limit'}: ${cam.speedLimitKmH} km/h
+            </div>
+            <div style="font-size: 9px; color: #64748b; margin-top: 2px;">${cam.locationDescription}</div>
+          </div>
+        `);
+
+      const marker = new maplibregl.Marker({ element: camEl })
+        .setLngLat(cam.coordinates)
+        .setPopup(popup)
+        .addTo(map);
+
+      aesMarkersRef.current.push(marker);
+    });
+
+    return () => {
+      aesMarkersRef.current.forEach(m => m.remove());
+      aesMarkersRef.current = [];
+    };
+  }, [aesAlert, lang]);
 
   // Update User Location & Follow Camera
   useEffect(() => {
