@@ -22,6 +22,12 @@ export function useGeolocation(enableHighAccuracy: boolean = true) {
   });
 
   const lastPositionRef = useRef<[number, number] | null>(null);
+  const lastEmittedRef = useRef<{
+    coord: [number, number];
+    heading: number;
+    speedKmH: number;
+    accuracy: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -58,11 +64,34 @@ export function useGeolocation(enableHighAccuracy: boolean = true) {
         }
         lastPositionRef.current = currentCoord;
 
+        const roundedHeading = Math.round(heading);
+        const roundedAccuracy = Math.round(accuracy);
+        const prev = lastEmittedRef.current;
+
+        // Deadband filter: Suppress sub-meter jitter updates (<1.6m) when speed/heading are unchanged
+        if (
+          prev &&
+          Math.abs(lng - prev.coord[0]) < 0.000015 &&
+          Math.abs(lat - prev.coord[1]) < 0.000015 &&
+          speed === prev.speedKmH &&
+          Math.abs(roundedHeading - prev.heading) < 2 &&
+          Math.abs(roundedAccuracy - prev.accuracy) < 5
+        ) {
+          return;
+        }
+
+        lastEmittedRef.current = {
+          coord: currentCoord,
+          heading: roundedHeading,
+          speedKmH: speed,
+          accuracy: roundedAccuracy
+        };
+
         setLocation({
           coords: currentCoord,
-          heading: Math.round(heading),
+          heading: roundedHeading,
           speedKmH: speed,
-          accuracy: Math.round(accuracy),
+          accuracy: roundedAccuracy,
           isGpsLocked: true,
           isAccuracyDegraded: accuracy > 50,
           error: null

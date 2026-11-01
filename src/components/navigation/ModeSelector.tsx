@@ -7,7 +7,7 @@ export interface ModeSelectorProps {
   onSelectMode: (mode: VehicleClass) => void;
 }
 
-export const ModeSelector: React.FC<ModeSelectorProps> = ({
+export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
   selectedMode,
   onSelectMode
 }) => {
@@ -53,5 +53,5 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       </button>
     </div>
   );
-};
+});
 

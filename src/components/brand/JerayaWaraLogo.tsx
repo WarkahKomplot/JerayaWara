@@ -5,7 +5,7 @@ export interface JerayaWaraLogoProps {
   className?: string;
 }
 
-export const JerayaWaraLogo: React.FC<JerayaWaraLogoProps> = ({
+export const JerayaWaraLogo: React.FC<JerayaWaraLogoProps> = React.memo(({
   size = 36,
   className = ''
 }) => {
@@ -127,4 +127,4 @@ export const JerayaWaraLogo: React.FC<JerayaWaraLogoProps> = ({
       </svg>
     </div>
   );
-};
+});

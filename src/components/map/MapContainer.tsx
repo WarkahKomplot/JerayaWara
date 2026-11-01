@@ -122,10 +122,20 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
+    let isCancelled = false;
     map.setStyle(getMapLibreStyle(theme));
-    map.once('styledata', () => {
+    const handleStyleData = () => {
+      if (isCancelled || !mapRef.current) return;
       renderRouteOnMap();
-    });
+    };
+    map.once('styledata', handleStyleData);
+
+    return () => {
+      isCancelled = true;
+      if (mapRef.current) {
+        mapRef.current.off('styledata', handleStyleData);
+      }
+    };
   }, [theme]);
 
   // Reset follow mode when navigation ends
@@ -312,12 +322,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
+    let isDisposed = false;
+
     const tryRender = () => {
+      if (isDisposed || !mapRef.current) return;
       try {
         renderRouteOnMap();
       } catch (err) {
         console.warn('Map style not fully ready yet, retrying on styledata:', err);
-        map.once('styledata', tryRender);
+        if (!isDisposed && mapRef.current) {
+          mapRef.current.once('styledata', tryRender);
+        }
       }
     };
 
@@ -327,6 +342,14 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       map.once('load', tryRender);
       map.once('styledata', tryRender);
     }
+
+    return () => {
+      isDisposed = true;
+      if (mapRef.current) {
+        mapRef.current.off('load', tryRender);
+        mapRef.current.off('styledata', tryRender);
+      }
+    };
   }, [routePolyline]);
 
   const handleZoomIn = () => mapRef.current?.zoomIn();

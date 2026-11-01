@@ -14,7 +14,7 @@ export interface MapControlsProps {
   isNavigating?: boolean;
 }
 
-export const MapControls: React.FC<MapControlsProps> = ({
+export const MapControls: React.FC<MapControlsProps> = React.memo(({
   onZoomIn,
   onZoomOut,
   onResetBearing,
@@ -96,4 +96,4 @@ export const MapControls: React.FC<MapControlsProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -15,7 +15,7 @@ export interface WindshieldHudOverlayProps {
   onClose: () => void;
 }
 
-export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = ({
+export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.memo(({
   speed,
   speedLimit,
   isNavigating,
@@ -26,10 +26,11 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = ({
 }) => {
   const isOverSpeed = speed > speedLimit && speedLimit > 0;
 
-  // Cardinal direction from heading degrees
+  // Cardinal direction from heading degrees with negative/modulo safety
   const getCardinal = (deg: number) => {
+    if (deg < 0 || isNaN(deg)) return 'U';
     const directions = ['U', 'TL', 'T', 'TG', 'S', 'BD', 'B', 'BL'];
-    const idx = Math.round(deg / 45) % 8;
+    const idx = ((Math.round(deg / 45) % 8) + 8) % 8;
     return directions[idx];
   };
 
@@ -149,4 +150,4 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = ({
       </div>
     </div>
   );
-};
+});

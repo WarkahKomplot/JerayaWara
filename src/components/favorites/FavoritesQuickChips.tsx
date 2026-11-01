@@ -14,7 +14,7 @@ export interface FavoritesQuickChipsProps {
   refreshTrigger?: number;
 }
 
-export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
+export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = React.memo(({
   onSelectFavorite,
   onAddFavorite,
   onRemoveFavorite,
@@ -23,7 +23,13 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
   const [favorites, setFavorites] = useState<FavoriteDestination[]>([]);
 
   useEffect(() => {
-    getFavorites().then(setFavorites);
+    let isMounted = true;
+    getFavorites().then(favs => {
+      if (isMounted) setFavorites(favs);
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [refreshTrigger]);
 
   const getFavByCategory = (category: 'home' | 'work' | 'balik_kampung') => {
@@ -112,4 +118,4 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = ({
       })}
     </div>
   );
-};
+});

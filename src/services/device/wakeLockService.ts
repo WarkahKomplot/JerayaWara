@@ -18,26 +18,29 @@ export class WakeLockService {
   private lockType: WakeLockType = 'none';
   private listeners: ((locked: boolean, type: WakeLockType) => void)[] = [];
   private heartbeatTimer: any = null;
+  private visibilityHandler: (() => void) | null = null;
+  private interactionHandler: (() => void) | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
       // Re-acquire when page visibility returns (e.g. after phone call or app switch)
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && this.isRequested) {
+      this.visibilityHandler = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible' && this.isRequested) {
           this.acquire();
         }
-      });
+      };
+      document.addEventListener('visibilitychange', this.visibilityHandler);
 
       // User interaction listener to satisfy mobile autoplay / wake lock gesture policies
-      const onInteraction = () => {
+      this.interactionHandler = () => {
         if (this.isRequested && (!this.isActive() || this.lockType === 'none')) {
           this.acquire();
         }
       };
 
-      window.addEventListener('pointerdown', onInteraction, { passive: true });
-      window.addEventListener('touchstart', onInteraction, { passive: true });
-      window.addEventListener('click', onInteraction, { passive: true });
+      window.addEventListener('pointerdown', this.interactionHandler, { passive: true });
+      window.addEventListener('touchstart', this.interactionHandler, { passive: true });
+      window.addEventListener('click', this.interactionHandler, { passive: true });
 
       // Periodic heartbeat check (every 15s) to detect quiet OS wake lock revocations
       this.heartbeatTimer = setInterval(() => {
@@ -204,6 +207,16 @@ export class WakeLockService {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+    if (typeof document !== 'undefined' && this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
+    if (typeof window !== 'undefined' && this.interactionHandler) {
+      window.removeEventListener('pointerdown', this.interactionHandler);
+      window.removeEventListener('touchstart', this.interactionHandler);
+      window.removeEventListener('click', this.interactionHandler);
+      this.interactionHandler = null;
     }
   }
 }

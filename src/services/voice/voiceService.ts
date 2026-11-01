@@ -101,7 +101,27 @@ export function generateVoiceInstruction(
 }
 
 /**
- * Pronounces the navigation voice prompt through the device's native TTS engine
+ * Reference to current speaking utterance to prevent browser garbage collection cutoffs
+ */
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+/**
+ * Stops any ongoing speech synthesis and releases active utterance
+ */
+export function stopVoiceGuidance(): void {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore
+    }
+  }
+  activeUtterance = null;
+}
+
+/**
+ * Pronounces the navigation voice prompt through the device's native TTS engine.
+ * Retains utterance reference to prevent mobile Chromium/Safari premature GC termination.
  */
 export function speakNavigationVoice(
   text: string,
@@ -113,13 +133,27 @@ export function speakNavigationVoice(
   }
 
   try {
-    window.speechSynthesis.cancel();
+    stopVoiceGuidance();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang === 'ms' ? 'ms-MY' : 'en-US';
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
+
+    activeUtterance = utterance;
+
+    utterance.onend = () => {
+      if (activeUtterance === utterance) {
+        activeUtterance = null;
+      }
+    };
+
+    utterance.onerror = () => {
+      if (activeUtterance === utterance) {
+        activeUtterance = null;
+      }
+    };
 
     const voices = window.speechSynthesis.getVoices();
     if (lang === 'ms') {
@@ -136,6 +170,7 @@ export function speakNavigationVoice(
     return true;
   } catch (err) {
     console.warn('Voice guidance error:', err);
+    activeUtterance = null;
     return false;
   }
 }

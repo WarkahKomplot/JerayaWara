@@ -25,9 +25,14 @@ export function useDeviceTheme(userCoords?: [number, number]) {
   // 2. Solar times calculation based on current time and user GPS coordinates
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
+  // Quantize coordinates to 2 decimal places (~1.1 km) so sub-meter GPS ticks
+  // do not trigger astronomical recalculation or cascading re-renders
+  const lngKey = userCoords ? userCoords[0].toFixed(2) : '101.69';
+  const latKey = userCoords ? userCoords[1].toFixed(2) : '3.14';
+
   const solarInfo: SolarTimes = useMemo(() => {
     return calculateMalaysiaSolarTimes(currentTime, userCoords || [101.693, 3.141]);
-  }, [currentTime, userCoords]);
+  }, [currentTime, lngKey, latKey]);
 
   // Periodic timer to keep solar daytime/nighttime in sync without manual reload
   useEffect(() => {

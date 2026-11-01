@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Download, Fuel } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
@@ -30,7 +30,7 @@ export interface TripSummaryDrawerProps {
   initialExpanded?: boolean;
 }
 
-export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
+export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
   route,
   tollBreakdown,
   onOpenTolls,
@@ -49,22 +49,25 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(initialExpanded);
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
   const [isServicesExpanded, setIsServicesExpanded] = useState(false);
-  const [activeCat, setActiveCat] = useState<'all' | 'petrol' | 'ev'>(amenityCategory);
+  const [localCategory, setLocalCategory] = useState<'all' | 'petrol' | 'ev'>(amenityCategory);
+  const effectiveCategory = amenityCategory ?? localCategory;
 
   const calculateETA = (minutes: number) => {
     const d = new Date(Date.now() + minutes * 60000);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // Find major highways or corridors mentioned in steps
-  const corridorNames = route.steps
-    .map(s => {
-      const match = s.instruction.match(/(PLUS\s+E\d+|E\d+|Lebuhraya[^\s,)]+|Federal Highway|KESAS|MEX|LDP|SPRINT|DUKE|Penang Bridge)/i);
-      return match ? match[0] : null;
-    })
-    .filter((name, idx, arr): name is string => !!name && arr.indexOf(name) === idx);
-
-  const primaryCorridor = corridorNames.length > 0 ? corridorNames.slice(0, 2).join(' → ') : null;
+  // Find major highways or corridors mentioned in steps (memoized to avoid regex in render loops)
+  const primaryCorridor = useMemo(() => {
+    if (!route.steps || route.steps.length === 0) return null;
+    const names = route.steps
+      .map(s => {
+        const match = s.instruction.match(/(PLUS\s+E\d+|E\d+|Lebuhraya[^\s,)]+|Federal Highway|KESAS|MEX|LDP|SPRINT|DUKE|Penang Bridge)/i);
+        return match ? match[0] : null;
+      })
+      .filter((name, idx, arr): name is string => !!name && arr.indexOf(name) === idx);
+    return names.length > 0 ? names.slice(0, 2).join(' → ') : null;
+  }, [route.steps]);
 
   // Ultra-compact bottom strip during active navigation
   if (!isDrawerExpanded && !isFoldable) {
@@ -272,9 +275,9 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
             <div className="mt-2.5">
               <EnRouteServicesCard
                 amenities={amenities || []}
-                activeCategory={activeCat}
+                activeCategory={effectiveCategory}
                 onSelectCategory={cat => {
-                  setActiveCat(cat);
+                  setLocalCategory(cat);
                   onSelectAmenityCategory?.(cat);
                 }}
                 shelter={shelter}
@@ -355,4 +358,4 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -158,9 +158,10 @@ export async function searchDestinations(query: string, isOnline: boolean = fals
   }
 
   // 2. If online, fetch from open Nominatim API (Malaysia restricted)
+  let timeoutId: any;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    timeoutId = setTimeout(() => controller.abort(), 2500);
 
     const searchQueryParam = expandedQuery !== cleanQuery ? expandedQuery : query;
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
@@ -174,7 +175,6 @@ export async function searchDestinations(query: string, isOnline: boolean = fals
         'User-Agent': 'JerayaWara-Malaysia-Nav-PWA/1.0'
       }
     });
-    clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
@@ -220,6 +220,8 @@ export async function searchDestinations(query: string, isOnline: boolean = fals
     }
   } catch {
     // If online search fails or timeouts, smoothly fall back to offline directory
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   return offlineMatches;

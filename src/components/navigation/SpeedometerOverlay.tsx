@@ -24,7 +24,7 @@ export interface SpeedometerOverlayProps {
   onToggleRain?: () => void;
 }
 
-export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
+export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(({
   currentSpeedKmH,
   speedLimitKmH,
   weather,
@@ -202,4 +202,4 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
       </div>
     </div>
   );
-};
+});

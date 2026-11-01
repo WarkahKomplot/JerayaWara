@@ -69,6 +69,9 @@ export function App() {
   const lastWarnedAESRef = useRef<string>('');
   const lastWarnedFloodRef = useRef<string>('');
   const lastWarnedShelterRef = useRef<string>('');
+  const lastWarnedAESTimeRef = useRef<number>(0);
+  const lastWarnedFloodTimeRef = useRef<number>(0);
+  const lastWarnedShelterTimeRef = useRef<number>(0);
 
   // Live Weather effect (updates with coordinate movement)
   const coordKey = `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
@@ -92,71 +95,84 @@ export function App() {
       }
     : null;
 
+  // Quantize coordinates (~11m resolution) for safety radar scans so sub-meter GPS noise
+  // does not recompute distance arrays every single second
+  const radarCoordKey = `${coords[0].toFixed(4)},${coords[1].toFixed(4)}`;
+
   // AES Speed Camera Alert (within 1.2 km threshold)
   const nearbyAESAlert = useMemo(() => {
     return findNearbyAESCamera(coords, 1.2);
-  }, [coords]);
+  }, [radarCoordKey]);
 
   // Banjir Kilat (Flash Flood) Blackspot Radar
   const nearbyFloodHotspot = useMemo(() => {
     return findNearbyFloodHotspot(coords, isRaining, 2.5);
-  }, [coords, isRaining]);
+  }, [radarCoordKey, isRaining]);
 
   // Motorcycle Expressway Rain Shelter Radar
   const nearbyMotorcycleShelter = useMemo(() => {
     return findNearbyMotorcycleShelter(coords, isRaining, vehicleMode, 3.0);
-  }, [coords, isRaining, vehicleMode]);
+  }, [radarCoordKey, isRaining, vehicleMode]);
 
   // Expressway En-Route Petrol & EV Fast Charger Stop Planner
   const [amenityCategory, setAmenityCategory] = useState<'all' | 'petrol' | 'ev'>('all');
   const upcomingAmenities = useMemo(() => {
     if (!activeRoute) return [];
     return getUpcomingAmenities(activeRoute.coordinates, coords, amenityCategory, 3);
-  }, [activeRoute, coords, amenityCategory]);
+  }, [activeRoute, radarCoordKey, amenityCategory]);
 
-  // Voice alert when approaching AES camera
+  // Voice alert when approaching AES camera (with 3-minute hysteresis to prevent boundary flutter)
   useEffect(() => {
+    const now = Date.now();
     if (nearbyAESAlert && isVoiceEnabled) {
       const alertKey = `${nearbyAESAlert.camera.id}-${nearbyAESAlert.camera.speedLimitKmH}`;
-      if (lastWarnedAESRef.current !== alertKey) {
+      const isNewTarget = lastWarnedAESRef.current !== alertKey;
+      const isCooldownElapsed = now - lastWarnedAESTimeRef.current > 180000;
+
+      if (isNewTarget || isCooldownElapsed) {
         lastWarnedAESRef.current = alertKey;
+        lastWarnedAESTimeRef.current = now;
         const msg = voiceLanguage === 'ms'
           ? `Perhatian: Kamera AES di hadapan. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
           : `Caution: Speed camera ahead. Speed limit ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`;
         speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
       }
-    } else if (!nearbyAESAlert) {
-      lastWarnedAESRef.current = '';
     }
   }, [nearbyAESAlert, isVoiceEnabled, voiceLanguage]);
 
   // Voice alert when approaching Flash Flood hotspot during rain
   useEffect(() => {
+    const now = Date.now();
     if (nearbyFloodHotspot && isVoiceEnabled) {
-      if (lastWarnedFloodRef.current !== nearbyFloodHotspot.id) {
+      const isNewTarget = lastWarnedFloodRef.current !== nearbyFloodHotspot.id;
+      const isCooldownElapsed = now - lastWarnedFloodTimeRef.current > 180000;
+
+      if (isNewTarget || isCooldownElapsed) {
         lastWarnedFloodRef.current = nearbyFloodHotspot.id;
+        lastWarnedFloodTimeRef.current = now;
         const msg = voiceLanguage === 'ms'
           ? `Awas: Kawasan berisiko banjir kilat ${nearbyFloodHotspot.name} di hadapan. Berhati-hati memandu.`
           : `Caution: Flash flood risk area ${nearbyFloodHotspot.name} ahead. Drive with extra care.`;
         speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
       }
-    } else if (!nearbyFloodHotspot) {
-      lastWarnedFloodRef.current = '';
     }
   }, [nearbyFloodHotspot, isVoiceEnabled, voiceLanguage]);
 
   // Voice alert when approaching Motorcycle Rain Shelter during rain
   useEffect(() => {
+    const now = Date.now();
     if (nearbyMotorcycleShelter && isVoiceEnabled) {
-      if (lastWarnedShelterRef.current !== nearbyMotorcycleShelter.id) {
+      const isNewTarget = lastWarnedShelterRef.current !== nearbyMotorcycleShelter.id;
+      const isCooldownElapsed = now - lastWarnedShelterTimeRef.current > 180000;
+
+      if (isNewTarget || isCooldownElapsed) {
         lastWarnedShelterRef.current = nearbyMotorcycleShelter.id;
+        lastWarnedShelterTimeRef.current = now;
         const msg = voiceLanguage === 'ms'
           ? `Pondok teduhan hujan motosikal di hadapan pada ${nearbyMotorcycleShelter.kmMarker}.`
           : `Motorcycle rain shelter ahead at ${nearbyMotorcycleShelter.kmMarker}.`;
         speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
       }
-    } else if (!nearbyMotorcycleShelter) {
-      lastWarnedShelterRef.current = '';
     }
   }, [nearbyMotorcycleShelter, isVoiceEnabled, voiceLanguage]);
 
@@ -241,12 +257,14 @@ export function App() {
   // Recalculate if user changes mode mid-route
   const handleModeChange = async (mode: VehicleClass) => {
     setVehicleMode(mode);
-    if (activeRoute) {
+    if (activeRoute && activeRoute.coordinates && activeRoute.coordinates.length > 0) {
       setTollBreakdown(null);
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
-      const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
-      setActiveRoute(reRoute);
-      setTollBreakdown(calculateRouteTolls(reRoute.tollPlazaKeys, mode));
+      if (dest) {
+        const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
+        setActiveRoute(reRoute);
+        setTollBreakdown(calculateRouteTolls(reRoute.tollPlazaKeys, mode));
+      }
     }
   };
 

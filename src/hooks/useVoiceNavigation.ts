@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   generateVoiceInstruction,
   speakNavigationVoice,
+  stopVoiceGuidance,
   isVoiceGuidanceSupported,
   VoiceLanguage
 } from '../services/voice/voiceService';
@@ -71,9 +72,7 @@ export function useVoiceNavigation() {
           voiceLanguage
         );
       } else {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
+        stopVoiceGuidance();
       }
       return next;
     });
@@ -115,16 +114,12 @@ export function useVoiceNavigation() {
   // Reset spoken memory when navigation stops
   const resetVoiceAnnouncements = useCallback(() => {
     lastSpokenKeyRef.current = '';
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopVoiceGuidance();
   }, []);
 
   useEffect(() => {
     return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      stopVoiceGuidance();
     };
   }, []);
 

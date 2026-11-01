@@ -25,7 +25,7 @@ export interface TurnBannerProps {
   onToggleVoiceLanguage?: () => void;
 }
 
-export const TurnBanner: React.FC<TurnBannerProps> = ({
+export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
   instruction,
   distanceMeters,
   maneuver,
@@ -137,4 +137,4 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
       </div>
     </div>
   );
-};
+});

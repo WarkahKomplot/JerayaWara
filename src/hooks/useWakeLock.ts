@@ -22,6 +22,9 @@ export function useWakeLock(autoEnableOnMount: boolean = true) {
     return () => {
       isMounted = false;
       unsubscribe();
+      if (autoEnableOnMount) {
+        wakeLockService.disable();
+      }
     };
   }, [autoEnableOnMount]);
 

@@ -64,6 +64,21 @@ export function getUpcomingAmenities(
     routeCoordinates
   );
 
+  // Compute route bounding box with 22km (~0.2deg) margin for O(1) early rejection
+  let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (let i = 0; i < routeCoordinates.length; i++) {
+    const [lng, lat] = routeCoordinates[i];
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+  const buffer = 0.22;
+  const bboxMinLng = minLng - buffer;
+  const bboxMaxLng = maxLng + buffer;
+  const bboxMinLat = minLat - buffer;
+  const bboxMaxLat = maxLat + buffer;
+
   // Filter by category
   const filtered = MALAYSIA_EXPRESSWAY_AMENITIES.filter(item => {
     if (category === 'all') return true;
@@ -75,6 +90,12 @@ export function getUpcomingAmenities(
   const candidates: EnRouteAmenityWithDistance[] = [];
 
   for (const amenity of filtered) {
+    const [aLng, aLat] = amenity.coordinates;
+    // O(1) Spatial bounding box pre-filter to bypass expensive polyline iteration
+    if (aLng < bboxMinLng || aLng > bboxMaxLng || aLat < bboxMinLat || aLat > bboxMaxLat) {
+      continue;
+    }
+
     // Proximity to route corridor (within 20km of expressway polyline)
     const { minDist, closestIdx: amenityRouteIdx } = minDistanceToRoute(
       amenity.coordinates,

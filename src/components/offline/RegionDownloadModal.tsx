@@ -18,21 +18,30 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    let isMounted = true;
 
-    regionManager.getDownloadedRegions().then(setDownloaded);
+    regionManager.getDownloadedRegions().then(records => {
+      if (isMounted) setDownloaded(records);
+    });
 
     const unsubscribe = regionManager.onProgress(progress => {
+      if (!isMounted) return;
       setActiveDownloads(prev => ({
         ...prev,
         [progress.regionId]: progress
       }));
 
       if (progress.status === 'completed') {
-        regionManager.getDownloadedRegions().then(setDownloaded);
+        regionManager.getDownloadedRegions().then(records => {
+          if (isMounted) setDownloaded(records);
+        });
       }
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;

@@ -10,7 +10,7 @@ export interface EnRouteServicesCardProps {
   shelter?: MotorcycleShelter | null;
 }
 
-export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = ({
+export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.memo(({
   amenities,
   activeCategory,
   onSelectCategory,
@@ -160,5 +160,5 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = ({
       </div>
     </div>
   );
-};
+});
 

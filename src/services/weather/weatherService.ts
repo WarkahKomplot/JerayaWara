@@ -99,13 +99,13 @@ export async function fetchLiveWeather(coords: [number, number]): Promise<Weathe
     return weatherCache.data;
   }
 
+  let timeoutId: any;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&current=temperature_2m,weather_code,is_day`;
     const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
@@ -123,6 +123,8 @@ export async function fetchLiveWeather(coords: [number, number]): Promise<Weathe
     }
   } catch {
     // Fallback on timeout or network offline
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const fallback = getOfflineEstimatedWeather();

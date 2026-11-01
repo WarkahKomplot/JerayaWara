@@ -9,22 +9,24 @@ export interface MalaysiaTime {
 }
 
 /**
+ * Singleton Intl.DateTimeFormat instance to avoid expensive compilation and heap allocation on every check
+ */
+const malaysiaDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Kuala_Lumpur',
+  hour12: false,
+  weekday: 'short',
+  hour: 'numeric',
+  minute: 'numeric',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric'
+});
+
+/**
  * Returns date and time broken down in Asia/Kuala_Lumpur (UTC+8)
  */
 export function getMalaysiaDateTime(date: Date = new Date()): MalaysiaTime {
-  // Use Intl.DateTimeFormat to guarantee Asia/Kuala_Lumpur timezone invariant of host OS
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kuala_Lumpur',
-    hour12: false,
-    weekday: 'short',
-    hour: 'numeric',
-    minute: 'numeric',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric'
-  });
-
-  const parts = formatter.formatToParts(date);
+  const parts = malaysiaDateFormatter.formatToParts(date);
   let hours = 0;
   let minutes = 0;
   let weekdayStr = '';

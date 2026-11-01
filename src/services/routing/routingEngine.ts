@@ -365,15 +365,15 @@ export async function calculateRoute(
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
 
   if (isOnline) {
+    let timeoutId: any;
     try {
       const mode = profile === 'walker' ? 'foot' : 'driving';
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2800);
+      timeoutId = setTimeout(() => controller.abort(), 2800);
 
       const url = `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`;
 
       const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
@@ -457,6 +457,8 @@ export async function calculateRoute(
       }
     } catch {
       // Network timeout or offline -> fallback to offline road snapper
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
