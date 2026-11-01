@@ -6,19 +6,22 @@ import {
   deleteFavorite,
   deleteFavoriteByCategory
 } from '../../services/favorites/favoritesStore';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface FavoritesQuickChipsProps {
   onSelectFavorite: (fav: FavoriteDestination) => void;
   onAddFavorite?: (category: 'home' | 'work' | 'balik_kampung') => void;
   onRemoveFavorite?: (id: string, category: 'home' | 'work' | 'balik_kampung') => void;
   refreshTrigger?: number;
+  lang?: Language;
 }
 
 export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = React.memo(({
   onSelectFavorite,
   onAddFavorite,
   onRemoveFavorite,
-  refreshTrigger = 0
+  refreshTrigger = 0,
+  lang = 'ms'
 }) => {
   const [favorites, setFavorites] = useState<FavoriteDestination[]>([]);
 
@@ -56,17 +59,17 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = React.mem
   }[] = [
     {
       category: 'home',
-      label: 'Rumah',
+      label: t('favHome', lang),
       icon: <Home className="h-3.5 w-3.5 text-blue-400" />
     },
     {
       category: 'work',
-      label: 'Kerja',
+      label: t('favWork', lang),
       icon: <Briefcase className="h-3.5 w-3.5 text-amber-400" />
     },
     {
       category: 'balik_kampung',
-      label: 'Balik Kampung',
+      label: t('favHometown', lang),
       icon: <Palmtree className="h-3.5 w-3.5 text-emerald-400" />
     }
   ];
@@ -94,8 +97,8 @@ export const FavoritesQuickChips: React.FC<FavoritesQuickChipsProps> = React.mem
                 type="button"
                 onClick={(e) => handleRemove(e, existing, category)}
                 data-testid={`remove-fav-${category}`}
-                aria-label={`Padam ${label}`}
-                title={`Padam / Reset ${label}`}
+                aria-label={`${t('deleteFav', lang)} ${label}`}
+                title={`${t('deleteFav', lang)} ${label}`}
                 className="flex items-center justify-center px-2 py-2 bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white border-l border-rose-500/30 transition-all shrink-0 active:scale-90"
               >
                 <X className="h-3.5 w-3.5 stroke-[2.5]" />

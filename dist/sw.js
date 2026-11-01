@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jerayawara-v4';
+const CACHE_NAME = 'jerayawara-v5';
 
 self.addEventListener('install', (event) => {
   const scope = self.registration.scope;

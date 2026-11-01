@@ -1,18 +1,20 @@
 import React from 'react';
 import { ArrowUp, ArrowRight, ArrowLeft, CornerUpRight, Compass } from 'lucide-react';
+import { Language, getLocalizedStepInstruction } from '../../services/i18n/translations';
 
 export interface WindshieldHudOverlayProps {
   speed: number;
   speedLimit: number;
   isNavigating: boolean;
   currentInstruction?: {
-    maneuver: string;
+    maneuver: any;
     distanceMeters: number;
     instruction: string;
   };
   roadName?: string;
   heading?: number;
   onClose: () => void;
+  lang?: Language;
 }
 
 export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.memo(({
@@ -22,14 +24,17 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.m
   currentInstruction,
   roadName,
   heading = 0,
-  onClose
+  onClose,
+  lang = 'ms'
 }) => {
   const isOverSpeed = speed > speedLimit && speedLimit > 0;
 
   // Cardinal direction from heading degrees with negative/modulo safety
   const getCardinal = (deg: number) => {
-    if (deg < 0 || isNaN(deg)) return 'U';
-    const directions = ['U', 'TL', 'T', 'TG', 'S', 'BD', 'B', 'BL'];
+    if (deg < 0 || isNaN(deg)) return lang === 'ms' ? 'U' : 'N';
+    const directionsMs = ['U', 'TL', 'T', 'TG', 'S', 'BD', 'B', 'BL'];
+    const directionsEn = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const directions = lang === 'ms' ? directionsMs : directionsEn;
     const idx = ((Math.round(deg / 45) % 8) + 8) % 8;
     return directions[idx];
   };
@@ -72,7 +77,7 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.m
           </span>
         </div>
         <div className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-          HUD MIRROR MODE · TAP TO EXIT
+          {lang === 'ms' ? 'MOD PANTULAN HUD · KETIK UNTUK KELUAR' : 'HUD MIRROR MODE · TAP TO EXIT'}
         </div>
         {roadName && (
           <div className="text-base font-bold tracking-wide text-zinc-300 uppercase truncate max-w-xs">
@@ -95,7 +100,7 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.m
                   : `${(currentInstruction.distanceMeters / 1000).toFixed(1)} km`}
               </span>
               <span className="text-xl font-semibold text-zinc-300 max-w-md">
-                {currentInstruction.instruction}
+                {getLocalizedStepInstruction(currentInstruction, lang, roadName)}
               </span>
             </div>
           </div>
@@ -132,7 +137,7 @@ export const WindshieldHudOverlay: React.FC<WindshieldHudOverlayProps> = React.m
           </div>
         ) : (
           <div className="text-sm font-semibold tracking-wide text-zinc-500 uppercase">
-            JALAN RAYA MALAYSIA
+            {lang === 'ms' ? 'LEBUHRAYA MALAYSIA' : 'MALAYSIA EXPRESSWAY'}
           </div>
         )}
 

@@ -32,6 +32,7 @@ import { findNearbyMotorcycleShelter } from './services/amenities/motorcycleShel
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
+import { t, getLocalizedStepInstruction } from './services/i18n/translations';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves } from 'lucide-react';
 
 export function App() {
@@ -360,7 +361,7 @@ export function App() {
                 </h1>
                 <div className="flex items-center gap-1 text-[10px] text-slate-400">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${isGpsLocked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>{isGpsLocked ? 'GPS Active' : 'Acquiring GPS...'}</span>
+                  <span>{isGpsLocked ? t('gpsActive', voiceLanguage) : t('gpsSearching', voiceLanguage)}</span>
                 </div>
               </div>
             </div>
@@ -370,10 +371,10 @@ export function App() {
               <button
                 onClick={() => setIsRegionModalOpen(true)}
                 className="flex items-center gap-1 rounded-xl bg-slate-800/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white"
-                title="Manage Offline Maps"
+                title={t('offlineMap', voiceLanguage)}
               >
                 <HardDrive className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Offline Maps</span>
+                <span className="hidden sm:inline">{t('offlineMap', voiceLanguage)}</span>
               </button>
 
               {/* Malaysia Sunrise/Sunset Day-Night Toggle */}
@@ -399,12 +400,12 @@ export function App() {
                 ) : themeMode === 'night' ? (
                   <>
                     <Moon className="h-3.5 w-3.5 text-sky-400" />
-                    <span className="text-[10px] font-black tracking-wider text-slate-200">NIGHT</span>
+                    <span className="text-[10px] font-black tracking-wider text-slate-200">{t('nightMode', voiceLanguage)}</span>
                   </>
                 ) : (
                   <>
                     <Sun className="h-3.5 w-3.5 text-amber-400" />
-                    <span className="text-[10px] font-black tracking-wider text-slate-200">DAY</span>
+                    <span className="text-[10px] font-black tracking-wider text-slate-200">{t('dayMode', voiceLanguage)}</span>
                   </>
                 )}
               </button>
@@ -443,10 +444,12 @@ export function App() {
                 <Waves className="h-5 w-5 text-cyan-300 flex-shrink-0 animate-bounce" />
                 <div>
                   <div className="text-[11px] uppercase tracking-wider text-cyan-200">
-                    AWAS: {nearbyFloodHotspot.name}
+                    {voiceLanguage === 'ms' ? 'AWAS:' : 'CAUTION:'} {nearbyFloodHotspot.name}
                   </div>
                   <div className="text-[10px] font-medium text-cyan-100">
-                    Kawasan berisiko banjir kilat semasa hujan lebat. Pandu cermat.
+                    {voiceLanguage === 'ms'
+                      ? 'Kawasan berisiko banjir kilat semasa hujan lebat. Pandu cermat.'
+                      : 'Flash flood risk area during heavy rain. Drive carefully.'}
                   </div>
                 </div>
               </div>
@@ -456,7 +459,11 @@ export function App() {
             {vehicleMode === 'motorcycle' && tollBreakdown?.hasMotorcycleRestriction && (
               <div className="flex items-center gap-2 rounded-xl bg-red-600 px-3.5 py-2.5 text-xs font-black text-white shadow-xl animate-pulse border border-red-400/50">
                 <AlertOctagon className="h-5 w-5 flex-shrink-0" />
-                <span>RESTRICTION: Motorcycles prohibited on SMART Tunnel E38. Follow surface route.</span>
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'SEKATAN: Motosikal dilarang di Terowong SMART E38. Ikut laluan atas.'
+                    : 'RESTRICTION: Motorcycles prohibited on SMART Tunnel E38. Follow surface route.'}
+                </span>
               </div>
             )}
 
@@ -464,7 +471,11 @@ export function App() {
             {isNavigating && !isGpsLocked && (
               <div className="flex items-center gap-2 rounded-xl bg-rose-700/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-rose-500/40">
                 <Satellite className="h-4 w-4 animate-spin flex-shrink-0" />
-                <span>GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).</span>
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Isyarat GPS Terputus. Mencari satelit (Terowong atau kanopi tebal).'
+                    : 'GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).'}
+                </span>
               </div>
             )}
 
@@ -480,7 +491,11 @@ export function App() {
             {isAccuracyDegraded && (
               <div className="flex items-center gap-2 rounded-xl bg-amber-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow-lg backdrop-blur">
                 <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-                <span>GPS accuracy degraded. Simulating corridor dead-reckoning.</span>
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Ketepatan GPS menurun. Anggaran kedudukan laluan digunakan.'
+                    : 'GPS accuracy degraded. Simulating corridor dead-reckoning.'}
+                </span>
               </div>
             )}
 
@@ -505,6 +520,7 @@ export function App() {
                   refreshTrigger={favRefreshKey}
                   onAddFavorite={handleAddFavorite}
                   onRemoveFavorite={handleRemoveFavorite}
+                  lang={voiceLanguage}
                   onSelectFavorite={fav =>
                     handleSelectDestination({
                       id: fav.id,
@@ -519,11 +535,13 @@ export function App() {
                 <SearchBar
                   onSelectDestination={handleSelectDestination}
                   isOnline={navigator.onLine}
+                  lang={voiceLanguage}
                 />
                 <div className="flex justify-center">
                   <ModeSelector
                     selectedMode={vehicleMode}
                     onSelectMode={handleModeChange}
+                    lang={voiceLanguage}
                   />
                 </div>
               </div>
@@ -535,11 +553,12 @@ export function App() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Route Step By Step
+                  {voiceLanguage === 'ms' ? 'Langkah Laluan Berperingkat' : 'Route Step By Step'}
                 </span>
                 <ModeSelector
                   selectedMode={vehicleMode}
                   onSelectMode={handleModeChange}
+                  lang={voiceLanguage}
                 />
               </div>
 
@@ -556,10 +575,10 @@ export function App() {
                     }`}
                   >
                     <div className="flex justify-between text-[11px] text-slate-400 mb-0.5">
-                      <span>Step {idx + 1}</span>
+                      <span>{voiceLanguage === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}</span>
                       <span>{s.distanceMeters > 0 ? `${s.distanceMeters}m` : ''}</span>
                     </div>
-                    <div>{s.instruction}</div>
+                    <div>{getLocalizedStepInstruction(s, voiceLanguage, activeRoute.destinationName)}</div>
                   </div>
                 ))}
               </div>
@@ -581,6 +600,7 @@ export function App() {
               amenityCategory={amenityCategory}
               onSelectAmenityCategory={setAmenityCategory}
               shelter={nearbyMotorcycleShelter}
+              lang={voiceLanguage}
             />
           ) : undefined
         }
@@ -594,6 +614,7 @@ export function App() {
               onMapClick={handleMapClick}
               isNavigating={isNavigating}
               focusStepCoord={focusStepCoord}
+              lang={voiceLanguage}
             />
 
             {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}
@@ -634,6 +655,7 @@ export function App() {
           roadName={activeRoute?.destinationName}
           heading={heading}
           onClose={() => setIsHudOpen(false)}
+          lang={voiceLanguage}
         />
       )}
 
@@ -642,12 +664,14 @@ export function App() {
         isOpen={isTollModalOpen}
         onClose={() => setIsTollModalOpen(false)}
         tollBreakdown={tollBreakdown}
+        lang={voiceLanguage}
       />
 
       {/* Offline Region Pack Manager Modal */}
       <RegionDownloadModal
         isOpen={isRegionModalOpen}
         onClose={() => setIsRegionModalOpen(false)}
+        lang={voiceLanguage}
       />
     </>
   );

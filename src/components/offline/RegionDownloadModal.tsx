@@ -3,15 +3,18 @@ import { X, Download, Trash2, CheckCircle2, HardDrive, Wifi } from 'lucide-react
 import { MALAYSIA_REGIONS, RegionPack } from '../../services/offline/regions';
 import { regionManager, DownloadProgress } from '../../services/offline/regionManager';
 import { CachedRegionRecord } from '../../services/offline/db';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface RegionDownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  lang?: Language;
 }
 
 export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  lang = 'ms'
 }) => {
   const [downloaded, setDownloaded] = useState<CachedRegionRecord[]>([]);
   const [activeDownloads, setActiveDownloads] = useState<Record<string, DownloadProgress>>({});
@@ -77,9 +80,9 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
               <HardDrive className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Offline Malaysia Maps</h3>
+              <h3 className="text-base font-bold text-white">{t('offlineModalTitle', lang)}</h3>
               <p className="text-xs text-slate-400">
-                Download regional packs for 100% offline GPS navigation
+                {t('offlineModalSubtitle', lang)}
               </p>
             </div>
           </div>
@@ -118,14 +121,14 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
 
                   {progress?.status === 'quota_exceeded' && (
                     <div className="mt-2 text-[11px] font-semibold text-amber-400 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-                      ⚠️ {progress.errorMessage || 'Storage quota exceeded. Please evict an existing regional pack.'}
+                      ⚠️ {progress.errorMessage || (lang === 'ms' ? 'Had storan dicapai. Sila padam pek zon lain terlebih dahulu.' : 'Storage quota exceeded. Please evict an existing regional pack.')}
                     </div>
                   )}
 
                   {isDownloading && (
                     <div className="mt-2.5 w-full">
                       <div className="flex justify-between text-[10px] font-medium text-slate-400 mb-1">
-                        <span>Downloading pack...</span>
+                        <span>{t('downloading', lang)}</span>
                         <span>{progress.progressPercent}%</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-slate-700 overflow-hidden">
@@ -143,12 +146,12 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
                         <CheckCircle2 className="h-4 w-4" />
-                        <span>Ready</span>
+                        <span>{t('readyToUse', lang)}</span>
                       </span>
                       <button
                         onClick={() => handleDelete(region.id)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600/10 text-red-400 hover:bg-red-600/20"
-                        title="Delete Pack"
+                        title={t('delete', lang)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -160,7 +163,7 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
                       className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 disabled:opacity-50 transition-all"
                     >
                       <Download className="h-4 w-4" />
-                      <span>{isDownloading ? 'Saving...' : 'Get'}</span>
+                      <span>{isDownloading ? t('downloading', lang) : t('download', lang)}</span>
                     </button>
                   )}
                 </div>
@@ -172,7 +175,7 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
         {/* Footer */}
         <div className="border-t border-slate-800 bg-slate-950/60 p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
           <Wifi className="h-4 w-4 text-sky-400" />
-          <span>Auto-prefetches neighboring regions when within 15 km of state borders</span>
+          <span>{lang === 'ms' ? 'Memuat turun secara automatik apabila berada dalam jarak 15 km dari sempadan zon' : 'Auto-prefetches neighboring regions when within 15 km of state borders'}</span>
         </div>
       </div>
     </div>

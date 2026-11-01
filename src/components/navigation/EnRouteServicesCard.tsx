@@ -2,19 +2,22 @@ import React from 'react';
 import { Fuel, Zap, ShieldAlert, MapPin } from 'lucide-react';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
 import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface EnRouteServicesCardProps {
   amenities: EnRouteAmenityWithDistance[];
   activeCategory: 'all' | 'petrol' | 'ev';
   onSelectCategory: (category: 'all' | 'petrol' | 'ev') => void;
   shelter?: MotorcycleShelter | null;
+  lang?: Language;
 }
 
 export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.memo(({
   amenities,
   activeCategory,
   onSelectCategory,
-  shelter
+  shelter,
+  lang = 'ms'
 }) => {
   const getBrandBadge = (type: string, brand: string) => {
     switch (type) {
@@ -57,7 +60,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
       <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
         <div className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-blue-400" />
-          <span>Sepanjang Laluan</span>
+          <span>{t('alongRoute', lang)}</span>
         </div>
         <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/60">
           <button
@@ -69,7 +72,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Semua
+            {t('allCategory', lang)}
           </button>
           <button
             type="button"
@@ -81,7 +84,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
             }`}
           >
             <Fuel className="h-3 w-3" />
-            <span>Petrol</span>
+            <span>{t('petrolCategory', lang)}</span>
           </button>
           <button
             type="button"
@@ -93,7 +96,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
             }`}
           >
             <Zap className="h-3 w-3" />
-            <span>EV Charger</span>
+            <span>{t('evCategory', lang)}</span>
           </button>
         </div>
       </div>
@@ -107,7 +110,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
               {shelter.name}
             </div>
             <div className="text-[10px] text-blue-300">
-              {shelter.expressway} {shelter.kmMarker} · Teluk Berteduh Motosikal
+              {shelter.expressway} {shelter.kmMarker} · {lang === 'ms' ? 'Teluk Berteduh Motosikal' : 'Motorcycle Rain Shelter'}
             </div>
           </div>
         </div>
@@ -117,7 +120,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
       <div className="mt-3 divide-y divide-slate-800/60">
         {amenities.length === 0 ? (
           <div className="py-3 text-center text-xs text-slate-500 font-medium">
-            Tiada stesen petrol / pengecas EV di sepanjang segmen lebuh raya ini.
+            {t('noAmenitiesFound', lang)}
           </div>
         ) : (
           amenities.map(item => (
@@ -151,7 +154,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
                   {item.distanceKm.toFixed(1)} km
                 </span>
                 <span className="text-[9px] font-semibold uppercase text-slate-500">
-                  Jarak
+                  {t('cameraDistance', lang)}
                 </span>
               </div>
             </div>

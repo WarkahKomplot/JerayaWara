@@ -14,15 +14,18 @@ import {
 } from 'lucide-react';
 import { SearchItem } from '../../services/search/types';
 import { searchDestinations } from '../../services/search/searchEngine';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface SearchBarProps {
   onSelectDestination: (item: SearchItem) => void;
   isOnline: boolean;
+  lang?: Language;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSelectDestination,
-  isOnline
+  isOnline,
+  lang = 'en'
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchItem[]>([]);
@@ -100,7 +103,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setIsOpen(results.length > 0)}
-          placeholder="Search Malaysian city, mall, coords (e.g. Tapah)..."
+          placeholder={t('searchPlaceholder', lang)}
           className="w-full bg-transparent px-3 py-3.5 text-sm font-medium text-white placeholder-slate-400 focus:outline-none"
         />
         {query && (

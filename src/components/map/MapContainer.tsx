@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
+import { Language } from '../../services/i18n/translations';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
@@ -13,6 +14,7 @@ export interface MapContainerProps {
   onMapClick?: (coords: [number, number]) => void;
   isNavigating?: boolean;
   focusStepCoord?: [number, number] | null;
+  lang?: Language;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -22,7 +24,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   routePolyline,
   onMapClick,
   isNavigating = false,
-  focusStepCoord = null
+  focusStepCoord = null,
+  lang = 'ms'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -393,6 +396,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         hasActiveRoute={!!routePolyline && routePolyline.length >= 2}
         onFitRouteOverview={handleFitRouteOverview}
         isNavigating={isNavigating}
+        lang={lang}
       />
     </div>
   );

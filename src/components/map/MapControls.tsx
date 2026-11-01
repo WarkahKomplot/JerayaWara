@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Minus, Compass, Navigation2, Route } from 'lucide-react';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface MapControlsProps {
   onZoomIn: () => void;
@@ -12,6 +13,7 @@ export interface MapControlsProps {
   hasActiveRoute?: boolean;
   onFitRouteOverview?: () => void;
   isNavigating?: boolean;
+  lang?: Language;
 }
 
 export const MapControls: React.FC<MapControlsProps> = React.memo(({
@@ -24,7 +26,8 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
   bearing,
   hasActiveRoute = false,
   onFitRouteOverview,
-  isNavigating = false
+  isNavigating = false,
+  lang = 'ms'
 }) => {
   return (
     <div
@@ -37,7 +40,7 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
         <button
           onClick={onFitRouteOverview}
           className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-all active:scale-95 animate-pulse"
-          title="Route Overview: View full road path (Lihat Semua Laluan)"
+          title={t('mapRouteOverview', lang)}
         >
           <Route className="h-5 w-5 stroke-[2.5]" />
         </button>
@@ -47,7 +50,7 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
       <button
         onClick={onResetBearing}
         className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900/90 text-white shadow-lg backdrop-blur-md transition-all active:scale-95 dark:bg-slate-800/90"
-        title="Reset North"
+        title={t('mapResetNorth', lang)}
       >
         <Compass
           className="h-5 w-5 text-red-500 transition-transform duration-200"
@@ -59,7 +62,7 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
       <button
         onClick={onRecenter}
         className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-95"
-        title="Re-center My Location (Ikut Lokasi Saya)"
+        title={t('mapRecenter', lang)}
       >
         <Navigation2 className="h-5 w-5 fill-white" />
       </button>
@@ -72,7 +75,7 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
             ? 'bg-amber-500 text-slate-900 font-extrabold'
             : 'bg-slate-900/90 text-white dark:bg-slate-800/90'
         }`}
-        title="Toggle 3D View"
+        title={t('mapToggle3d', lang)}
       >
         <span className="text-xs font-bold tracking-tight">3D</span>
       </button>
@@ -82,14 +85,14 @@ export const MapControls: React.FC<MapControlsProps> = React.memo(({
         <button
           onClick={onZoomIn}
           className="flex h-11 w-11 items-center justify-center border-b border-slate-700/50 text-white active:bg-slate-700/50"
-          title="Zoom In"
+          title={t('mapZoomIn', lang)}
         >
           <Plus className="h-5 w-5" />
         </button>
         <button
           onClick={onZoomOut}
           className="flex h-11 w-11 items-center justify-center text-white active:bg-slate-700/50"
-          title="Zoom Out"
+          title={t('mapZoomOut', lang)}
         >
           <Minus className="h-5 w-5" />
         </button>

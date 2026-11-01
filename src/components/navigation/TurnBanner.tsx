@@ -10,6 +10,7 @@ import {
   VolumeX
 } from 'lucide-react';
 import { ManeuverType } from '../../services/routing/types';
+import { getLocalizedStepInstruction } from '../../services/i18n/translations';
 
 export interface TurnBannerProps {
   instruction: string;
@@ -35,7 +36,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
   isMotorcycleLane,
   isVoiceEnabled = true,
   onToggleVoice,
-  voiceLanguage = 'ms',
+  voiceLanguage = 'en',
   onToggleVoiceLanguage
 }) => {
   const renderManeuverIcon = () => {
@@ -64,12 +65,16 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
     return `${meters} m`;
   };
 
+  const displayedInstruction = voiceLanguage === 'ms'
+    ? getLocalizedStepInstruction({ instruction, maneuver }, 'ms')
+    : instruction;
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl border border-slate-700/60 p-4 transition-all">
       {isMotorcycleLane && (
         <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
           <ShieldAlert className="h-3.5 w-3.5 text-emerald-400" />
-          <span>Dedicated Motorcycle Lane (Lorong Motosikal)</span>
+          <span>{voiceLanguage === 'ms' ? 'Lorong Motosikal Khas' : 'Dedicated Motorcycle Lane'}</span>
         </div>
       )}
 
@@ -82,10 +87,10 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
         {/* Turn Guidance Text */}
         <div className="flex-1 min-w-0">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            In {formatDistance(distanceMeters)}
+            {voiceLanguage === 'ms' ? 'Dalam' : 'In'} {formatDistance(distanceMeters)}
           </div>
           <div className="text-lg font-bold leading-tight text-white truncate">
-            {instruction}
+            {displayedInstruction || instruction}
           </div>
           {laneGuidance && (
             <div className="mt-1 text-xs font-medium text-sky-400">

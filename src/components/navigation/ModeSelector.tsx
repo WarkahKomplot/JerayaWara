@@ -1,15 +1,18 @@
 import React from 'react';
 import { Car, Bike, Footprints } from 'lucide-react';
 import { VehicleClass } from '../../services/toll/types';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface ModeSelectorProps {
   selectedMode: VehicleClass;
   onSelectMode: (mode: VehicleClass) => void;
+  lang?: Language;
 }
 
 export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
   selectedMode,
-  onSelectMode
+  onSelectMode,
+  lang = 'en'
 }) => {
   return (
     <div className="inline-flex rounded-xl bg-slate-900/90 p-1 backdrop-blur-md border border-slate-700/60 shadow-lg">
@@ -23,7 +26,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
         }`}
       >
         <Car className="h-4 w-4" />
-        <span>Car</span>
+        <span>{t('modeCar', lang)}</span>
       </button>
 
       {/* Motorcycle Option */}
@@ -36,7 +39,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
         }`}
       >
         <Bike className="h-4 w-4" />
-        <span>Motorcycle</span>
+        <span>{t('modeMotorcycle', lang)}</span>
       </button>
 
       {/* Walker Option */}
@@ -49,7 +52,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
         }`}
       >
         <Footprints className="h-4 w-4" />
-        <span>Walker</span>
+        <span>{t('modeWalker', lang)}</span>
       </button>
     </div>
   );

@@ -5,6 +5,7 @@ import { TollBreakdown } from '../../services/toll/types';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
 import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
 import { EnRouteServicesCard } from './EnRouteServicesCard';
+import { Language, t, getLocalizedStepInstruction } from '../../services/i18n/translations';
 
 export interface TripSummaryDrawerProps {
   route: RouteResult;
@@ -28,6 +29,7 @@ export interface TripSummaryDrawerProps {
     corridorName: string;
   };
   initialExpanded?: boolean;
+  lang?: Language;
 }
 
 export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
@@ -44,7 +46,8 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
   onSelectAmenityCategory,
   shelter,
   trafficCongestion,
-  initialExpanded = false
+  initialExpanded = false,
+  lang = 'ms'
 }) => {
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(initialExpanded);
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
@@ -77,13 +80,13 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
         <div
           onClick={() => setIsDrawerExpanded(true)}
           className="flex-1 cursor-pointer select-none"
-          title="Ketik untuk maklumat lanjut laluan"
+          title={lang === 'ms' ? 'Ketik untuk butiran lanjut laluan' : 'Tap for full route details'}
         >
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-emerald-400 tracking-tight">
               {route.durationMinutes}
             </span>
-            <span className="text-xs font-semibold text-slate-400">min</span>
+            <span className="text-xs font-semibold text-slate-400">{t('minUnit', lang)}</span>
             <span className="text-xs text-slate-500">•</span>
             <span className="text-sm font-bold text-slate-200">
               {route.distanceKm} km
@@ -94,7 +97,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-            {route.destinationName || 'Destinasi'}
+            {route.destinationName || (lang === 'ms' ? 'Destinasi' : 'Destination')}
           </div>
         </div>
 
@@ -105,7 +108,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             onClick={() => setIsDrawerExpanded(true)}
             data-testid="expand-trip-drawer"
             className="flex items-center gap-1 rounded-xl bg-slate-800 hover:bg-slate-700 px-2.5 py-2 text-xs font-bold text-slate-300 border border-slate-700 transition-all active:scale-95"
-            title="Papar butiran penuh laluan"
+            title={lang === 'ms' ? 'Papar butiran penuh laluan' : 'View full route summary'}
           >
             <ChevronUp className="h-4 w-4 text-slate-400" />
             <span className="hidden xs:inline">Info</span>
@@ -116,10 +119,10 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             onClick={onEndNavigation}
             data-testid="exit-navigation-btn"
             className="flex items-center gap-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 px-3 py-2 text-xs font-bold text-rose-400 border border-rose-500/30 transition-all active:scale-95"
-            title="Tamat Pandu Arah"
+            title={lang === 'ms' ? 'Tamat Pandu Arah' : 'Exit Navigation'}
           >
             <X className="h-4 w-4" />
-            <span>Tamat</span>
+            <span>{t('exitNavCompact', lang)}</span>
           </button>
         </div>
       </div>
@@ -136,16 +139,16 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
       {!isFoldable && (
         <div className="flex justify-between items-center pb-2.5 mb-2 border-b border-slate-800">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Butiran Pandu Arah
+            {lang === 'ms' ? 'Butiran Pandu Arah' : 'Trip Summary'}
           </span>
           <button
             type="button"
             onClick={() => setIsDrawerExpanded(false)}
             data-testid="collapse-trip-drawer"
             className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors"
-            title="Kecilkan butiran laluan"
+            title={lang === 'ms' ? 'Kecilkan butiran laluan' : 'Collapse route summary'}
           >
-            <span>Kecilkan</span>
+            <span>{lang === 'ms' ? 'Kecilkan' : 'Collapse'}</span>
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -157,7 +160,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <span className="text-3xl font-black text-white tracking-tight">
               {route.durationMinutes}
             </span>
-            <span className="text-sm font-semibold text-slate-400">min</span>
+            <span className="text-sm font-semibold text-slate-400">{t('minUnit', lang)}</span>
             <span className="text-sm text-slate-500">•</span>
             <span className="text-base font-bold text-slate-300">
               {route.distanceKm} km
@@ -182,7 +185,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
           {/* Traffic Condition Badge */}
           {(trafficCongestion || route.traffic) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[10px] font-bold text-slate-400">LALULINTAS:</span>
+              <span className="text-[10px] font-bold text-slate-400">{t('trafficTitle', lang)}</span>
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border"
                 style={{
@@ -195,7 +198,15 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                   className="h-1.5 w-1.5 rounded-full"
                   style={{ backgroundColor: trafficCongestion?.color || route.traffic?.colorHex || '#10b981' }}
                 />
-                {trafficCongestion?.label || route.traffic?.label}
+                {(() => {
+                  const rawLabel = trafficCongestion?.label || route.traffic?.label || '';
+                  if (lang === 'en') {
+                    if (rawLabel.includes('Lancar')) return 'Smooth Traffic';
+                    if (rawLabel.includes('Sederhana')) return 'Moderate Traffic';
+                    if (rawLabel.includes('Sesak') || rawLabel.includes('Teruk')) return 'Heavy Congestion';
+                  }
+                  return rawLabel;
+                })()}
                 {((trafficCongestion?.delayMinutes || 0) > 0 || (route.traffic?.delayMinutes || 0) > 0) &&
                   ` (+${trafficCongestion?.delayMinutes || route.traffic?.delayMinutes}m)`}
               </span>
@@ -229,12 +240,12 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <CreditCard className="h-4 w-4" />
             <div className="text-left">
               <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                Toll Fares
+                {t('tollFares', lang)}
               </div>
               <div className="text-xs font-black">
                 {tollBreakdown.totalCost > 0
                   ? `RM ${tollBreakdown.totalCost.toFixed(2)}`
-                  : 'Free'}
+                  : t('tollFree', lang)}
               </div>
             </div>
             <ChevronRight className="h-3.5 w-3.5 opacity-60" />
@@ -255,14 +266,16 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <div className="flex items-center gap-2">
               <Fuel className="h-3.5 w-3.5 text-emerald-400" />
               <span className="font-bold text-slate-200">
-                {isServicesExpanded ? 'Stesen Minyak & EV Berdekatan' : 'Stesen Minyak & EV'}
+                {lang === 'ms'
+                  ? (isServicesExpanded ? 'Stesen Minyak & EV Berdekatan' : 'Stesen Minyak & EV')
+                  : (isServicesExpanded ? 'Nearby Petrol & EV Stations' : 'Petrol & EV Stations')}
               </span>
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
-                {amenities?.length || 0} berdekatan
+                {amenities?.length || 0} {lang === 'ms' ? 'berdekatan' : 'nearby'}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400">
-              <span>{isServicesExpanded ? 'Sembunyi' : 'Papar'}</span>
+              <span>{isServicesExpanded ? t('hide', lang) : t('show', lang)}</span>
               {isServicesExpanded ? (
                 <ChevronUp className="h-4 w-4 text-slate-400" />
               ) : (
@@ -281,6 +294,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                   onSelectAmenityCategory?.(cat);
                 }}
                 shelter={shelter}
+                lang={lang}
               />
             </div>
           )}
@@ -295,7 +309,11 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
         >
           <div className="flex items-center gap-2">
             <ListOrdered className="h-4 w-4 text-sky-400" />
-            <span>Route Steps & Roads ({route.steps.length} turns)</span>
+            <span>
+              {lang === 'ms'
+                ? `Langkah Laluan & Jalan (${route.steps.length} simpang)`
+                : `Route Steps & Roads (${route.steps.length} turns)`}
+            </span>
           </div>
           {isStepsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
@@ -313,10 +331,12 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                 }`}
               >
                 <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                  <span className="font-bold text-sky-400">Step {idx + 1}</span>
+                  <span className="font-bold text-sky-400">
+                    {lang === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}
+                  </span>
                   <span>{step.distanceMeters > 0 ? `${step.distanceMeters >= 1000 ? `${(step.distanceMeters/1000).toFixed(1)} km` : `${step.distanceMeters} m`}` : ''}</span>
                 </div>
-                <div>{step.instruction}</div>
+                <div>{getLocalizedStepInstruction(step, lang, route.destinationName)}</div>
                 {step.laneGuidance && (
                   <div className="text-[10px] text-emerald-400 mt-0.5 font-medium">
                     {step.laneGuidance}
@@ -336,24 +356,24 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             className="flex items-center gap-2 rounded-xl bg-red-600/20 px-3.5 py-2 text-xs font-bold text-red-400 hover:bg-red-600/30 transition-all border border-red-500/30 active:scale-95"
           >
             <X className="h-4 w-4" />
-            <span>Exit Navigation</span>
+            <span>{t('exitNav', lang)}</span>
           </button>
 
           {onExportGpx && (
             <button
               onClick={onExportGpx}
               className="flex items-center gap-1.5 rounded-xl bg-slate-800/80 px-3 py-2 text-xs font-bold text-cyan-400 hover:bg-slate-700/80 transition-all border border-slate-700/60 active:scale-95"
-              title="Muat turun laluan sebagai fail GPX"
+              title={lang === 'ms' ? 'Muat turun laluan sebagai fail GPX' : 'Download route as GPX file'}
             >
               <Download className="h-3.5 w-3.5" />
-              <span>Eksport GPX</span>
+              <span>{t('exportGpx', lang)}</span>
             </button>
           )}
         </div>
 
         <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Live GPS Route
+          {t('liveGpsRoute', lang)}
         </span>
       </div>
     </div>

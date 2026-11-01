@@ -1,17 +1,20 @@
 import React from 'react';
 import { X, CreditCard, ShieldCheck } from 'lucide-react';
 import { TollBreakdown } from '../../services/toll/types';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface TollBreakdownModalProps {
   isOpen: boolean;
   onClose: () => void;
   tollBreakdown: TollBreakdown | null;
+  lang?: Language;
 }
 
 export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
   isOpen,
   onClose,
-  tollBreakdown
+  tollBreakdown,
+  lang = 'ms'
 }) => {
   if (!isOpen || !tollBreakdown) return null;
 
@@ -25,9 +28,14 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
               <CreditCard className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Malaysia Expressway Tolls</h3>
+              <h3 className="text-base font-bold text-white">{t('tollModalTitle', lang)}</h3>
               <p className="text-xs text-slate-400">
-                Vehicle: {tollBreakdown.vehicleClass.toUpperCase()}
+                {lang === 'ms' ? 'Kenderaan: ' : 'Vehicle: '}
+                {tollBreakdown.vehicleClass === 'motorcycle'
+                  ? t('tollClassMotorcycle', lang)
+                  : tollBreakdown.vehicleClass === 'walker'
+                  ? t('tollClassWalker', lang)
+                  : t('tollClassCar', lang)}
               </p>
             </div>
           </div>
@@ -50,12 +58,14 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
 
           {tollBreakdown.items.length === 0 ? (
             <div className="py-6 text-center text-sm text-slate-400">
-              No tolls along this route (Toll-Free Route).
+              {lang === 'ms'
+                ? 'Tiada tol di sepanjang laluan ini (Laluan Bebas Tol).'
+                : 'No tolls along this route (Toll-Free Route).'}
             </div>
           ) : (
             <div className="space-y-2.5">
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Toll Plaza Breakdown
+                {lang === 'ms' ? 'Senarai Plaza Tol' : 'Toll Plaza Breakdown'}
               </div>
               {tollBreakdown.items.map(item => (
                 <div
@@ -90,7 +100,7 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
         {/* Total Footer */}
         <div className="border-t border-slate-800 bg-slate-950/60 p-5 flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-400 font-medium">Estimated Total Fares</div>
+            <div className="text-xs text-slate-400 font-medium">{t('totalTollEstimate', lang)}</div>
             <div className="text-xl font-black text-amber-400">
               RM {tollBreakdown.totalCost.toFixed(2)}
             </div>
@@ -99,7 +109,7 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
             onClick={onClose}
             className="rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition-all"
           >
-            Done
+            {t('close', lang)}
           </button>
         </div>
       </div>
