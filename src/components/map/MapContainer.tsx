@@ -25,6 +25,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const prevRouteKeyRef = useRef<string>('');
   const [is3D, setIs3D] = useState(true);
   const [currentBearing, setCurrentBearing] = useState(0);
 
@@ -71,19 +73,27 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
 
     return () => {
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.remove();
+        destinationMarkerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
-  // Update Theme
+  // Update Theme (re-apply route after style reloads)
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setStyle(getMapLibreStyle(theme));
-    }
+    const map = mapRef.current;
+    if (!map) return;
+
+    map.setStyle(getMapLibreStyle(theme));
+    map.once('style.load', () => {
+      renderRouteOnMap();
+    });
   }, [theme]);
 
-  // Update User Location & Camera Follow
+  // Update User Location
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) return;
 
@@ -94,7 +104,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       headingElement.style.transform = `rotate(${heading}deg)`;
     }
 
-    if (isNavigating) {
+    // Follow camera while navigating if not showing overview
+    if (isNavigating && (!routePolyline || routePolyline.length === 0)) {
       mapRef.current.easeTo({
         center: userLocation,
         bearing: heading,
@@ -105,73 +116,114 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   }, [userLocation, heading, isNavigating, is3D]);
 
+  // Helper to draw or update route polyline and destination pin
+  const renderRouteOnMap = () => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!routePolyline || routePolyline.length < 2) {
+      if (map.getSource('active-route')) {
+        if (map.getLayer('active-route-casing')) map.removeLayer('active-route-casing');
+        if (map.getLayer('active-route-line')) map.removeLayer('active-route-line');
+        map.removeSource('active-route');
+      }
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.remove();
+        destinationMarkerRef.current = null;
+      }
+      prevRouteKeyRef.current = '';
+      return;
+    }
+
+    const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: routePolyline
+      }
+    };
+
+    if (map.getSource('active-route')) {
+      (map.getSource('active-route') as maplibregl.GeoJSONSource).setData(geojson);
+    } else {
+      map.addSource('active-route', {
+        type: 'geojson',
+        data: geojson
+      });
+
+      map.addLayer({
+        id: 'active-route-casing',
+        type: 'line',
+        source: 'active-route',
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        paint: {
+          'line-color': '#1d4ed8',
+          'line-width': 10,
+          'line-opacity': 0.8
+        }
+      });
+
+      map.addLayer({
+        id: 'active-route-line',
+        type: 'line',
+        source: 'active-route',
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        paint: {
+          'line-color': '#38bdf8',
+          'line-width': 6
+        }
+      });
+    }
+
+    // Update or create Destination Pin Marker
+    const destCoord = routePolyline[routePolyline.length - 1];
+    if (!destinationMarkerRef.current) {
+      const destEl = document.createElement('div');
+      destEl.className = 'relative flex flex-col items-center cursor-pointer';
+      destEl.innerHTML = `
+        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-red-600 to-rose-500 text-white shadow-xl shadow-red-500/40 border-2 border-white transform hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="w-3 h-1 bg-black/40 rounded-full blur-[1px] mt-1"></div>
+      `;
+      destinationMarkerRef.current = new maplibregl.Marker({ element: destEl })
+        .setLngLat(destCoord)
+        .addTo(map);
+    } else {
+      destinationMarkerRef.current.setLngLat(destCoord);
+    }
+
+    // Auto-fit bounds when a new route is activated
+    const currentRouteKey = `${routePolyline[0][0]},${routePolyline[0][1]}->${destCoord[0]},${destCoord[1]}`;
+    if (currentRouteKey !== prevRouteKeyRef.current) {
+      prevRouteKeyRef.current = currentRouteKey;
+      const bounds = new maplibregl.LngLatBounds();
+      bounds.extend(userLocation);
+      routePolyline.forEach(c => bounds.extend(c));
+      map.fitBounds(bounds, {
+        padding: { top: 120, bottom: 220, left: 60, right: 60 },
+        maxZoom: 16,
+        duration: 1000
+      });
+    }
+  };
+
   // Draw Route Polyline
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const updateRoute = () => {
-      if (!routePolyline || routePolyline.length < 2) {
-        if (map.getSource('active-route')) {
-          if (map.getLayer('active-route-casing')) map.removeLayer('active-route-casing');
-          if (map.getLayer('active-route-line')) map.removeLayer('active-route-line');
-          map.removeSource('active-route');
-        }
-        return;
-      }
-
-      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: routePolyline
-        }
-      };
-
-      if (map.getSource('active-route')) {
-        (map.getSource('active-route') as maplibregl.GeoJSONSource).setData(geojson);
-      } else {
-        map.addSource('active-route', {
-          type: 'geojson',
-          data: geojson
-        });
-
-        map.addLayer({
-          id: 'active-route-casing',
-          type: 'line',
-          source: 'active-route',
-          layout: {
-            'line-cap': 'round',
-            'line-join': 'round'
-          },
-          paint: {
-            'line-color': '#1d4ed8',
-            'line-width': 10,
-            'line-opacity': 0.8
-          }
-        });
-
-        map.addLayer({
-          id: 'active-route-line',
-          type: 'line',
-          source: 'active-route',
-          layout: {
-            'line-cap': 'round',
-            'line-join': 'round'
-          },
-          paint: {
-            'line-color': '#38bdf8',
-            'line-width': 6
-          }
-        });
-      }
-    };
-
     if (map.isStyleLoaded()) {
-      updateRoute();
+      renderRouteOnMap();
     } else {
-      map.once('style.load', updateRoute);
+      map.once('style.load', renderRouteOnMap);
     }
   }, [routePolyline]);
 
@@ -208,4 +260,3 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     </div>
   );
 };
-

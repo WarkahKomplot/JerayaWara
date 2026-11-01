@@ -21,7 +21,8 @@ function haversineDistanceKm(c1: [number, number], c2: [number, number]): number
 export function calculateRoute(
   start: [number, number],
   destination: [number, number],
-  profile: VehicleClass
+  profile: VehicleClass,
+  destinationTitle?: string
 ): RouteResult {
   const straightDistKm = haversineDistanceKm(start, destination);
 
@@ -52,7 +53,7 @@ export function calculateRoute(
       steps,
       tollPlazaKeys: profile === 'car' ? CORRIDOR_KL_SEREMBAN.tollPlazaKeys : [],
       profile,
-      destinationName: 'Seremban City Centre'
+      destinationName: destinationTitle || 'Seremban City Centre'
     };
   }
 
@@ -113,7 +114,7 @@ export function calculateRoute(
       steps,
       tollPlazaKeys: [],
       profile,
-      destinationName: 'Destination'
+      destinationName: destinationTitle || 'Destination'
     };
   }
 
@@ -157,7 +158,7 @@ export function calculateRoute(
     steps,
     tollPlazaKeys: profile === 'car' && actualDistanceKm > 20 ? ['PLUS_SG_BESI'] : [],
     profile,
-    destinationName: 'Destination'
+    destinationName: destinationTitle || 'Destination'
   };
 }
 

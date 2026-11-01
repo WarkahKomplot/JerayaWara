@@ -73,7 +73,7 @@ export class RegionManager {
 
       // Simulation of chunked stream download
       const steps = 10;
-      for (let i = 1; i <= steps; i++) {
+      for (let i = 1; i < steps; i++) {
         await new Promise(res => setTimeout(res, 80));
         const progressPercent = i * 10;
         const downloadedMB = Math.round((region.sizeMB * (progressPercent / 100)) * 10) / 10;
@@ -82,10 +82,13 @@ export class RegionManager {
           progressPercent,
           downloadedMB,
           totalMB: region.sizeMB,
-          status: i === steps ? 'completed' : 'downloading'
+          status: 'downloading'
         });
       }
 
+      await new Promise(res => setTimeout(res, 80));
+
+      // 1. Commit status 'ready' to IndexedDB BEFORE firing 'completed' event
       await offlineDb.regions.put({
         regionId,
         name: region.name,
@@ -93,6 +96,15 @@ export class RegionManager {
         downloadedAt: Date.now(),
         version: '2026.11',
         status: 'ready'
+      });
+
+      // 2. Notify listeners now that database transaction has fully resolved
+      this.notifyProgress({
+        regionId,
+        progressPercent: 100,
+        downloadedMB: region.sizeMB,
+        totalMB: region.sizeMB,
+        status: 'completed'
       });
 
       return true;

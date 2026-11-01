@@ -49,9 +49,9 @@ export function App() {
     });
   }, [coords]);
 
-  // Handle destination selection from search
+  // Handle destination selection from search or map click
   const handleSelectDestination = (item: SearchItem) => {
-    const route = calculateRoute(coords, item.coordinates, vehicleMode);
+    const route = calculateRoute(coords, item.coordinates, vehicleMode, item.title);
     setActiveRoute(route);
     const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
     setTollBreakdown(tolls);
@@ -60,12 +60,25 @@ export function App() {
     requestLock();
   };
 
+  // Direct map click to start navigation to any point in Malaysia
+  const handleMapClick = (clickCoords: [number, number]) => {
+    const destinationItem: SearchItem = {
+      id: `pinned-${clickCoords[0].toFixed(4)}-${clickCoords[1].toFixed(4)}`,
+      title: `Selected Location (${clickCoords[1].toFixed(3)}°N, ${clickCoords[0].toFixed(3)}°E)`,
+      subtitle: 'Tapped point on Malaysia map',
+      category: 'landmark',
+      coordinates: clickCoords,
+      regionId: 'pinned'
+    };
+    handleSelectDestination(destinationItem);
+  };
+
   // Recalculate if user changes mode mid-route
   const handleModeChange = (mode: VehicleClass) => {
     setVehicleMode(mode);
     if (activeRoute) {
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
-      const reRoute = calculateRoute(coords, dest, mode);
+      const reRoute = calculateRoute(coords, dest, mode, activeRoute.destinationName);
       setActiveRoute(reRoute);
       setTollBreakdown(calculateRouteTolls(reRoute.tollPlazaKeys, mode));
     }
@@ -245,6 +258,7 @@ export function App() {
             heading={heading}
             theme={theme}
             routePolyline={activeRoute?.coordinates}
+            onMapClick={handleMapClick}
             isNavigating={isNavigating}
           />
         }

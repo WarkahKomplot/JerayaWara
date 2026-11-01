@@ -37,16 +37,26 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleDownload = (region: RegionPack) => {
-    regionManager.downloadRegion(region);
+  const handleDownload = async (region: RegionPack) => {
+    await regionManager.downloadRegion(region);
+    const updated = await regionManager.getDownloadedRegions();
+    setDownloaded(updated);
   };
 
   const handleDelete = async (regionId: string) => {
     await regionManager.deleteRegion(regionId);
-    regionManager.getDownloadedRegions().then(setDownloaded);
+    setActiveDownloads(prev => {
+      const next = { ...prev };
+      delete next[regionId];
+      return next;
+    });
+    const updated = await regionManager.getDownloadedRegions();
+    setDownloaded(updated);
   };
 
-  const isReady = (regionId: string) => downloaded.some(d => d.regionId === regionId);
+  const isReady = (regionId: string) =>
+    downloaded.some(d => d.regionId === regionId) ||
+    activeDownloads[regionId]?.status === 'completed';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">

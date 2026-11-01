@@ -91,6 +91,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           {results.map(item => (
             <button
               key={item.id}
+              type="button"
+              onPointerDown={e => {
+                // Prevent input blur before click registers on mobile/touch screens
+                e.preventDefault();
+              }}
               onClick={() => {
                 onSelectDestination(item);
                 setQuery(item.title);
