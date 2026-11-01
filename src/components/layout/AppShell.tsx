@@ -15,7 +15,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   topBanner,
   bottomDrawer,
   sidePanelContent,
-  headerBar
+  headerBar,
+  isNavigating = false
 }) => {
   const { isFoldableUnfolded } = useFoldableDetection();
 
@@ -55,9 +56,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-950 font-sans text-slate-100">
       {/* Top Floating Area */}
       <header className="absolute top-0 left-0 right-0 z-30 p-3 pt-safe space-y-2 pointer-events-none">
-        <div className="pointer-events-auto">
-          {headerBar}
-        </div>
+        {!isNavigating && headerBar && (
+          <div className="pointer-events-auto">
+            {headerBar}
+          </div>
+        )}
         <div className="pointer-events-auto">
           {topBanner}
         </div>

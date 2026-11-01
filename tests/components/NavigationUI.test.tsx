@@ -89,11 +89,26 @@ describe('Navigation UI Components', () => {
       />
     );
 
+    // Compact mode is active by default to save screen space
     expect(screen.getByText('Tapah R&R (Northbound)')).toBeDefined();
     expect(screen.getByText('65 km')).toBeDefined();
+    expect(screen.getByTestId('expand-trip-drawer')).toBeDefined();
+
+    // Toll breakdown RM 4.80 is hidden in compact mode
+    expect(screen.queryByText('RM 4.80')).toBeNull();
+
+    // Click expand button to reveal full trip details
+    fireEvent.click(screen.getByTestId('expand-trip-drawer'));
     expect(screen.getByText('RM 4.80')).toBeDefined();
 
-    const exitBtn = screen.getByText(/Exit Navigation/i);
+    // Collapse back to compact mode
+    const collapseBtn = screen.getByTestId('collapse-trip-drawer');
+    expect(collapseBtn).toBeDefined();
+    fireEvent.click(collapseBtn);
+    expect(screen.queryByText('RM 4.80')).toBeNull();
+
+    // Exit navigation works from compact mode
+    const exitBtn = screen.getByTestId('exit-navigation-btn');
     fireEvent.click(exitBtn);
     expect(handleExit).toHaveBeenCalledTimes(1);
   });
@@ -121,6 +136,7 @@ describe('Navigation UI Components', () => {
         }}
         onOpenTolls={() => {}}
         onEndNavigation={() => {}}
+        initialExpanded={true}
         trafficCongestion={{
           level: 'moderate',
           label: 'Sederhana',
@@ -284,6 +300,7 @@ describe('Navigation UI Components', () => {
         onEndNavigation={() => {}}
         onExportGpx={handleExportGpx}
         amenities={mockAmenities}
+        initialExpanded={true}
       />
     );
 
