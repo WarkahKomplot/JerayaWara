@@ -5,7 +5,9 @@ import {
   CornerUpLeft,
   RotateCw,
   MapPin,
-  ShieldAlert
+  ShieldAlert,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { ManeuverType } from '../../services/routing/types';
 
@@ -17,6 +19,8 @@ export interface TurnBannerProps {
   speedLimit?: number;
   currentSpeed?: number;
   isMotorcycleLane?: boolean;
+  isVoiceEnabled?: boolean;
+  onToggleVoice?: () => void;
 }
 
 export const TurnBanner: React.FC<TurnBannerProps> = ({
@@ -26,7 +30,9 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
   laneGuidance,
   speedLimit,
   currentSpeed = 0,
-  isMotorcycleLane
+  isMotorcycleLane,
+  isVoiceEnabled = true,
+  onToggleVoice
 }) => {
   const renderManeuverIcon = () => {
     switch (maneuver) {
@@ -94,6 +100,21 @@ export const TurnBanner: React.FC<TurnBannerProps> = ({
               <span className="text-sky-400 font-extrabold">{currentSpeed}</span> km/h
             </div>
           </div>
+        )}
+
+        {/* Voice Guidance Mute/Unmute Toggle Button */}
+        {onToggleVoice && (
+          <button
+            onClick={onToggleVoice}
+            className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border transition-all active:scale-95 shadow-md ${
+              isVoiceEnabled
+                ? 'bg-blue-600/25 border-blue-500/50 text-sky-300 hover:bg-blue-600/35'
+                : 'bg-slate-800/80 border-slate-700/60 text-slate-500 hover:text-slate-300'
+            }`}
+            title={isVoiceEnabled ? 'Matikan Suara (Mute Voice)' : 'Aktifkan Suara (Unmute Voice)'}
+          >
+            {isVoiceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+          </button>
         )}
       </div>
     </div>

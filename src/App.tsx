@@ -14,6 +14,7 @@ import { useGeolocation } from './hooks/useGeolocation';
 import { useDeviceTheme } from './hooks/useDeviceTheme';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useFoldableDetection } from './hooks/useFoldableDetection';
+import { useVoiceNavigation } from './hooks/useVoiceNavigation';
 
 import { calculateRoute } from './services/routing/routingEngine';
 import { calculateRouteTolls } from './services/toll/tollCalculator';
@@ -35,6 +36,16 @@ export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
+
+  // Turn-by-Turn Voice Navigation Engine
+  const {
+    isVoiceEnabled,
+    toggleVoice,
+    announceStart,
+    announceStep,
+    announceArrive,
+    resetVoiceAnnouncements
+  } = useVoiceNavigation();
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
@@ -97,6 +108,9 @@ export function App() {
     // 3. Set destination-specific tolls
     const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
     setTollBreakdown(tolls);
+
+    // 4. Voice announcement: navigation start
+    announceStart(item.title);
   };
 
   // Direct map click to start navigation to any point in Malaysia
@@ -130,6 +144,7 @@ export function App() {
     setTollBreakdown(null);
     setFocusStepCoord(null);
     releaseLock();
+    resetVoiceAnnouncements();
   };
 
   const handleSelectStep = (idx: number) => {
@@ -138,6 +153,18 @@ export function App() {
       setFocusStepCoord(activeRoute.steps[idx].coordinates);
     }
   };
+
+  // Turn-by-Turn Voice Guidance Trigger: Speaks upcoming turn when step updates
+  useEffect(() => {
+    if (isNavigating && activeRoute && activeRoute.steps[currentStepIndex]) {
+      const step = activeRoute.steps[currentStepIndex];
+      if (step.maneuver === 'arrive') {
+        announceArrive(activeRoute.destinationName);
+      } else {
+        announceStep(step, currentStepIndex);
+      }
+    }
+  }, [isNavigating, activeRoute, currentStepIndex, announceStep, announceArrive]);
 
   // Current turn instruction
   const currentStep = activeRoute?.steps[currentStepIndex] || (activeRoute ? activeRoute.steps[0] : null);
@@ -279,6 +306,8 @@ export function App() {
                 speedLimit={currentStep.speedLimitKmH}
                 currentSpeed={speedKmH}
                 isMotorcycleLane={currentStep.isMotorcycleLane}
+                isVoiceEnabled={isVoiceEnabled}
+                onToggleVoice={toggleVoice}
               />
             ) : (
               <div className="space-y-2">

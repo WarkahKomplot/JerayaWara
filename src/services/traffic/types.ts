@@ -21,5 +21,7 @@ export interface HighwayCamera {
   coordinates: [number, number]; // [lng, lat]
   imageUrl: string;
   fallbackUrl?: string;
+  portalUrl?: string;
   source: 'LLM' | 'PLUS' | 'ITIS' | 'JKR';
 }
+

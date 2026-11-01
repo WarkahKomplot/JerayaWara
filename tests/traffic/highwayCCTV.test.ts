@@ -72,3 +72,4 @@ describe('Malaysian Highway Live CCTV Matcher', () => {
     expect(firstCam.coordinates[1]).toBeGreaterThan(lastCam.coordinates[1]);
   });
 });
+

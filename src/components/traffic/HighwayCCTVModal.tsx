@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Camera, RefreshCw, AlertCircle, Compass } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Camera, RefreshCw, AlertCircle, Compass, ExternalLink, ShieldCheck } from 'lucide-react';
 import { HighwayCamera } from '../../services/traffic/types';
 
 export interface HighwayCCTVModalProps {
@@ -16,42 +16,38 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
   destinationName
 }) => {
   const [selectedCamId, setSelectedCamId] = useState<string | null>(null);
-  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-
-  if (!isOpen) return null;
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [isImgLoading, setIsImgLoading] = useState<boolean>(true);
+  const [imgFailed, setImgFailed] = useState<boolean>(false);
 
   const activeCam =
     cameras.find(c => c.id === selectedCamId) || (cameras.length > 0 ? cameras[0] : null);
 
-  const handleRefresh = (camId: string, e: React.MouseEvent) => {
+  // 2.5 second fallback timer: if image hangs due to LLM hotlink firewall, fail over cleanly
+  useEffect(() => {
+    if (!activeCam) return;
+    setIsImgLoading(true);
+    setImgFailed(false);
+
+    const timer = setTimeout(() => {
+      setIsImgLoading(false);
+      setImgFailed(true);
+    }, 2800);
+
+    return () => clearTimeout(timer);
+  }, [activeCam?.id, refreshKey]);
+
+  if (!isOpen) return null;
+
+  const handleRefresh = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setRefreshKeys(prev => ({
-      ...prev,
-      [camId]: Date.now()
-    }));
-    setFailedImages(prev => ({
-      ...prev,
-      [camId]: false
-    }));
+    setRefreshKey(Date.now());
   };
 
-  const handleImageError = (camId: string) => {
-    setFailedImages(prev => ({
-      ...prev,
-      [camId]: true
-    }));
-  };
-
-  const getActiveImageUrl = (cam: HighwayCamera) => {
-    const timestamp = refreshKeys[cam.id] || 0;
-    const base = failedImages[cam.id] && cam.fallbackUrl ? cam.fallbackUrl : cam.imageUrl;
-    const separator = base.includes('?') ? '&' : '?';
-    return timestamp > 0 ? `${base}${separator}_t=${timestamp}` : base;
-  };
+  const portalUrl = activeCam?.portalUrl || 'https://www.jalanow.com';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-md animate-fadeIn">
       <div
         className="flex max-h-[92vh] sm:max-h-[85vh] w-full max-w-2xl flex-col rounded-t-3xl sm:rounded-3xl border border-slate-700/80 bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl overflow-hidden"
         role="dialog"
@@ -75,7 +71,7 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                {cameras.length} kamera dikesan di laluan {destinationName ? `ke ${destinationName}` : ''}
+                {cameras.length} kamera di laluan {destinationName ? `ke ${destinationName}` : ''}
               </p>
             </div>
           </div>
@@ -103,35 +99,62 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
             {activeCam && (
               <div className="relative border-b border-slate-800 bg-black/60 p-4">
                 <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-950 shadow-inner flex items-center justify-center">
-                  {failedImages[activeCam.id] ? (
-                    <div className="flex flex-col items-center justify-center p-6 text-center">
-                      <Camera className="h-10 w-10 text-slate-600 mb-2" />
-                      <p className="text-xs font-semibold text-slate-300">
-                        Suapan kamera sedang dikemas kini oleh {activeCam.source}
+                  {imgFailed ? (
+                    <div className="flex flex-col items-center justify-center p-6 text-center max-w-md">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30 mb-3">
+                        <Camera className="h-6 w-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-white">
+                        {activeCam.title}
+                      </h4>
+                      <p className="text-xs text-slate-300 mt-1 font-medium">
+                        {activeCam.highway} {activeCam.km ? `(${activeCam.km})` : ''} · {activeCam.source}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        {activeCam.title} ({activeCam.highway})
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                        Suapan rasmi LLM dilindungi dari hotlinking pihak ketiga. Ketik butang di bawah untuk membuka suapan rasmi langsung tanpa sekatan:
                       </p>
-                      <button
-                        onClick={(e) => handleRefresh(activeCam.id, e)}
-                        className="mt-3 flex items-center gap-1.5 rounded-lg bg-sky-600/80 hover:bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        Cuba Semula (Reload)
-                      </button>
+                      <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
+                        <a
+                          href={portalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+                        >
+                          <span>Buka Suapan Live di Portal Rasmi</span>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                        <button
+                          onClick={handleRefresh}
+                          className="flex items-center gap-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 transition-colors"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span>Cuba Semula</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <img
-                      src={getActiveImageUrl(activeCam)}
-                      alt={activeCam.title}
-                      className="h-full w-full object-cover"
-                      onError={() => handleImageError(activeCam.id)}
-                      loading="eager"
-                    />
+                    <>
+                      {isImgLoading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 z-10">
+                          <RefreshCw className="h-7 w-7 text-sky-400 animate-spin mb-2" />
+                          <span className="text-xs text-slate-400">Menyambung ke suapan {activeCam.source}...</span>
+                        </div>
+                      )}
+                      <img
+                        src={`${activeCam.imageUrl}${activeCam.imageUrl.includes('?') ? '&' : '?'}_t=${refreshKey}`}
+                        alt={activeCam.title}
+                        className="h-full w-full object-cover"
+                        onLoad={() => setIsImgLoading(false)}
+                        onError={() => {
+                          setIsImgLoading(false);
+                          setImgFailed(true);
+                        }}
+                      />
+                    </>
                   )}
 
                   {/* Overlaid Camera Metadata Badge */}
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20">
                     <span className="rounded-lg bg-slate-900/85 px-2.5 py-1 text-[11px] font-bold text-sky-300 backdrop-blur-md border border-slate-700/80">
                       {activeCam.highway} {activeCam.km ? `· ${activeCam.km}` : ''}
                     </span>
@@ -140,17 +163,29 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
                     </span>
                   </div>
 
-                  {/* Refresh Button */}
-                  <button
-                    onClick={(e) => handleRefresh(activeCam.id, e)}
-                    className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/85 text-slate-200 hover:text-white backdrop-blur-md border border-slate-700/80 transition-all active:scale-90"
-                    title="Muat semula gambar kamera"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
+                  {/* Top-Right Direct Portal Link Button */}
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20">
+                    <a
+                      href={portalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-8 items-center gap-1.5 rounded-lg bg-blue-600/90 hover:bg-blue-500 px-2.5 text-[11px] font-bold text-white backdrop-blur-md border border-blue-400/40 transition-all shadow"
+                      title="Buka suapan langsung penuh di portal rasmi"
+                    >
+                      <span>Live Feed</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    <button
+                      onClick={handleRefresh}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/85 text-slate-200 hover:text-white backdrop-blur-md border border-slate-700/80 transition-all active:scale-90"
+                      title="Muat semula suapan kamera"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
                   {/* Direction Badge */}
-                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/75 px-2 py-1 text-[10px] font-medium text-slate-300 backdrop-blur-sm">
+                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-md bg-black/75 px-2 py-1 text-[10px] font-medium text-slate-300 backdrop-blur-sm z-20">
                     <Compass className="h-3 w-3 text-sky-400" />
                     <span>{activeCam.direction}</span>
                   </div>
@@ -159,15 +194,16 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
                 <div className="mt-2.5 flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-white leading-tight">{activeCam.title}</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Lokasi: {activeCam.coordinates[1].toFixed(4)}°N, {activeCam.coordinates[0].toFixed(4)}°E
+                    <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                      <ShieldCheck className="h-3 w-3 text-emerald-400" />
+                      <span>Kamera Rasmi {activeCam.source} ({activeCam.coordinates[1].toFixed(3)}°N, {activeCam.coordinates[0].toFixed(3)}°E)</span>
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Horizontal Scroll / List of Other Cameras on Route */}
+            {/* Camera Selection List */}
             <div className="p-4 overflow-y-auto">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Pilih Kamera di Sepanjang Laluan ({cameras.length})
@@ -214,8 +250,8 @@ export const HighwayCCTVModal: React.FC<HighwayCCTVModalProps> = ({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-slate-800/80 bg-slate-950/80 px-5 py-3 text-[11px] text-slate-400">
           <div className="flex items-center gap-1">
-            <span>Sumber:</span>
-            <span className="font-semibold text-slate-300">LLM, PLUS & ITIS Malaysia</span>
+            <span>Disahkan:</span>
+            <span className="font-semibold text-slate-300">Lembaga Lebuhraya Malaysia & PLUS</span>
           </div>
           <button
             onClick={onClose}
