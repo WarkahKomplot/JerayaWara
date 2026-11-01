@@ -7,7 +7,8 @@ import {
   Zap,
   Camera,
   Eye,
-  EyeOff
+  EyeOff,
+  MonitorUp
 } from 'lucide-react';
 import { WeatherInfo } from '../../services/weather/weatherService';
 import { NearbyAESAlert } from '../../services/traffic/aesCameraData';
@@ -19,6 +20,8 @@ export interface SpeedometerOverlayProps {
   aesAlert: NearbyAESAlert | null;
   lang?: 'ms' | 'en';
   isNavigating?: boolean;
+  onOpenHud?: () => void;
+  onToggleRain?: () => void;
 }
 
 export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
@@ -27,7 +30,9 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
   weather,
   aesAlert,
   lang = 'ms',
-  isNavigating = false
+  isNavigating = false,
+  onOpenHud,
+  onToggleRain
 }) => {
   const [showInfoPill, setShowInfoPill] = useState(true);
   const [dateStr, setDateStr] = useState('');
@@ -113,17 +118,30 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
             </div>
           )}
 
+          {onToggleRain && (
+            <button
+              type="button"
+              onClick={onToggleRain}
+              className={`p-0.5 rounded transition-colors ${
+                weather?.isRaining ? 'text-sky-300 bg-sky-900/50' : 'text-slate-500 hover:text-sky-400'
+              }`}
+              title="Tukar status hujan"
+            >
+              <CloudRain className="h-3 w-3" />
+            </button>
+          )}
+
           <button
             onClick={() => setShowInfoPill(false)}
             className="p-0.5 text-slate-500 hover:text-slate-300"
-            title="Tutup info cuaca & tarikh"
+            title="Tutup info cuaca"
           >
             <EyeOff className="h-3 w-3" />
           </button>
         </div>
       )}
 
-      {/* 4. Circular Round Speedometer Icon + Companion Malaysian Speed Limit Badge */}
+      {/* 4. Circular Round Speedometer Icon + Companion Malaysian Speed Limit Badge + HUD button */}
       <div className="flex items-center gap-2">
         {/* Round Speedometer Gauge */}
         <div
@@ -159,6 +177,18 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
           </div>
         )}
 
+        {/* Windshield HUD Trigger Button */}
+        {onOpenHud && (
+          <button
+            type="button"
+            onClick={onOpenHud}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/90 text-cyan-400 hover:text-white border border-cyan-500/50 shadow-xl active:scale-95 transition-all"
+            title="Mod HUD Cermin Depan"
+          >
+            <MonitorUp className="h-4 w-4" />
+          </button>
+        )}
+
         {/* Re-expand Weather Pill if hidden */}
         {!showInfoPill && (
           <button
@@ -173,4 +203,3 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = ({
     </div>
   );
 };
-

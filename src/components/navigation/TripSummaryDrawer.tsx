@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone } from 'lucide-react';
+import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Download } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
+import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
+import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
+import { EnRouteServicesCard } from './EnRouteServicesCard';
 
 export interface TripSummaryDrawerProps {
   route: RouteResult;
@@ -11,6 +14,19 @@ export interface TripSummaryDrawerProps {
   isFoldable?: boolean;
   onSelectStep?: (index: number) => void;
   currentStepIndex?: number;
+  onExportGpx?: () => void;
+  amenities?: EnRouteAmenityWithDistance[];
+  amenityCategory?: 'all' | 'petrol' | 'ev';
+  onSelectAmenityCategory?: (cat: 'all' | 'petrol' | 'ev') => void;
+  shelter?: MotorcycleShelter | null;
+  trafficCongestion?: {
+    level: string;
+    label: string;
+    color: string;
+    speedKmh: number;
+    delayMinutes: number;
+    corridorName: string;
+  };
 }
 
 export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
@@ -20,9 +36,16 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
   onEndNavigation,
   isFoldable = false,
   onSelectStep,
-  currentStepIndex = 0
+  currentStepIndex = 0,
+  onExportGpx,
+  amenities,
+  amenityCategory = 'all',
+  onSelectAmenityCategory,
+  shelter,
+  trafficCongestion
 }) => {
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
+  const [activeCat, setActiveCat] = useState<'all' | 'petrol' | 'ev'>(amenityCategory);
 
   const calculateETA = (minutes: number) => {
     const d = new Date(Date.now() + minutes * 60000);
@@ -74,24 +97,26 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
           </div>
 
           {/* Traffic Condition Badge */}
-          {route.traffic && (
+          {(trafficCongestion || route.traffic) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-[10px] font-bold text-slate-400">LALULINTAS:</span>
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border"
                 style={{
-                  backgroundColor: `${route.traffic.colorHex}25`,
-                  borderColor: `${route.traffic.colorHex}60`,
-                  color: route.traffic.colorHex
+                  backgroundColor: `${(trafficCongestion?.color || route.traffic?.colorHex || '#10b981')}25`,
+                  borderColor: `${(trafficCongestion?.color || route.traffic?.colorHex || '#10b981')}60`,
+                  color: trafficCongestion?.color || route.traffic?.colorHex || '#10b981'
                 }}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: route.traffic.colorHex }}
+                  style={{ backgroundColor: trafficCongestion?.color || route.traffic?.colorHex || '#10b981' }}
                 />
-                {route.traffic.label}
-                {route.traffic.delayMinutes > 0 && ` (+${route.traffic.delayMinutes}m)`}
+                {trafficCongestion?.label || route.traffic?.label}
+                {((trafficCongestion?.delayMinutes || 0) > 0 || (route.traffic?.delayMinutes || 0) > 0) &&
+                  ` (+${trafficCongestion?.delayMinutes || route.traffic?.delayMinutes}m)`}
               </span>
-              {route.traffic.level === 'heavy' && (
+              {route.traffic?.level === 'heavy' && (
                 <span className="text-[10px] text-amber-300 font-medium truncate max-w-[200px]">
                   {route.traffic.reason}
                 </span>
@@ -134,6 +159,21 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
         )}
       </div>
 
+      {/* En-Route Services Card (Petrol, EV, Shelters) */}
+      {amenities && amenities.length > 0 && (
+        <div className="mt-3">
+          <EnRouteServicesCard
+            amenities={amenities}
+            activeCategory={activeCat}
+            onSelectCategory={cat => {
+              setActiveCat(cat);
+              onSelectAmenityCategory?.(cat);
+            }}
+            shelter={shelter}
+          />
+        </div>
+      )}
+
       {/* Expandable Step-by-Step Road Itinerary */}
       <div className="mt-3">
         <button
@@ -175,15 +215,28 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
         )}
       </div>
 
-      {/* Stop / Cancel Action */}
-      <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center">
-        <button
-          onClick={onEndNavigation}
-          className="flex items-center gap-2 rounded-xl bg-red-600/20 px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-600/30 transition-all border border-red-500/30"
-        >
-          <X className="h-4 w-4" />
-          <span>Exit Navigation</span>
-        </button>
+      {/* Stop / Cancel & Export Actions */}
+      <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEndNavigation}
+            className="flex items-center gap-2 rounded-xl bg-red-600/20 px-3.5 py-2 text-xs font-bold text-red-400 hover:bg-red-600/30 transition-all border border-red-500/30 active:scale-95"
+          >
+            <X className="h-4 w-4" />
+            <span>Exit Navigation</span>
+          </button>
+
+          {onExportGpx && (
+            <button
+              onClick={onExportGpx}
+              className="flex items-center gap-1.5 rounded-xl bg-slate-800/80 px-3 py-2 text-xs font-bold text-cyan-400 hover:bg-slate-700/80 transition-all border border-slate-700/60 active:scale-95"
+              title="Muat turun laluan sebagai fail GPX"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Eksport GPX</span>
+            </button>
+          )}
+        </div>
 
         <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>

@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
 import { TurnBanner } from '../../src/components/navigation/TurnBanner';
-import { SpeedometerOverlay } from '../../src/components/navigation/SpeedometerOverlay';
-import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
+import { ModeSelector } from '../../src/components/navigation/ModeSelector';
+import { SpeedometerOverlay } from '../../src/components/navigation/SpeedometerOverlay';
 import { RouteResult } from '../../src/services/routing/types';
+import { EnRouteAmenityWithDistance } from '../../src/services/amenities/types';
 
 describe('Navigation UI Components', () => {
   it('renders turn instruction and lane guidance accurately', () => {
@@ -24,7 +26,9 @@ describe('Navigation UI Components', () => {
   });
 
   it('renders mode switchers for Car, Motorcycle, and Walker', () => {
-    render(<ModeSelector selectedMode="car" onSelectMode={() => {}} />);
+    const handleSelect = vi.fn();
+    render(<ModeSelector selectedMode="car" onSelectMode={handleSelect} />);
+
     expect(screen.getByText(/Car/i)).toBeDefined();
     expect(screen.getByText(/Motorcycle/i)).toBeDefined();
     expect(screen.getByText(/Walker/i)).toBeDefined();
@@ -99,45 +103,39 @@ describe('Navigation UI Components', () => {
     const mockRoute: RouteResult = {
       coordinates: [[101.789, 2.993], [101.938, 2.725]],
       distanceKm: 42,
-      durationMinutes: 52,
-      steps: [
-        {
-          id: 'step-1',
-          instruction: 'Follow PLUS E2 South',
-          distanceMeters: 42000,
-          durationSeconds: 3120,
-          coordinates: [101.789, 2.993],
-          maneuver: 'straight'
-        }
-      ],
-      tollPlazaKeys: ['PLUS_KAJANG'],
+      durationMinutes: 38,
+      steps: [],
+      tollPlazaKeys: [],
       profile: 'car',
-      destinationName: 'Seremban City Centre',
-      traffic: {
-        level: 'heavy',
-        label: 'Sesak Waktu Puncak',
-        labelEn: 'Peak Hour Congestion',
-        delayMinutes: 17,
-        totalMinutes: 52,
-        delayFactor: 1.48,
-        reason: 'Waktu Puncak Petang di PLUS E2',
-        colorHex: '#ef4444',
-        corridorsDetected: ['PLUS E2']
-      }
+      destinationName: 'Kajang Toll Plaza'
     };
 
     render(
       <TripSummaryDrawer
         route={mockRoute}
-        tollBreakdown={null}
+        tollBreakdown={{
+          totalCost: 2.1,
+          currency: 'MYR',
+          items: [],
+          hasMotorcycleRestriction: false,
+          vehicleClass: 'car'
+        }}
         onOpenTolls={() => {}}
         onEndNavigation={() => {}}
+        trafficCongestion={{
+          level: 'moderate',
+          label: 'Sederhana',
+          color: '#f97316',
+          speedKmh: 65,
+          delayMinutes: 6,
+          corridorName: 'PLUS Sg Besi - Seremban'
+        }}
       />
     );
 
-    // Verify traffic condition badge
-    expect(screen.getByText(/Sesak Waktu Puncak/i)).toBeDefined();
-    expect(screen.getByText(/\+17m/i)).toBeDefined();
+    expect(screen.getByText(/LALULINTAS:/i)).toBeDefined();
+    expect(screen.getByText(/Sederhana/i)).toBeDefined();
+    expect(screen.getByText(/\+6m/i)).toBeDefined();
   });
 
   it('renders TurnBanner with voice toggle and bilingual BM/EN language toggle', () => {
@@ -146,7 +144,7 @@ describe('Navigation UI Components', () => {
 
     render(
       <TurnBanner
-        instruction="Belok ke kanan ke Jalan Bukit"
+        instruction="Belok kanan ke Jalan Tun Razak"
         distanceMeters={200}
         maneuver="turn_right"
         speedLimit={80}
@@ -173,7 +171,7 @@ describe('Navigation UI Components', () => {
     expect(handleToggleVoice).toHaveBeenCalledTimes(1);
   });
 
-  it('renders SpeedometerOverlay with round speed circle, weather, date and AES alerts', () => {
+  it('renders SpeedometerOverlay with round speed circle, weather, date, HUD button, and manual rain toggle', () => {
     const mockWeather = {
       tempC: 32,
       condition: 'Sunny',
@@ -197,6 +195,9 @@ describe('Navigation UI Components', () => {
       distanceMeters: 650
     };
 
+    const handleOpenHud = vi.fn();
+    const handleToggleRain = vi.fn();
+
     render(
       <SpeedometerOverlay
         currentSpeedKmH={85}
@@ -205,6 +206,8 @@ describe('Navigation UI Components', () => {
         aesAlert={mockAes}
         lang="ms"
         isNavigating={true}
+        onOpenHud={handleOpenHud}
+        onToggleRain={handleToggleRain}
       />
     );
 
@@ -222,6 +225,18 @@ describe('Navigation UI Components', () => {
     expect(screen.getByText(/AWAS: AES Slim River/i)).toBeDefined();
     expect(screen.getByText(/Jarak 650m/i)).toBeDefined();
 
+    // Verify HUD button and click
+    const hudBtn = screen.getByTitle(/Mod HUD Cermin Depan/i);
+    expect(hudBtn).toBeDefined();
+    fireEvent.click(hudBtn);
+    expect(handleOpenHud).toHaveBeenCalledTimes(1);
+
+    // Verify manual rain toggle click
+    const rainToggleBtn = screen.getByTitle(/Tukar status hujan/i);
+    expect(rainToggleBtn).toBeDefined();
+    fireEvent.click(rainToggleBtn);
+    expect(handleToggleRain).toHaveBeenCalledTimes(1);
+
     // Verify collapse info pill button
     const closePillBtn = screen.getByTitle(/Tutup info cuaca/i);
     fireEvent.click(closePillBtn);
@@ -229,5 +244,58 @@ describe('Navigation UI Components', () => {
     // Verify re-open pill button
     const openPillBtn = screen.getByTitle(/Papar Tarikh & Cuaca/i);
     expect(openPillBtn).toBeDefined();
+  });
+
+  it('renders TripSummaryDrawer with Export GPX button and EnRouteServicesCard', () => {
+    const mockRoute: RouteResult = {
+      coordinates: [[101.693, 3.141], [101.938, 2.725]],
+      distanceKm: 65,
+      durationMinutes: 45,
+      steps: [],
+      tollPlazaKeys: [],
+      profile: 'car',
+      destinationName: 'Seremban'
+    };
+
+    const mockAmenities: EnRouteAmenityWithDistance[] = [
+      {
+        id: 'pet-1',
+        name: 'Petronas R&R Seremban',
+        type: 'petronas',
+        brand: 'Petronas',
+        expressway: 'PLUS E2',
+        coordinates: [101.915, 2.715],
+        distanceKm: 22.4
+      }
+    ];
+
+    const handleExportGpx = vi.fn();
+
+    render(
+      <TripSummaryDrawer
+        route={mockRoute}
+        tollBreakdown={{
+          totalCost: 3.5,
+          currency: 'MYR',
+          items: [],
+          hasMotorcycleRestriction: false,
+          vehicleClass: 'car'
+        }}
+        onOpenTolls={() => {}}
+        onEndNavigation={() => {}}
+        onExportGpx={handleExportGpx}
+        amenities={mockAmenities}
+      />
+    );
+
+    // Verify GPX export button
+    const gpxBtn = screen.getByText(/Eksport GPX/i);
+    expect(gpxBtn).toBeDefined();
+    fireEvent.click(gpxBtn);
+    expect(handleExportGpx).toHaveBeenCalledTimes(1);
+
+    // Verify en-route amenity displayed
+    expect(screen.getByText(/Petronas R&R Seremban/i)).toBeDefined();
+    expect(screen.getByText(/22.4 km/i)).toBeDefined();
   });
 });

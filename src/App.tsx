@@ -9,6 +9,8 @@ import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
+import { WindshieldHudOverlay } from './components/hud/WindshieldHudOverlay';
+import { FavoritesQuickChips } from './components/favorites/FavoritesQuickChips';
 
 import { useGeolocation } from './hooks/useGeolocation';
 import { useDeviceTheme } from './hooks/useDeviceTheme';
@@ -24,8 +26,12 @@ import { SearchItem } from './services/search/types';
 import { regionManager } from './services/offline/regionManager';
 import { WeatherInfo, fetchLiveWeather } from './services/weather/weatherService';
 import { findNearbyAESCamera } from './services/traffic/aesCameraData';
+import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
+import { getUpcomingAmenities } from './services/amenities/amenitiesService';
+import { findNearbyMotorcycleShelter } from './services/amenities/motorcycleSheltersData';
+import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
 import { speakNavigationVoice } from './services/voice/voiceService';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves } from 'lucide-react';
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
@@ -40,6 +46,9 @@ export function App() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
 
+  // Windshield HUD Mode state
+  const [isHudOpen, setIsHudOpen] = useState(false);
+
   // Turn-by-Turn Voice Navigation Engine
   const {
     isVoiceEnabled,
@@ -52,9 +61,12 @@ export function App() {
     resetVoiceAnnouncements
   } = useVoiceNavigation();
 
-  // Live Weather & AES Speed Camera Alerts
+  // Live Weather & Rain condition (Supports manual offline override)
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
+  const [manualRainMode, setManualRainMode] = useState<boolean | null>(null);
   const lastWarnedAESRef = useRef<string>('');
+  const lastWarnedFloodRef = useRef<string>('');
+  const lastWarnedShelterRef = useRef<string>('');
 
   // Live Weather effect (updates with coordinate movement)
   const coordKey = `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
@@ -66,10 +78,39 @@ export function App() {
     return () => { isMounted = false; };
   }, [coordKey]);
 
+  // Effective rain status (manual toggle overrides automatic weather if set)
+  const isRaining = manualRainMode !== null ? manualRainMode : (weather?.isRaining ?? false);
+  const effectiveWeather: WeatherInfo | null = weather
+    ? {
+        ...weather,
+        isRaining,
+        condition: isRaining ? 'Rain' : weather.condition,
+        conditionBm: isRaining ? 'Hujan' : weather.conditionBm,
+        icon: isRaining ? 'rain' : weather.icon
+      }
+    : null;
+
   // AES Speed Camera Alert (within 1.2 km threshold)
   const nearbyAESAlert = useMemo(() => {
     return findNearbyAESCamera(coords, 1.2);
   }, [coords]);
+
+  // Banjir Kilat (Flash Flood) Blackspot Radar
+  const nearbyFloodHotspot = useMemo(() => {
+    return findNearbyFloodHotspot(coords, isRaining, 2.5);
+  }, [coords, isRaining]);
+
+  // Motorcycle Expressway Rain Shelter Radar
+  const nearbyMotorcycleShelter = useMemo(() => {
+    return findNearbyMotorcycleShelter(coords, isRaining, vehicleMode, 3.0);
+  }, [coords, isRaining, vehicleMode]);
+
+  // Expressway En-Route Petrol & EV Fast Charger Stop Planner
+  const [amenityCategory, setAmenityCategory] = useState<'all' | 'petrol' | 'ev'>('all');
+  const upcomingAmenities = useMemo(() => {
+    if (!activeRoute) return [];
+    return getUpcomingAmenities(activeRoute.coordinates, coords, amenityCategory, 3);
+  }, [activeRoute, coords, amenityCategory]);
 
   // Voice alert when approaching AES camera
   useEffect(() => {
@@ -86,6 +127,36 @@ export function App() {
       lastWarnedAESRef.current = '';
     }
   }, [nearbyAESAlert, isVoiceEnabled, voiceLanguage]);
+
+  // Voice alert when approaching Flash Flood hotspot during rain
+  useEffect(() => {
+    if (nearbyFloodHotspot && isVoiceEnabled) {
+      if (lastWarnedFloodRef.current !== nearbyFloodHotspot.id) {
+        lastWarnedFloodRef.current = nearbyFloodHotspot.id;
+        const msg = voiceLanguage === 'ms'
+          ? `Awas: Kawasan berisiko banjir kilat ${nearbyFloodHotspot.name} di hadapan. Berhati-hati memandu.`
+          : `Caution: Flash flood risk area ${nearbyFloodHotspot.name} ahead. Drive with extra care.`;
+        speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
+      }
+    } else if (!nearbyFloodHotspot) {
+      lastWarnedFloodRef.current = '';
+    }
+  }, [nearbyFloodHotspot, isVoiceEnabled, voiceLanguage]);
+
+  // Voice alert when approaching Motorcycle Rain Shelter during rain
+  useEffect(() => {
+    if (nearbyMotorcycleShelter && isVoiceEnabled) {
+      if (lastWarnedShelterRef.current !== nearbyMotorcycleShelter.id) {
+        lastWarnedShelterRef.current = nearbyMotorcycleShelter.id;
+        const msg = voiceLanguage === 'ms'
+          ? `Pondok teduhan hujan motosikal di hadapan pada ${nearbyMotorcycleShelter.kmMarker}.`
+          : `Motorcycle rain shelter ahead at ${nearbyMotorcycleShelter.kmMarker}.`;
+        speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
+      }
+    } else if (!nearbyMotorcycleShelter) {
+      lastWarnedShelterRef.current = '';
+    }
+  }, [nearbyMotorcycleShelter, isVoiceEnabled, voiceLanguage]);
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
@@ -136,23 +207,19 @@ export function App() {
     };
   }, [coords]);
 
-  // Handle destination selection from search or map click
+  // Handle destination selection from search, favorites, or map click
   const handleSelectDestination = async (item: SearchItem) => {
-    // 1. Immediately reset toll breakdown so previous search estimate never persists
     setTollBreakdown(null);
     setCurrentStepIndex(0);
     setIsNavigating(true);
     requestLock();
 
-    // 2. Calculate route for the new destination
     const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
     setActiveRoute(route);
 
-    // 3. Set destination-specific tolls
     const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
     setTollBreakdown(tolls);
 
-    // 4. Voice announcement: navigation start
     announceStart(item.title);
   };
 
@@ -162,7 +229,7 @@ export function App() {
       id: `pinned-${clickCoords[0].toFixed(4)}-${clickCoords[1].toFixed(4)}`,
       title: `Selected Location (${clickCoords[1].toFixed(3)}°N, ${clickCoords[0].toFixed(3)}°E)`,
       subtitle: 'Tapped point on Malaysia map',
-      category: 'landmark',
+      category: 'pinned',
       coordinates: clickCoords,
       regionId: 'pinned'
     };
@@ -195,6 +262,18 @@ export function App() {
     if (activeRoute?.steps[idx]?.coordinates) {
       setFocusStepCoord(activeRoute.steps[idx].coordinates);
     }
+  };
+
+  const handleExportGpx = () => {
+    if (!activeRoute) return;
+    const gpxContent = exportRouteToGPX(
+      activeRoute.destinationName || 'JerayaWara Route',
+      activeRoute.coordinates
+    );
+    const filename = `jerayawara-${(activeRoute.destinationName || 'route')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')}-${new Date().toISOString().slice(0, 10)}`;
+    downloadGPXFile(filename, gpxContent);
   };
 
   // Turn-by-Turn Voice Guidance Trigger: Speaks upcoming turn when step updates
@@ -307,6 +386,21 @@ export function App() {
         }
         topBanner={
           <div className="space-y-2">
+            {/* Banjir Kilat (Flash Flood) Caution Alert Banner */}
+            {nearbyFloodHotspot && (
+              <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-900 to-blue-900 border-2 border-cyan-400 px-3.5 py-2 text-xs font-black text-white shadow-2xl animate-pulse">
+                <Waves className="h-5 w-5 text-cyan-300 flex-shrink-0 animate-bounce" />
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-cyan-200">
+                    AWAS: {nearbyFloodHotspot.name}
+                  </div>
+                  <div className="text-[10px] font-medium text-cyan-100">
+                    Kawasan berisiko banjir kilat semasa hujan lebat. Pandu cermat.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Motorcycle Tunnel / Expressway Restriction Alert */}
             {vehicleMode === 'motorcycle' && tollBreakdown?.hasMotorcycleRestriction && (
               <div className="flex items-center gap-2 rounded-xl bg-red-600 px-3.5 py-2.5 text-xs font-black text-white shadow-xl animate-pulse border border-red-400/50">
@@ -339,7 +433,7 @@ export function App() {
               </div>
             )}
 
-            {/* Active Turn Guidance Banner or Search Bar */}
+            {/* Active Turn Guidance Banner or Search Bar with Favorites */}
             {isNavigating && currentStep ? (
               <TurnBanner
                 instruction={currentStep.instruction}
@@ -356,6 +450,18 @@ export function App() {
               />
             ) : (
               <div className="space-y-2">
+                <FavoritesQuickChips
+                  onSelectFavorite={fav =>
+                    handleSelectDestination({
+                      id: fav.id,
+                      title: fav.title,
+                      subtitle: fav.subtitle,
+                      category: 'pinned',
+                      coordinates: fav.coordinates,
+                      regionId: 'pinned'
+                    })
+                  }
+                />
                 <SearchBar
                   onSelectDestination={handleSelectDestination}
                   isOnline={navigator.onLine}
@@ -416,6 +522,11 @@ export function App() {
               isFoldable={isFoldableUnfolded}
               onSelectStep={handleSelectStep}
               currentStepIndex={currentStepIndex}
+              onExportGpx={handleExportGpx}
+              amenities={upcomingAmenities}
+              amenityCategory={amenityCategory}
+              onSelectAmenityCategory={setAmenityCategory}
+              shelter={nearbyMotorcycleShelter}
             />
           ) : undefined
         }
@@ -431,18 +542,43 @@ export function App() {
               focusStepCoord={focusStepCoord}
             />
 
-            {/* Circular Speedometer Gauge, Weather, Date & AES Camera Overlay in Lower-Left Corner */}
+            {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}
             <SpeedometerOverlay
               currentSpeedKmH={speedKmH}
               speedLimitKmH={currentStep?.speedLimitKmH}
-              weather={weather}
+              weather={effectiveWeather}
               aesAlert={nearbyAESAlert}
               lang={voiceLanguage}
               isNavigating={isNavigating}
+              onOpenHud={() => setIsHudOpen(true)}
+              onToggleRain={() =>
+                setManualRainMode(prev => (prev === null ? !(weather?.isRaining ?? false) : !prev))
+              }
             />
           </div>
         }
       />
+
+      {/* Windshield HUD Full-Screen Mirror Overlay */}
+      {isHudOpen && (
+        <WindshieldHudOverlay
+          speed={speedKmH}
+          speedLimit={currentStep?.speedLimitKmH || 0}
+          isNavigating={isNavigating}
+          currentInstruction={
+            currentStep
+              ? {
+                  maneuver: currentStep.maneuver,
+                  distanceMeters: currentStep.distanceMeters,
+                  instruction: currentStep.instruction
+                }
+              : undefined
+          }
+          roadName={activeRoute?.destinationName}
+          heading={heading}
+          onClose={() => setIsHudOpen(false)}
+        />
+      )}
 
       {/* Toll Breakdown Modal */}
       <TollBreakdownModal
