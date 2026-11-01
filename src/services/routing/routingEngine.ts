@@ -56,52 +56,159 @@ function formatStepInstruction(
   }
 }
 
-function detectTollsFromRoadNames(roadNames: string[], profile: VehicleClass): string[] {
+/**
+ * Accurately determines Malaysian toll plaza keys based on:
+ * - Specific entry and exit locations along closed expressway systems (PLUS E1, E2, LPT E8)
+ * - Barrier toll plazas crossed (MEX E20, KESAS E5, LDP E11, SMART E38, Penang Bridges)
+ * - Destination name and coordinates
+ * - Vehicle mode (motorcycle exemptions & SMART restrictions)
+ */
+export function determineRouteTollPlazas(
+  start: [number, number],
+  dest: [number, number],
+  destTitle: string,
+  roadNames: string[],
+  _distanceKmVal: number,
+  profile: VehicleClass
+): string[] {
   if (profile === 'walker') return [];
-  const detectedKeys = new Set<string>();
+  const keys: string[] = [];
+  const titleLower = destTitle.toLowerCase();
+  const roadStr = roadNames.join(' ').toLowerCase();
 
-  for (const name of roadNames) {
-    const lower = name.toLowerCase();
-    if (lower.includes('e1') || lower.includes('north-south') || lower.includes('plus')) {
-      if (lower.includes('duta')) detectedKeys.add('PLUS_JALAN_DUTA');
-      else if (lower.includes('tapah')) detectedKeys.add('PLUS_E1_TAPAH');
-      else if (lower.includes('ipoh')) detectedKeys.add('PLUS_IPOH_SELATAN');
-      else if (lower.includes('juru')) detectedKeys.add('PLUS_JURU');
-      else detectedKeys.add('PLUS_SG_BESI');
-    }
-    if (lower.includes('e2') || lower.includes('seremban') || lower.includes('sungai besi')) {
-      detectedKeys.add('PLUS_E2_SG_BESI_SEREMBAN');
-    }
-    if (lower.includes('e20') || lower.includes('mex') || lower.includes('maju')) {
-      detectedKeys.add('MEX_SERI_KEMBANGAN');
-    }
-    if (lower.includes('e5') || lower.includes('kesas') || lower.includes('shah alam')) {
-      detectedKeys.add('KESAS_SUNWAY');
-    }
-    if (lower.includes('e11') || lower.includes('ldp') || lower.includes('damansara-puchong')) {
-      detectedKeys.add('LDP_PENCHALA');
-    }
-    if (lower.includes('e38') || lower.includes('smart')) {
-      detectedKeys.add('SMART_TUNNEL');
-    }
-    if (lower.includes('e36') || lower.includes('penang bridge') || lower.includes('jambatan pulau pinang')) {
-      detectedKeys.add('PENANG_BRIDGE_1');
-    }
-    if (lower.includes('e28') || lower.includes('second penang')) {
-      detectedKeys.add('PENANG_BRIDGE_2');
-    }
-    if (lower.includes('e33') || lower.includes('duke')) {
-      detectedKeys.add('DUKE_BATU');
-    }
-    if (lower.includes('e23') || lower.includes('sprint')) {
-      detectedKeys.add('SPRINT_PANTAI');
-    }
-    if (lower.includes('e8') || lower.includes('karak') || lower.includes('lpt') || lower.includes('pantai timur')) {
-      detectedKeys.add('LPT_BENTONG');
+  const isE2 = roadStr.includes('e2') || roadStr.includes('seremban') || roadStr.includes('sungai besi') ||
+    (start[1] > dest[1] && dest[1] < 3.05 && Math.abs(dest[0] - 102.0) < 2.2);
+
+  const isE1 = roadStr.includes('e1') || roadStr.includes('duta') ||
+    (start[1] < dest[1] && dest[1] > 3.20 && Math.abs(dest[0] - 101.0) < 1.8);
+
+  const isE8 = roadStr.includes('e8') || roadStr.includes('karak') || roadStr.includes('lpt') ||
+    titleLower.includes('kuantan') || titleLower.includes('terengganu') || titleLower.includes('bentong') ||
+    (dest[0] > 102.0 && dest[1] > 3.4);
+
+  const isMex = roadStr.includes('e20') || roadStr.includes('mex') || roadStr.includes('maju') ||
+    titleLower.includes('putrajaya') || titleLower.includes('cyberjaya') || titleLower.includes('seri kembangan');
+
+  const isKesas = roadStr.includes('e5') || roadStr.includes('kesas') || roadStr.includes('shah alam exp');
+  const isLdp = roadStr.includes('e11') || roadStr.includes('ldp') || roadStr.includes('damansara-puchong');
+  const isSmart = roadStr.includes('e38') || roadStr.includes('smart') || titleLower.includes('smart tunnel');
+  const isPenangBridge = (dest[0] < 100.35 && dest[1] > 5.25 && dest[1] < 5.55) || titleLower.includes('penang bridge') || titleLower.includes('george town');
+
+  // 1. PLUS E2 Southbound (From KL / Sg Besi -> South destinations)
+  if (isE2 && start[1] > dest[1]) {
+    const lat = dest[1];
+    if (lat >= 2.88 || titleLower.includes('bangi') || titleLower.includes('kajang')) {
+      keys.push('PLUS_E2_SG_BESI_BANGI');
+    } else if (lat >= 2.78 || titleLower.includes('nilai')) {
+      keys.push('PLUS_E2_SG_BESI_NILAI');
+    } else if (lat >= 2.65 || titleLower.includes('seremban')) {
+      keys.push('PLUS_E2_SG_BESI_SEREMBAN');
+    } else if (lat >= 2.50 || titleLower.includes('senawang') || titleLower.includes('rembau')) {
+      keys.push('PLUS_E2_SG_BESI_REMBAU');
+    } else if (lat >= 2.35 || titleLower.includes('alor gajah') || titleLower.includes('simpang ampat')) {
+      keys.push('PLUS_E2_SG_BESI_ALOR_GAJAH');
+    } else if (lat >= 2.22 || titleLower.includes('melaka') || titleLower.includes('ayer keroh')) {
+      keys.push('PLUS_E2_SG_BESI_AYER_KEROH');
+    } else if (lat >= 2.15 || titleLower.includes('jasin')) {
+      keys.push('PLUS_E2_SG_BESI_JASIN');
+    } else if (lat >= 2.05 || titleLower.includes('tangkak') || titleLower.includes('muar')) {
+      keys.push('PLUS_E2_SG_BESI_TANGKAK');
+    } else if (lat >= 1.95 || titleLower.includes('pagoh')) {
+      keys.push('PLUS_E2_SG_BESI_PAGOH');
+    } else if (lat >= 1.88 || titleLower.includes('yong peng')) {
+      keys.push('PLUS_E2_SG_BESI_YONG_PENG');
+    } else if (lat >= 1.80 || titleLower.includes('ayer hitam') || titleLower.includes('batu pahat')) {
+      keys.push('PLUS_E2_SG_BESI_AYER_HITAM');
+    } else if (lat >= 1.68 || titleLower.includes('simpang renggam') || titleLower.includes('kluang')) {
+      keys.push('PLUS_E2_SG_BESI_SIMPANG_RENGGAM');
+    } else if (lat >= 1.60 || titleLower.includes('kulai')) {
+      keys.push('PLUS_E2_SG_BESI_KULAI');
+    } else if (lat >= 1.52 || titleLower.includes('senai')) {
+      keys.push('PLUS_E2_SG_BESI_SENAI');
+    } else {
+      keys.push('PLUS_E2_SG_BESI_SKUDAI');
     }
   }
 
-  return Array.from(detectedKeys);
+  // 2. PLUS E1 Northbound (From KL / Jalan Duta -> North destinations)
+  else if (isE1 && start[1] < dest[1]) {
+    const lat = dest[1];
+    if (lat <= 3.35 || titleLower.includes('rawang')) {
+      keys.push('PLUS_E1_JALAN_DUTA_RAWANG');
+    } else if (lat <= 3.55 || titleLower.includes('beruntung')) {
+      keys.push('PLUS_E1_JALAN_DUTA_BERUNTUNG');
+    } else if (lat <= 3.75 || titleLower.includes('malim')) {
+      keys.push('PLUS_E1_JALAN_DUTA_TG_MALIM');
+    } else if (lat <= 3.90 || titleLower.includes('slim river')) {
+      keys.push('PLUS_E1_JALAN_DUTA_SLIM_RIVER');
+    } else if (lat <= 4.05 || titleLower.includes('sungkai')) {
+      keys.push('PLUS_E1_JALAN_DUTA_SUNGKAI');
+    } else if (lat <= 4.15 || titleLower.includes('bidor')) {
+      keys.push('PLUS_E1_JALAN_DUTA_BIDOR');
+    } else if (lat <= 4.30 || titleLower.includes('tapah')) {
+      keys.push('PLUS_E1_JALAN_DUTA_TAPAH');
+    } else if (lat <= 4.50 || titleLower.includes('gopeng') || titleLower.includes('kampar')) {
+      keys.push('PLUS_E1_JALAN_DUTA_GOPENG');
+    } else if (lat <= 4.70 || titleLower.includes('ipoh')) {
+      keys.push('PLUS_E1_JALAN_DUTA_IPOH');
+    } else if (lat <= 4.85 || titleLower.includes('kangsar')) {
+      keys.push('PLUS_E1_JALAN_DUTA_KK');
+    } else if (lat <= 5.00 || titleLower.includes('taiping')) {
+      keys.push('PLUS_E1_JALAN_DUTA_TAIPING');
+    } else if (lat <= 5.25 || titleLower.includes('merah') || titleLower.includes('jawi')) {
+      keys.push('PLUS_E1_JALAN_DUTA_BUKIT_MERAH');
+    } else if (lat <= 5.55 || titleLower.includes('penang') || titleLower.includes('juru')) {
+      keys.push('PLUS_E1_JALAN_DUTA_JURU');
+    } else if (lat <= 5.95 || titleLower.includes('sungai petani')) {
+      keys.push('PLUS_E1_JALAN_DUTA_SG_PETANI');
+    } else {
+      keys.push('PLUS_E1_JALAN_DUTA_ALOR_SETAR');
+    }
+  }
+
+  // 3. Penang Bridge
+  if (isPenangBridge) {
+    keys.push('PENANG_BRIDGE_1');
+  }
+
+  // 4. East Coast E8 (LPT / Karak)
+  if (isE8) {
+    if (titleLower.includes('terengganu') || dest[1] > 4.5) {
+      keys.push('LPT_TERENGGANU');
+    } else if (titleLower.includes('kuantan') || dest[1] > 3.6) {
+      keys.push('LPT_KUANTAN');
+    } else {
+      keys.push('LPT_BENTONG');
+    }
+  }
+
+  // 5. MEX E20
+  if (isMex) {
+    if (titleLower.includes('putrajaya') || titleLower.includes('cyberjaya')) {
+      keys.push('MEX_PUTRAJAYA');
+    } else if (titleLower.includes('kembangan')) {
+      keys.push('MEX_SERI_KEMBANGAN');
+    } else {
+      keys.push('MEX_SALAK_SELATAN');
+    }
+  }
+
+  // 6. KESAS E5
+  if (isKesas) {
+    keys.push('KESAS_SUNWAY');
+  }
+
+  // 7. LDP E11
+  if (isLdp) {
+    keys.push('LDP_PENCHALA');
+  }
+
+  // 8. SMART E38
+  if (isSmart) {
+    keys.push('SMART_TUNNEL');
+  }
+
+  return keys;
 }
 
 /**
@@ -234,12 +341,21 @@ export function calculateOfflineRoute(
       }
     ];
 
+    const tollPlazaKeys = determineRouteTollPlazas(
+      start,
+      destination,
+      destinationTitle || roadMatch.corridor.name,
+      [roadMatch.corridor.name],
+      totalDistKm,
+      profile
+    );
+
     return {
       coordinates: fullCoordinates,
       distanceKm: totalDistKm,
       durationMinutes,
       steps,
-      tollPlazaKeys: profile === 'car' ? roadMatch.corridor.tollPlazaKeys : [],
+      tollPlazaKeys,
       profile,
       destinationName: destinationTitle || roadMatch.corridor.name
     };
@@ -260,6 +376,15 @@ export function calculateOfflineRoute(
     const lat = start[1] + (destination[1] - start[1]) * ratio + curve2;
     coordinates.push([lng, lat]);
   }
+
+  const fallbackTolls = determineRouteTollPlazas(
+    start,
+    destination,
+    destinationTitle || 'Destination',
+    [],
+    actualDistanceKm,
+    profile
+  );
 
   return {
     coordinates,
@@ -294,7 +419,7 @@ export function calculateOfflineRoute(
         coordinates: destination
       }
     ],
-    tollPlazaKeys: profile === 'car' && actualDistanceKm > 30 ? ['PLUS_SG_BESI'] : [],
+    tollPlazaKeys: fallbackTolls,
     profile,
     destinationName: destinationTitle || 'Destination'
   };
@@ -371,7 +496,14 @@ export async function calculateRoute(
             });
           }
 
-          const tollPlazaKeys = detectTollsFromRoadNames(roadNames, profile);
+          const tollPlazaKeys = determineRouteTollPlazas(
+            start,
+            destination,
+            destinationTitle || '',
+            roadNames,
+            distanceKmVal,
+            profile
+          );
 
           return {
             coordinates: rawCoordinates,

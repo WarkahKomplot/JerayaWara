@@ -11,15 +11,6 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'open'
   },
-  'MEX_PUTRAJAYA': {
-    id: 'MEX_PUTRAJAYA',
-    plazaName: 'Putrajaya Toll Plaza',
-    expressway: 'MEX E20',
-    carRate: 3.50,
-    motorcycleRate: 0.00,
-    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
-    system: 'open'
-  },
   'MEX_SERI_KEMBANGAN': {
     id: 'MEX_SERI_KEMBANGAN',
     plazaName: 'Seri Kembangan Toll Plaza',
@@ -29,22 +20,76 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'open'
   },
+  'MEX_PUTRAJAYA': {
+    id: 'MEX_PUTRAJAYA',
+    plazaName: 'Putrajaya Toll Plaza',
+    expressway: 'MEX E20',
+    carRate: 3.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
 
-  // PLUS E1 / E2 (Closed & Key Barrier Plazas)
+  // PLUS E2 Southbound (From Sg Besi)
   'PLUS_SG_BESI': {
     id: 'PLUS_SG_BESI',
-    plazaName: 'Sungai Besi Toll Plaza',
+    plazaName: 'Sungai Besi Toll Plaza (Entry)',
     expressway: 'PLUS E2',
     carRate: 2.80,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'open'
   },
+  'PLUS_E2_SG_BESI_BANGI': {
+    id: 'PLUS_E2_SG_BESI_BANGI',
+    plazaName: 'PLUS E2 (Sg. Besi → Bangi)',
+    expressway: 'PLUS E2',
+    carRate: 1.40,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_NILAI': {
+    id: 'PLUS_E2_SG_BESI_NILAI',
+    plazaName: 'PLUS E2 (Sg. Besi → Nilai)',
+    expressway: 'PLUS E2',
+    carRate: 2.90,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
   'PLUS_E2_SG_BESI_SEREMBAN': {
     id: 'PLUS_E2_SG_BESI_SEREMBAN',
     plazaName: 'PLUS E2 (Sg. Besi → Seremban)',
     expressway: 'PLUS E2',
     carRate: 4.10,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_SENAWANG': {
+    id: 'PLUS_E2_SG_BESI_SENAWANG',
+    plazaName: 'PLUS E2 (Sg. Besi → Senawang)',
+    expressway: 'PLUS E2',
+    carRate: 4.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_REMBAU': {
+    id: 'PLUS_E2_SG_BESI_REMBAU',
+    plazaName: 'PLUS E2 (Sg. Besi → Rembau / Pedas)',
+    expressway: 'PLUS E2',
+    carRate: 7.20,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_ALOR_GAJAH': {
+    id: 'PLUS_E2_SG_BESI_ALOR_GAJAH',
+    plazaName: 'PLUS E2 (Sg. Besi → Simpang Ampat / Alor Gajah)',
+    expressway: 'PLUS E2',
+    carRate: 11.20,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'closed'
@@ -58,11 +103,157 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'closed'
   },
+  'PLUS_E2_SG_BESI_JASIN': {
+    id: 'PLUS_E2_SG_BESI_JASIN',
+    plazaName: 'PLUS E2 (Sg. Besi → Jasin)',
+    expressway: 'PLUS E2',
+    carRate: 18.20,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_TANGKAK': {
+    id: 'PLUS_E2_SG_BESI_TANGKAK',
+    plazaName: 'PLUS E2 (Sg. Besi → Tangkak / Muar)',
+    expressway: 'PLUS E2',
+    carRate: 21.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_PAGOH': {
+    id: 'PLUS_E2_SG_BESI_PAGOH',
+    plazaName: 'PLUS E2 (Sg. Besi → Pagoh)',
+    expressway: 'PLUS E2',
+    carRate: 24.60,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_YONG_PENG': {
+    id: 'PLUS_E2_SG_BESI_YONG_PENG',
+    plazaName: 'PLUS E2 (Sg. Besi → Yong Peng)',
+    expressway: 'PLUS E2',
+    carRate: 28.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_AYER_HITAM': {
+    id: 'PLUS_E2_SG_BESI_AYER_HITAM',
+    plazaName: 'PLUS E2 (Sg. Besi → Ayer Hitam)',
+    expressway: 'PLUS E2',
+    carRate: 31.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_SIMPANG_RENGGAM': {
+    id: 'PLUS_E2_SG_BESI_SIMPANG_RENGGAM',
+    plazaName: 'PLUS E2 (Sg. Besi → Simpang Renggam / Kluang)',
+    expressway: 'PLUS E2',
+    carRate: 34.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_KULAI': {
+    id: 'PLUS_E2_SG_BESI_KULAI',
+    plazaName: 'PLUS E2 (Sg. Besi → Kulai)',
+    expressway: 'PLUS E2',
+    carRate: 40.10,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E2_SG_BESI_SENAI': {
+    id: 'PLUS_E2_SG_BESI_SENAI',
+    plazaName: 'PLUS E2 (Sg. Besi → Senai Airport)',
+    expressway: 'PLUS E2',
+    carRate: 41.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
   'PLUS_E2_SG_BESI_SKUDAI': {
     id: 'PLUS_E2_SG_BESI_SKUDAI',
-    plazaName: 'PLUS E2 (Sg. Besi → Skudai JB)',
+    plazaName: 'PLUS E2 (Sg. Besi → Skudai Johor Bahru)',
     expressway: 'PLUS E2',
     carRate: 43.10,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+
+  // PLUS E1 Northbound (From Jalan Duta)
+  'PLUS_E1_JALAN_DUTA_RAWANG': {
+    id: 'PLUS_E1_JALAN_DUTA_RAWANG',
+    plazaName: 'PLUS E1 (Jalan Duta → Rawang)',
+    expressway: 'PLUS E1',
+    carRate: 2.60,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_BERUNTUNG': {
+    id: 'PLUS_E1_JALAN_DUTA_BERUNTUNG',
+    plazaName: 'PLUS E1 (Jalan Duta → Bukit Beruntung)',
+    expressway: 'PLUS E1',
+    carRate: 3.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_TG_MALIM': {
+    id: 'PLUS_E1_JALAN_DUTA_TG_MALIM',
+    plazaName: 'PLUS E1 (Jalan Duta → Tanjung Malim)',
+    expressway: 'PLUS E1',
+    carRate: 8.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_SLIM_RIVER': {
+    id: 'PLUS_E1_JALAN_DUTA_SLIM_RIVER',
+    plazaName: 'PLUS E1 (Jalan Duta → Slim River)',
+    expressway: 'PLUS E1',
+    carRate: 12.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_SUNGKAI': {
+    id: 'PLUS_E1_JALAN_DUTA_SUNGKAI',
+    plazaName: 'PLUS E1 (Jalan Duta → Sungkai)',
+    expressway: 'PLUS E1',
+    carRate: 16.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_BIDOR': {
+    id: 'PLUS_E1_JALAN_DUTA_BIDOR',
+    plazaName: 'PLUS E1 (Jalan Duta → Bidor)',
+    expressway: 'PLUS E1',
+    carRate: 18.90,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_TAPAH': {
+    id: 'PLUS_E1_JALAN_DUTA_TAPAH',
+    plazaName: 'PLUS E1 (Jalan Duta → Tapah R&R)',
+    expressway: 'PLUS E1',
+    carRate: 20.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_GOPENG': {
+    id: 'PLUS_E1_JALAN_DUTA_GOPENG',
+    plazaName: 'PLUS E1 (Jalan Duta → Gopeng / Kampar)',
+    expressway: 'PLUS E1',
+    carRate: 24.30,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'closed'
@@ -71,7 +262,34 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     id: 'PLUS_E1_JALAN_DUTA_IPOH',
     plazaName: 'PLUS E1 (Jalan Duta → Ipoh Selatan)',
     expressway: 'PLUS E1',
-    carRate: 23.40,
+    carRate: 26.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_KK': {
+    id: 'PLUS_E1_JALAN_DUTA_KK',
+    plazaName: 'PLUS E1 (Jalan Duta → Kuala Kangsar)',
+    expressway: 'PLUS E1',
+    carRate: 33.60,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_TAIPING': {
+    id: 'PLUS_E1_JALAN_DUTA_TAIPING',
+    plazaName: 'PLUS E1 (Jalan Duta → Taiping / Changkat Jering)',
+    expressway: 'PLUS E1',
+    carRate: 38.50,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_BUKIT_MERAH': {
+    id: 'PLUS_E1_JALAN_DUTA_BUKIT_MERAH',
+    plazaName: 'PLUS E1 (Jalan Duta → Bukit Merah)',
+    expressway: 'PLUS E1',
+    carRate: 42.10,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'closed'
@@ -83,6 +301,53 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     carRate: 43.30,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_SG_PETANI': {
+    id: 'PLUS_E1_JALAN_DUTA_SG_PETANI',
+    plazaName: 'PLUS E1 (Jalan Duta → Sungai Petani)',
+    expressway: 'PLUS E1',
+    carRate: 46.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+  'PLUS_E1_JALAN_DUTA_ALOR_SETAR': {
+    id: 'PLUS_E1_JALAN_DUTA_ALOR_SETAR',
+    plazaName: 'PLUS E1 (Jalan Duta → Alor Setar / Kedah)',
+    expressway: 'PLUS E1',
+    carRate: 52.80,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'closed'
+  },
+
+  // East Coast E8 (Karak & LPT)
+  'LPT_BENTONG': {
+    id: 'LPT_BENTONG',
+    plazaName: 'Karak Highway (Gombak + Bentong)',
+    expressway: 'Karak Expressway E8',
+    carRate: 8.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID'],
+    system: 'open'
+  },
+  'LPT_KUANTAN': {
+    id: 'LPT_KUANTAN',
+    plazaName: 'East Coast Expressway (KL → Kuantan)',
+    expressway: 'LPT E8',
+    carRate: 21.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID'],
+    system: 'closed'
+  },
+  'LPT_TERENGGANU': {
+    id: 'LPT_TERENGGANU',
+    plazaName: 'East Coast Expressway (KL → Kuala Terengganu)',
+    expressway: 'LPT2 E8',
+    carRate: 36.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID'],
     system: 'closed'
   },
 
@@ -189,4 +454,3 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     system: 'open'
   }
 };
-

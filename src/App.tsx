@@ -51,13 +51,19 @@ export function App() {
 
   // Handle destination selection from search or map click
   const handleSelectDestination = async (item: SearchItem) => {
-    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
-    setActiveRoute(route);
-    const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
-    setTollBreakdown(tolls);
+    // 1. Immediately reset toll breakdown so previous search estimate never persists
+    setTollBreakdown(null);
     setCurrentStepIndex(0);
     setIsNavigating(true);
     requestLock();
+
+    // 2. Calculate route for the new destination
+    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
+    setActiveRoute(route);
+
+    // 3. Set destination-specific tolls
+    const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
+    setTollBreakdown(tolls);
   };
 
   // Direct map click to start navigation to any point in Malaysia
@@ -77,6 +83,7 @@ export function App() {
   const handleModeChange = async (mode: VehicleClass) => {
     setVehicleMode(mode);
     if (activeRoute) {
+      setTollBreakdown(null);
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
       const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
       setActiveRoute(reRoute);
