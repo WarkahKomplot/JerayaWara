@@ -45,7 +45,8 @@ export class ErrorBoundary extends Component<Props, State> {
       console.warn('Cache purge failed:', err);
     } finally {
       if (typeof window !== 'undefined') {
-        window.location.reload();
+        // Cache-busting navigation forces Safari to bypass disk cache
+        window.location.href = window.location.pathname + '?t=' + Date.now();
       }
     }
   };
@@ -88,7 +89,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               onClick={() => {
                 if (typeof window !== 'undefined') {
-                  window.location.reload();
+                  window.location.href = window.location.pathname + '?t=' + Date.now();
                 }
               }}
               className="rounded-2xl bg-slate-800 hover:bg-slate-700 px-6 py-3 text-xs font-bold text-slate-300 transition-all active:scale-95"

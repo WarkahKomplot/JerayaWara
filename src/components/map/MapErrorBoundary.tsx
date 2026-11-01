@@ -48,3 +48,4 @@ export class MapErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+
