@@ -30,7 +30,17 @@ function formatStepInstruction(
 ): string {
   const road = roadName && roadName !== 'unnamed' && roadName.trim() !== '' ? roadName : 'primary road';
 
-  if (profile === 'motorcycle' && (road.toLowerCase().includes('plus') || road.toLowerCase().includes('kesas') || road.toLowerCase().includes('federal'))) {
+  if (profile === 'motorcycle' && (
+    road.toLowerCase().includes('plus') ||
+    road.toLowerCase().includes('kesas') ||
+    road.toLowerCase().includes('federal') ||
+    road.toLowerCase().includes('lebuhraya') ||
+    road.toLowerCase().includes('expressway') ||
+    road.toLowerCase().includes('utara') ||
+    road.toLowerCase().includes('selatan') ||
+    road.toLowerCase().includes('e1') ||
+    road.toLowerCase().includes('e2')
+  )) {
     if (maneuver === 'straight') {
       return `Follow dedicated motorcycle lane (Lorong Motosikal) on ${road}`;
     }
@@ -381,7 +391,13 @@ export async function calculateRoute(
             const isMoto = profile === 'motorcycle' && (
               s.name?.toLowerCase().includes('plus') ||
               s.name?.toLowerCase().includes('federal') ||
-              s.name?.toLowerCase().includes('kesas')
+              s.name?.toLowerCase().includes('kesas') ||
+              s.name?.toLowerCase().includes('lebuhraya') ||
+              s.name?.toLowerCase().includes('expressway') ||
+              s.name?.toLowerCase().includes('utara') ||
+              s.name?.toLowerCase().includes('selatan') ||
+              s.name?.toLowerCase().includes('e1') ||
+              s.name?.toLowerCase().includes('e2')
             );
 
             turnSteps.push({
