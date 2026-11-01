@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TurnBanner } from '../../src/components/navigation/TurnBanner';
+import { SpeedometerOverlay } from '../../src/components/navigation/SpeedometerOverlay';
 import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
@@ -170,5 +171,63 @@ describe('Navigation UI Components', () => {
 
     fireEvent.click(muteBtn);
     expect(handleToggleVoice).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders SpeedometerOverlay with round speed circle, weather, date and AES alerts', () => {
+    const mockWeather = {
+      tempC: 32,
+      condition: 'Sunny',
+      conditionBm: 'Cerah',
+      icon: 'sunny' as const,
+      isRaining: false,
+      fetchedAt: Date.now()
+    };
+
+    const mockAes = {
+      camera: {
+        id: 'aes-1',
+        name: 'AES Slim River (Arah Selatan)',
+        highway: 'PLUS E1',
+        km: 'KM 375.9',
+        speedLimitKmH: 110,
+        direction: 'Southbound',
+        coordinates: [101.4012, 3.8291] as [number, number],
+        locationDescription: 'Slim River'
+      },
+      distanceMeters: 650
+    };
+
+    render(
+      <SpeedometerOverlay
+        currentSpeedKmH={85}
+        speedLimitKmH={110}
+        weather={mockWeather}
+        aesAlert={mockAes}
+        lang="ms"
+        isNavigating={true}
+      />
+    );
+
+    // Verify circular speedometer
+    expect(screen.getByText('85')).toBeDefined();
+    expect(screen.getAllByText(/KM\/H/i).length).toBeGreaterThan(0);
+
+    // Verify speed limit Malaysian round badge
+    expect(screen.getByText('110')).toBeDefined();
+
+    // Verify weather & date
+    expect(screen.getByText(/32°C/i)).toBeDefined();
+
+    // Verify AES alert banner
+    expect(screen.getByText(/AWAS: AES Slim River/i)).toBeDefined();
+    expect(screen.getByText(/Jarak 650m/i)).toBeDefined();
+
+    // Verify collapse info pill button
+    const closePillBtn = screen.getByTitle(/Tutup info cuaca/i);
+    fireEvent.click(closePillBtn);
+
+    // Verify re-open pill button
+    const openPillBtn = screen.getByTitle(/Papar Tarikh & Cuaca/i);
+    expect(openPillBtn).toBeDefined();
   });
 });

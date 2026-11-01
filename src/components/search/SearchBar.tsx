@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, X, Building2, Coffee, CornerUpRight } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  X,
+  Building2,
+  Coffee,
+  CornerUpRight,
+  ShoppingBag,
+  HeartPulse,
+  GraduationCap,
+  Train,
+  Navigation
+} from 'lucide-react';
 import { SearchItem } from '../../services/search/types';
 import { searchDestinations } from '../../services/search/searchEngine';
 
@@ -61,6 +73,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         return <CornerUpRight className="h-4 w-4 text-emerald-400" />;
       case 'city':
         return <Building2 className="h-4 w-4 text-blue-400" />;
+      case 'shopping':
+        return <ShoppingBag className="h-4 w-4 text-pink-400" />;
+      case 'hospital':
+        return <HeartPulse className="h-4 w-4 text-rose-400" />;
+      case 'university':
+        return <GraduationCap className="h-4 w-4 text-purple-400" />;
+      case 'transit':
+        return <Train className="h-4 w-4 text-amber-500" />;
+      case 'pinned':
+        return <Navigation className="h-4 w-4 text-cyan-400" />;
       default:
         return <MapPin className="h-4 w-4 text-red-400" />;
     }
@@ -78,7 +100,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setIsOpen(results.length > 0)}
-          placeholder="Search Malaysian city, R&R, exit (e.g. Tapah)..."
+          placeholder="Search Malaysian city, mall, coords (e.g. Tapah)..."
           className="w-full bg-transparent px-3 py-3.5 text-sm font-medium text-white placeholder-slate-400 focus:outline-none"
         />
         {query && (

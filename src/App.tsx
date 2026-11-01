@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer } from './components/map/MapContainer';
 import { TurnBanner } from './components/navigation/TurnBanner';
+import { SpeedometerOverlay } from './components/navigation/SpeedometerOverlay';
 import { ModeSelector } from './components/navigation/ModeSelector';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
@@ -21,6 +22,9 @@ import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
 import { SearchItem } from './services/search/types';
 import { regionManager } from './services/offline/regionManager';
+import { WeatherInfo, fetchLiveWeather } from './services/weather/weatherService';
+import { findNearbyAESCamera } from './services/traffic/aesCameraData';
+import { speakNavigationVoice } from './services/voice/voiceService';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap } from 'lucide-react';
 
 export function App() {
@@ -47,6 +51,41 @@ export function App() {
     announceArrive,
     resetVoiceAnnouncements
   } = useVoiceNavigation();
+
+  // Live Weather & AES Speed Camera Alerts
+  const [weather, setWeather] = useState<WeatherInfo | null>(null);
+  const lastWarnedAESRef = useRef<string>('');
+
+  // Live Weather effect (updates with coordinate movement)
+  const coordKey = `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
+  useEffect(() => {
+    let isMounted = true;
+    fetchLiveWeather(coords).then(w => {
+      if (isMounted) setWeather(w);
+    });
+    return () => { isMounted = false; };
+  }, [coordKey]);
+
+  // AES Speed Camera Alert (within 1.2 km threshold)
+  const nearbyAESAlert = useMemo(() => {
+    return findNearbyAESCamera(coords, 1.2);
+  }, [coords]);
+
+  // Voice alert when approaching AES camera
+  useEffect(() => {
+    if (nearbyAESAlert && isVoiceEnabled) {
+      const alertKey = `${nearbyAESAlert.camera.id}-${nearbyAESAlert.camera.speedLimitKmH}`;
+      if (lastWarnedAESRef.current !== alertKey) {
+        lastWarnedAESRef.current = alertKey;
+        const msg = voiceLanguage === 'ms'
+          ? `Perhatian: Kamera AES di hadapan. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
+          : `Caution: Speed camera ahead. Speed limit ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`;
+        speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
+      }
+    } else if (!nearbyAESAlert) {
+      lastWarnedAESRef.current = '';
+    }
+  }, [nearbyAESAlert, isVoiceEnabled, voiceLanguage]);
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
@@ -381,15 +420,27 @@ export function App() {
           ) : undefined
         }
         childrenMap={
-          <MapContainer
-            userLocation={coords}
-            heading={heading}
-            theme={theme}
-            routePolyline={activeRoute?.coordinates}
-            onMapClick={handleMapClick}
-            isNavigating={isNavigating}
-            focusStepCoord={focusStepCoord}
-          />
+          <div className="relative h-full w-full">
+            <MapContainer
+              userLocation={coords}
+              heading={heading}
+              theme={theme}
+              routePolyline={activeRoute?.coordinates}
+              onMapClick={handleMapClick}
+              isNavigating={isNavigating}
+              focusStepCoord={focusStepCoord}
+            />
+
+            {/* Circular Speedometer Gauge, Weather, Date & AES Camera Overlay in Lower-Left Corner */}
+            <SpeedometerOverlay
+              currentSpeedKmH={speedKmH}
+              speedLimitKmH={currentStep?.speedLimitKmH}
+              weather={weather}
+              aesAlert={nearbyAESAlert}
+              lang={voiceLanguage}
+              isNavigating={isNavigating}
+            />
+          </div>
         }
       />
 
