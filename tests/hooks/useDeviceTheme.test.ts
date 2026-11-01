@@ -74,3 +74,4 @@ describe('useDeviceTheme (Malaysia Solar & Day/Night Management)', () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 });
+

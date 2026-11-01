@@ -19,12 +19,12 @@ import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
 import { SearchItem } from './services/search/types';
 import { regionManager } from './services/offline/regionManager';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap } from 'lucide-react';
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
   const { theme, themeMode, cycleThemeMode, solarInfo } = useDeviceTheme(coords);
-  const { requestLock, releaseLock } = useWakeLock();
+  const { isLocked, isScreenAwakeEnabled, toggleWakeLock, requestLock, releaseLock } = useWakeLock(true);
   const { isFoldableUnfolded } = useFoldableDetection();
 
   const [vehicleMode, setVehicleMode] = useState<VehicleClass>('car');
@@ -197,6 +197,30 @@ export function App() {
                     <span className="text-[10px] font-black tracking-wider text-slate-200">DAY</span>
                   </>
                 )}
+              </button>
+
+              {/* Anti-Sleep Screen Lock Button */}
+              <button
+                onClick={toggleWakeLock}
+                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold border shadow transition-all active:scale-95 ${
+                  isScreenAwakeEnabled
+                    ? 'bg-slate-800/90 text-amber-300 border-amber-500/50 shadow-amber-500/10'
+                    : 'bg-slate-800/60 text-slate-400 border-slate-700/50'
+                }`}
+                title={
+                  isScreenAwakeEnabled
+                    ? `Screen Awake Active: Display will NOT sleep (Engine: ${isLocked ? 'Hardware Locked' : 'Standby'})`
+                    : 'Screen Awake Off: Using default system screen timeout'
+                }
+              >
+                <Zap
+                  className={`h-3.5 w-3.5 ${
+                    isScreenAwakeEnabled ? 'text-amber-400 fill-amber-400' : 'text-slate-500'
+                  }`}
+                />
+                <span className="hidden md:inline text-[10px] font-black tracking-wider">
+                  {isScreenAwakeEnabled ? 'SCREEN ON' : 'TIMEOUT'}
+                </span>
               </button>
             </div>
           </div>

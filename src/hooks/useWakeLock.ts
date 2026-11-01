@@ -1,74 +1,54 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { wakeLockService, WakeLockType } from '../services/device/wakeLockService';
 
-export function useWakeLock() {
-  const [isLocked, setIsLocked] = useState(false);
-  const sentinelRef = useRef<any>(null);
-  const isRequestedRef = useRef(false);
+export function useWakeLock(autoEnableOnMount: boolean = true) {
+  const [isLocked, setIsLocked] = useState(() => wakeLockService.isActive());
+  const [lockType, setLockType] = useState<WakeLockType>(() => wakeLockService.getLockType());
+  const [isScreenAwakeEnabled, setIsScreenAwakeEnabled] = useState(autoEnableOnMount);
+
+  useEffect(() => {
+    const unsubscribe = wakeLockService.subscribe((active, type) => {
+      setIsLocked(active);
+      setLockType(type);
+    });
+
+    if (autoEnableOnMount) {
+      wakeLockService.enable();
+    }
+
+    return () => {
+      unsubscribe();
+    };
+  }, [autoEnableOnMount]);
 
   const requestLock = useCallback(async () => {
-    isRequestedRef.current = true;
-    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock?.request) {
-      try {
-        if (!sentinelRef.current) {
-          const sentinel = await (navigator as any).wakeLock.request('screen');
-          sentinelRef.current = sentinel;
-          setIsLocked(true);
-
-          sentinel.addEventListener('release', () => {
-            sentinelRef.current = null;
-            setIsLocked(false);
-          });
-        }
-      } catch {
-        setIsLocked(false);
-      }
-    }
+    setIsScreenAwakeEnabled(true);
+    return await wakeLockService.enable();
   }, []);
 
   const releaseLock = useCallback(() => {
-    isRequestedRef.current = false;
-    if (sentinelRef.current) {
-      try {
-        const p = sentinelRef.current.release?.();
-        if (p && typeof p.catch === 'function') {
-          p.catch(() => {});
-        }
-      } catch {
-        // Ignore
-      }
-      sentinelRef.current = null;
-      setIsLocked(false);
-    }
+    setIsScreenAwakeEnabled(false);
+    wakeLockService.disable();
   }, []);
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isRequestedRef.current) {
-        requestLock();
+  const toggleWakeLock = useCallback(() => {
+    setIsScreenAwakeEnabled(prev => {
+      const next = !prev;
+      if (next) {
+        wakeLockService.enable();
+      } else {
+        wakeLockService.disable();
       }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Clean up lock when hook unmounts
-      if (sentinelRef.current) {
-        try {
-          const p = sentinelRef.current.release?.();
-          if (p && typeof p.catch === 'function') {
-            p.catch(() => {});
-          }
-        } catch {
-          // Ignore
-        }
-        sentinelRef.current = null;
-      }
-    };
-  }, [requestLock]);
+      return next;
+    });
+  }, []);
 
   return {
     isLocked,
+    lockType,
+    isScreenAwakeEnabled,
     requestLock,
-    releaseLock
+    releaseLock,
+    toggleWakeLock
   };
 }

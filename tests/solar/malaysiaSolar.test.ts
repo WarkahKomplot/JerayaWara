@@ -45,3 +45,4 @@ describe('Malaysia Astronomical Solar Calculation', () => {
     expect(sabahResult.sunset.getTime()).toBeLessThan(klResult.sunset.getTime());
   });
 });
+
