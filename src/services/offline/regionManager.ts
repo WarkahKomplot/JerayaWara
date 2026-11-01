@@ -143,6 +143,15 @@ export class RegionManager {
 
       if (!ready && !isCurrentlyDownloading) {
         triggered.push(region.id);
+        // Immediately mark as downloading to prevent race conditions from rapid GPS updates
+        this.activeDownloads.set(region.id, {
+          regionId: region.id,
+          progressPercent: 0,
+          downloadedMB: 0,
+          totalMB: region.sizeMB,
+          status: 'downloading'
+        });
+
         // Exponential backoff retry loop (tries up to 3 times: immediate, 2s, 6s)
         (async () => {
           let attempts = 0;

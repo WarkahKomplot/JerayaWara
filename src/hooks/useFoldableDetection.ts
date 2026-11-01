@@ -14,15 +14,22 @@ export function useFoldableDetection() {
   });
 
   useEffect(() => {
+    let rafId: number | null = null;
     const handleResize = () => {
-      setWindowDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setWindowDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
       });
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const isFoldableUnfolded = checkFoldableUnfolded(

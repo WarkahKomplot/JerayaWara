@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer } from './components/map/MapContainer';
 import { TurnBanner } from './components/navigation/TurnBanner';
 import { ModeSelector } from './components/navigation/ModeSelector';
@@ -23,7 +23,7 @@ import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite } fro
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
-  const { theme, toggleTheme } = useDeviceTheme();
+  const { theme, themeMode, cycleThemeMode, solarInfo } = useDeviceTheme(coords);
   const { requestLock, releaseLock } = useWakeLock();
   const { isFoldableUnfolded } = useFoldableDetection();
 
@@ -37,16 +37,45 @@ export function App() {
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const [autoDownloadNotice, setAutoDownloadNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCheckedCoordRef = useRef<[number, number] | null>(null);
+  const lastCheckedTimeRef = useRef<number>(0);
 
-  // Proximity Geofencing: Check border crossing every time GPS updates
+  // Proximity Geofencing: Throttled check to avoid excessive DB queries and memory churn
   useEffect(() => {
     if (!coords) return;
+
+    const now = Date.now();
+    // Only check if at least 15 seconds have passed or user has moved significantly (> 500m)
+    if (lastCheckedCoordRef.current && now - lastCheckedTimeRef.current < 15000) {
+      const [prevLng, prevLat] = lastCheckedCoordRef.current;
+      const dLng = Math.abs(coords[0] - prevLng);
+      const dLat = Math.abs(coords[1] - prevLat);
+      if (dLng < 0.005 && dLat < 0.005) {
+        return;
+      }
+    }
+
+    lastCheckedCoordRef.current = coords;
+    lastCheckedTimeRef.current = now;
+
     regionManager.handleProximityGeofence(coords).then(triggered => {
       if (triggered.length > 0) {
         setAutoDownloadNotice(`Approaching boundary — Auto-downloading ${triggered.join(', ')} pack`);
-        setTimeout(() => setAutoDownloadNotice(null), 5000);
+        if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+        noticeTimerRef.current = setTimeout(() => {
+          setAutoDownloadNotice(null);
+          noticeTimerRef.current = null;
+        }, 5000);
       }
     });
+
+    return () => {
+      if (noticeTimerRef.current) {
+        clearTimeout(noticeTimerRef.current);
+        noticeTimerRef.current = null;
+      }
+    };
   }, [coords]);
 
   // Handle destination selection from search or map click
@@ -137,15 +166,36 @@ export function App() {
                 <span className="hidden sm:inline">Offline Maps</span>
               </button>
 
+              {/* Malaysia Sunrise/Sunset Day-Night Toggle */}
               <button
-                onClick={toggleTheme}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800/90 text-slate-300 border border-slate-700/60 shadow hover:text-white"
-                title="Toggle Theme"
+                onClick={cycleThemeMode}
+                className="flex items-center gap-1.5 rounded-xl bg-slate-800/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white transition-all active:scale-95"
+                title={
+                  themeMode === 'auto'
+                    ? `Theme: AUTO (Following Malaysia Solar: ${solarInfo.isDaytime ? `Sunset at ${solarInfo.sunsetFormatted}` : `Sunrise at ${solarInfo.sunriseFormatted}`})`
+                    : `Theme: ${themeMode.toUpperCase()} (Manual)`
+                }
               >
-                {theme === 'night' ? (
-                  <Moon className="h-4 w-4 text-sky-400" />
+                {themeMode === 'auto' ? (
+                  <>
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-black tracking-wider text-sky-400">AUTO</span>
+                    {theme === 'night' ? (
+                      <Moon className="h-3.5 w-3.5 text-sky-300" />
+                    ) : (
+                      <Sun className="h-3.5 w-3.5 text-amber-300" />
+                    )}
+                  </>
+                ) : themeMode === 'night' ? (
+                  <>
+                    <Moon className="h-3.5 w-3.5 text-sky-400" />
+                    <span className="text-[10px] font-black tracking-wider text-slate-200">NIGHT</span>
+                  </>
                 ) : (
-                  <Sun className="h-4 w-4 text-amber-400" />
+                  <>
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-[10px] font-black tracking-wider text-slate-200">DAY</span>
+                  </>
                 )}
               </button>
             </div>

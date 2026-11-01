@@ -26,9 +26,14 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const puckHeadingElRef = useRef<HTMLElement | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
+
   const prevRouteKeyRef = useRef<string>('');
   const [is3D, setIs3D] = useState(true);
   const [currentBearing, setCurrentBearing] = useState(0);
+  const rotateRafRef = useRef<number | null>(null);
 
   // Initialize Map
   useEffect(() => {
@@ -56,6 +61,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       </div>
     `;
 
+    puckHeadingElRef.current = el.querySelector('#puck-heading');
+
     const marker = new maplibregl.Marker({ element: el })
       .setLngLat(userLocation)
       .addTo(map);
@@ -63,20 +70,30 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     markerRef.current = marker;
 
     map.on('rotate', () => {
-      setCurrentBearing(Math.round(map.getBearing()));
+      if (rotateRafRef.current) cancelAnimationFrame(rotateRafRef.current);
+      rotateRafRef.current = requestAnimationFrame(() => {
+        const newBearing = Math.round(map.getBearing());
+        setCurrentBearing(prev => (prev !== newBearing ? newBearing : prev));
+      });
     });
 
     map.on('click', (e) => {
-      if (onMapClick) {
-        onMapClick([e.lngLat.lng, e.lngLat.lat]);
+      if (onMapClickRef.current) {
+        onMapClickRef.current([e.lngLat.lng, e.lngLat.lat]);
       }
     });
 
     return () => {
+      if (rotateRafRef.current) cancelAnimationFrame(rotateRafRef.current);
       if (destinationMarkerRef.current) {
         destinationMarkerRef.current.remove();
         destinationMarkerRef.current = null;
       }
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+      puckHeadingElRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -99,9 +116,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     markerRef.current.setLngLat(userLocation);
 
-    const headingElement = document.getElementById('puck-heading');
-    if (headingElement) {
-      headingElement.style.transform = `rotate(${heading}deg)`;
+    if (puckHeadingElRef.current) {
+      puckHeadingElRef.current.style.transform = `rotate(${heading}deg)`;
     }
 
     // Follow camera while navigating if not showing overview

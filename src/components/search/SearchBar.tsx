@@ -23,14 +23,20 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       return;
     }
 
+    let isCurrent = true;
     const timer = setTimeout(() => {
       searchDestinations(query, isOnline).then(res => {
-        setResults(res);
-        setIsOpen(true);
+        if (isCurrent) {
+          setResults(res);
+          setIsOpen(true);
+        }
       });
     }, 150);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
   }, [query, isOnline]);
 
   useEffect(() => {

@@ -1,29 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { calculateMalaysiaSolarTimes, SolarTimes } from '../services/solar/malaysiaSolar';
 
 export type AppTheme = 'day' | 'night';
+export type ThemeMode = 'auto' | 'day' | 'night';
 
-export function useDeviceTheme() {
-  const [theme, setTheme] = useState<AppTheme>(() => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day';
+const STORAGE_KEY = 'jerayawara_theme_mode';
+
+export function useDeviceTheme(userCoords?: [number, number]) {
+  // 1. Initial theme mode from localStorage, defaulting to 'auto' (Malaysia Sunrise & Sunset)
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY) as ThemeMode;
+        if (saved === 'auto' || saved === 'day' || saved === 'night') {
+          return saved;
+        }
+      } catch {
+        // Fallback for sandboxed iframes or private browsing
+      }
     }
-    return 'day';
+    return 'auto';
   });
 
-  const [isManualOverride, setIsManualOverride] = useState(false);
+  // 2. Solar times calculation based on current time and user GPS coordinates
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
+  const solarInfo: SolarTimes = useMemo(() => {
+    return calculateMalaysiaSolarTimes(currentTime, userCoords || [101.693, 3.141]);
+  }, [currentTime, userCoords]);
+
+  // Periodic timer to keep solar daytime/nighttime in sync without manual reload
   useEffect(() => {
-    if (isManualOverride) return;
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // Check every 30 seconds
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? 'night' : 'day');
-    };
+    return () => clearInterval(timer);
+  }, []);
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [isManualOverride]);
+  // 3. Resolve effective visual theme ('day' | 'night')
+  const theme: AppTheme = useMemo(() => {
+    if (themeMode === 'day') return 'day';
+    if (themeMode === 'night') return 'night';
+    // In 'auto' mode, follow Malaysia solar times
+    return solarInfo.isDaytime ? 'day' : 'night';
+  }, [themeMode, solarInfo.isDaytime]);
 
+  // 4. Synchronize HTML class for Tailwind dark styling
   useEffect(() => {
     if (typeof document !== 'undefined') {
       if (theme === 'night') {
@@ -34,19 +57,50 @@ export function useDeviceTheme() {
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setIsManualOverride(true);
-    setTheme(prev => (prev === 'day' ? 'night' : 'day'));
-  };
+  // 5. Update and persist theme mode
+  const setThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeModeState(mode);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, mode);
+      } catch {
+        // Ignore storage exceptions
+      }
+    }
+  }, []);
+
+  // Cycle: auto -> day -> night -> auto
+  const cycleThemeMode = useCallback(() => {
+    setThemeModeState(prev => {
+      let next: ThemeMode = 'auto';
+      if (prev === 'auto') next = 'day';
+      else if (prev === 'day') next = 'night';
+      else next = 'auto';
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, next);
+        } catch {
+          // Ignore storage exceptions
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  // Backward-compatible toggleTheme
+  const toggleTheme = useCallback(() => {
+    cycleThemeMode();
+  }, [cycleThemeMode]);
 
   return {
     theme,
-    isManualOverride,
+    themeMode,
+    setThemeMode,
+    cycleThemeMode,
     toggleTheme,
-    resetToSystem: () => {
-      setIsManualOverride(false);
-      setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
-    }
+    solarInfo,
+    isManualOverride: themeMode !== 'auto',
+    resetToAuto: () => setThemeMode('auto')
   };
 }
-

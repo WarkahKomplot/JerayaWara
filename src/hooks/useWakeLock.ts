@@ -1,20 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function useWakeLock() {
   const [isLocked, setIsLocked] = useState(false);
-  const [wakeLockSentinel, setWakeLockSentinel] = useState<any>(null);
+  const sentinelRef = useRef<any>(null);
+  const isRequestedRef = useRef(false);
 
   const requestLock = useCallback(async () => {
-    if ('wakeLock' in navigator && (navigator as any).wakeLock?.request) {
+    isRequestedRef.current = true;
+    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator && (navigator as any).wakeLock?.request) {
       try {
-        const sentinel = await (navigator as any).wakeLock.request('screen');
-        setWakeLockSentinel(sentinel);
-        setIsLocked(true);
+        if (!sentinelRef.current) {
+          const sentinel = await (navigator as any).wakeLock.request('screen');
+          sentinelRef.current = sentinel;
+          setIsLocked(true);
 
-        sentinel.addEventListener('release', () => {
-          setIsLocked(false);
-          setWakeLockSentinel(null);
-        });
+          sentinel.addEventListener('release', () => {
+            sentinelRef.current = null;
+            setIsLocked(false);
+          });
+        }
       } catch {
         setIsLocked(false);
       }
@@ -22,16 +26,24 @@ export function useWakeLock() {
   }, []);
 
   const releaseLock = useCallback(() => {
-    if (wakeLockSentinel) {
-      wakeLockSentinel.release().catch(() => {});
-      setWakeLockSentinel(null);
+    isRequestedRef.current = false;
+    if (sentinelRef.current) {
+      try {
+        const p = sentinelRef.current.release?.();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
+      } catch {
+        // Ignore
+      }
+      sentinelRef.current = null;
       setIsLocked(false);
     }
-  }, [wakeLockSentinel]);
+  }, []);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isLocked) {
+      if (document.visibilityState === 'visible' && isRequestedRef.current) {
         requestLock();
       }
     };
@@ -39,9 +51,20 @@ export function useWakeLock() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      releaseLock();
+      // Clean up lock when hook unmounts
+      if (sentinelRef.current) {
+        try {
+          const p = sentinelRef.current.release?.();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => {});
+          }
+        } catch {
+          // Ignore
+        }
+        sentinelRef.current = null;
+      }
     };
-  }, [isLocked, requestLock, releaseLock]);
+  }, [requestLock]);
 
   return {
     isLocked,
@@ -49,4 +72,3 @@ export function useWakeLock() {
     releaseLock
   };
 }
-
