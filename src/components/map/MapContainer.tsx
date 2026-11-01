@@ -12,6 +12,7 @@ export interface MapContainerProps {
   routePolyline?: [number, number][];
   onMapClick?: (coords: [number, number]) => void;
   isNavigating?: boolean;
+  focusStepCoord?: [number, number] | null;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -20,7 +21,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   theme,
   routePolyline,
   onMapClick,
-  isNavigating = false
+  isNavigating = false,
+  focusStepCoord = null
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -30,6 +32,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
 
+  const isFirstMountRef = useRef(true);
   const prevRouteKeyRef = useRef<string>('');
   const [is3D, setIs3D] = useState(true);
   const [currentBearing, setCurrentBearing] = useState(0);
@@ -101,6 +104,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
   // Update Theme (re-apply route after style reloads)
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
     const map = mapRef.current;
     if (!map) return;
 
@@ -109,6 +116,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       renderRouteOnMap();
     });
   }, [theme]);
+
+  // Focus specific step when selected from turn list
+  useEffect(() => {
+    if (!focusStepCoord || !mapRef.current) return;
+    mapRef.current.flyTo({
+      center: focusStepCoord,
+      zoom: 16.5,
+      pitch: is3D ? 55 : 0,
+      duration: 800
+    });
+  }, [focusStepCoord]);
 
   // Update User Location
   useEffect(() => {
@@ -177,9 +195,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           'line-join': 'round'
         },
         paint: {
-          'line-color': '#1d4ed8',
-          'line-width': 10,
-          'line-opacity': 0.8
+          'line-color': '#1e3a8a',
+          'line-width': 12,
+          'line-opacity': 0.95
         }
       });
 
@@ -192,8 +210,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           'line-join': 'round'
         },
         paint: {
-          'line-color': '#38bdf8',
-          'line-width': 6
+          'line-color': '#0ea5e9',
+          'line-width': 7
         }
       });
     }
@@ -204,10 +222,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       const destEl = document.createElement('div');
       destEl.className = 'relative flex flex-col items-center cursor-pointer';
       destEl.innerHTML = `
-        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-red-600 to-rose-500 text-white shadow-xl shadow-red-500/40 border-2 border-white transform hover:scale-110 transition-transform">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-red-600 to-rose-500 text-white shadow-2xl shadow-red-500/50 border-2 border-white transform hover:scale-110 transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
-        <div class="w-3 h-1 bg-black/40 rounded-full blur-[1px] mt-1"></div>
+        <div class="w-4 h-1.5 bg-black/50 rounded-full blur-[1px] mt-1"></div>
       `;
       destinationMarkerRef.current = new maplibregl.Marker({ element: destEl })
         .setLngLat(destCoord)
@@ -220,15 +238,21 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     const currentRouteKey = `${routePolyline[0][0]},${routePolyline[0][1]}->${destCoord[0]},${destCoord[1]}`;
     if (currentRouteKey !== prevRouteKeyRef.current) {
       prevRouteKeyRef.current = currentRouteKey;
-      const bounds = new maplibregl.LngLatBounds();
-      bounds.extend(userLocation);
-      routePolyline.forEach(c => bounds.extend(c));
-      map.fitBounds(bounds, {
-        padding: { top: 120, bottom: 220, left: 60, right: 60 },
-        maxZoom: 16,
-        duration: 1000
-      });
+      fitRouteBounds();
     }
+  };
+
+  const fitRouteBounds = () => {
+    const map = mapRef.current;
+    if (!map || !routePolyline || routePolyline.length < 2) return;
+    const bounds = new maplibregl.LngLatBounds();
+    bounds.extend(userLocation);
+    routePolyline.forEach(c => bounds.extend(c));
+    map.fitBounds(bounds, {
+      padding: { top: 130, bottom: 250, left: 60, right: 60 },
+      maxZoom: 15,
+      duration: 1000
+    });
   };
 
   // Draw Route Polyline
@@ -240,6 +264,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       renderRouteOnMap();
     } else {
       map.once('style.load', renderRouteOnMap);
+      map.once('load', renderRouteOnMap);
     }
   }, [routePolyline]);
 
@@ -272,6 +297,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         onToggle3D={handleToggle3D}
         is3D={is3D}
         bearing={currentBearing}
+        hasActiveRoute={!!routePolyline && routePolyline.length >= 2}
+        onFitRouteOverview={fitRouteBounds}
       />
     </div>
   );

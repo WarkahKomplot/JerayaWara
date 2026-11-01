@@ -33,6 +33,7 @@ export function App() {
   const [tollBreakdown, setTollBreakdown] = useState<TollBreakdown | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
@@ -125,7 +126,15 @@ export function App() {
     setIsNavigating(false);
     setActiveRoute(null);
     setTollBreakdown(null);
+    setFocusStepCoord(null);
     releaseLock();
+  };
+
+  const handleSelectStep = (idx: number) => {
+    setCurrentStepIndex(idx);
+    if (activeRoute?.steps[idx]?.coordinates) {
+      setFocusStepCoord(activeRoute.steps[idx].coordinates);
+    }
   };
 
   // Current turn instruction
@@ -329,6 +338,8 @@ export function App() {
               onOpenTolls={() => setIsTollModalOpen(true)}
               onEndNavigation={handleEndNavigation}
               isFoldable={isFoldableUnfolded}
+              onSelectStep={handleSelectStep}
+              currentStepIndex={currentStepIndex}
             />
           ) : undefined
         }
@@ -340,6 +351,7 @@ export function App() {
             routePolyline={activeRoute?.coordinates}
             onMapClick={handleMapClick}
             isNavigating={isNavigating}
+            focusStepCoord={focusStepCoord}
           />
         }
       />

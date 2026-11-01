@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Compass, Navigation2 } from 'lucide-react';
+import { Plus, Minus, Compass, Navigation2, Route } from 'lucide-react';
 
 export interface MapControlsProps {
   onZoomIn: () => void;
@@ -9,6 +9,8 @@ export interface MapControlsProps {
   onToggle3D: () => void;
   is3D: boolean;
   bearing: number;
+  hasActiveRoute?: boolean;
+  onFitRouteOverview?: () => void;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -18,10 +20,23 @@ export const MapControls: React.FC<MapControlsProps> = ({
   onRecenter,
   onToggle3D,
   is3D,
-  bearing
+  bearing,
+  hasActiveRoute = false,
+  onFitRouteOverview
 }) => {
   return (
     <div className="absolute right-4 top-24 z-20 flex flex-col gap-2.5">
+      {/* Route Overview Button (When navigating) */}
+      {hasActiveRoute && onFitRouteOverview && (
+        <button
+          onClick={onFitRouteOverview}
+          className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-all active:scale-95 animate-pulse"
+          title="Route Overview: View full road path (Lihat Semua Laluan)"
+        >
+          <Route className="h-5 w-5 stroke-[2.5]" />
+        </button>
+      )}
+
       {/* Compass Button */}
       <button
         onClick={onResetBearing}
@@ -38,7 +53,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
       <button
         onClick={onRecenter}
         className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/25 transition-all active:scale-95"
-        title="Re-center My Location"
+        title="Re-center My Location (Ikut Lokasi Saya)"
       >
         <Navigation2 className="h-5 w-5 fill-white" />
       </button>
