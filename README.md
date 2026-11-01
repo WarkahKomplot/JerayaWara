@@ -40,9 +40,16 @@ An open-source, privacy-first, offline-ready Progressive Web App (PWA) tailored 
 - **Embedded Offline Directory**: Instant search across Malaysian cities, mukims, highway exits (R&Rs, toll plazas), and major landmarks without internet.
 - **Live Online Geocoding**: Augments queries with live street addresses via open geocoding when cellular data is available.
 
-### 6. 🌙 ☀️ Adaptive Day & OLED Night Cartography
-- Synchronizes with system `prefers-color-scheme` and solar times across Malaysia.
-- Night mode features low-glare slate and OLED blacks (`#090d16`) with high-contrast road illumination to prevent night driving pupil fatigue.
+### 6. 🌙 ☀️ Malaysia Astronomical Solar View (Zero-API Day/Night)
+- High-precision astronomical solar calculator based on UTC+8 geographical coordinates.
+- Automatically transitions between Day and OLED Night based on exact Malaysian sunrise and sunset (~07:12 AM / ~19:15 PM in Peninsular, ~06:14 AM / ~18:15 PM in Sabah & Sarawak).
+- Manual overrides (`Auto Solar`, `Force Day`, `Force Night`) with instant persistent memory.
+
+### 7. 💡 Dual-Layer Screen Anti-Sleep Engine (Zero Touch Display Timeout Prevention)
+- Keeps mobile navigation screens permanently active without accidental display sleep during drives.
+- **Hardware Layer**: W3C Screen Wake Lock API (`navigator.wakeLock.request('screen')`).
+- **Media Fallback Layer**: Silent, looping 1x1 video sentinel for iOS Safari or non-HTTPS local network testing.
+- Automatic reacquisition upon app switching (`visibilitychange`) and 15-second heartbeat monitor.
 
 ---
 
@@ -67,8 +74,8 @@ An open-source, privacy-first, offline-ready Progressive Web App (PWA) tailored 
 - **Styling**: Tailwind CSS (dark mode & foldable media queries)
 - **Map & 3D WebGL**: MapLibre GL JS
 - **Offline Storage**: Dexie.js (IndexedDB wrapper) & CacheStorage API
-- **Icons**: Lucide React
-- **Test Runner**: Vitest
+- **Icons**: Lucide React & Custom JerayaWara Vector Compass Logo
+- **Test Runner**: Vitest (42 unit tests across 12 suites)
 
 ---
 
@@ -76,8 +83,8 @@ An open-source, privacy-first, offline-ready Progressive Web App (PWA) tailored 
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/jerayawara.git
-cd jerayawara
+git clone https://github.com/WarkahKomplot/JerayaWara.git
+cd JerayaWara
 
 # Install dependencies
 npm install
