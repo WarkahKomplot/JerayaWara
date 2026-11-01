@@ -11,6 +11,7 @@ export interface MapControlsProps {
   bearing: number;
   hasActiveRoute?: boolean;
   onFitRouteOverview?: () => void;
+  isNavigating?: boolean;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -22,10 +23,15 @@ export const MapControls: React.FC<MapControlsProps> = ({
   is3D,
   bearing,
   hasActiveRoute = false,
-  onFitRouteOverview
+  onFitRouteOverview,
+  isNavigating = false
 }) => {
   return (
-    <div className="absolute right-4 top-24 z-20 flex flex-col gap-2.5">
+    <div
+      className={`absolute right-3.5 z-20 flex flex-col gap-2 transition-all duration-300 md:top-6 md:right-6 ${
+        isNavigating ? 'top-44' : 'top-[218px]'
+      }`}
+    >
       {/* Route Overview Button (When navigating) */}
       {hasActiveRoute && onFitRouteOverview && (
         <button

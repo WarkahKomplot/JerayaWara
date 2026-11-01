@@ -299,6 +299,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         bearing={currentBearing}
         hasActiveRoute={!!routePolyline && routePolyline.length >= 2}
         onFitRouteOverview={fitRouteBounds}
+        isNavigating={isNavigating}
       />
     </div>
   );
