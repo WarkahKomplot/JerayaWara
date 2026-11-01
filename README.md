@@ -3,7 +3,8 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway / Highway Voyager")* is a 100% zero-API-cost, offline-first Progressive Web App (PWA) navigation system engineered specifically for Malaysian driving conditions across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-88%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-100%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![PWA](https://img.shields.io/badge/PWA-v5%20Offline-blueviolet?style=for-the-badge)](https://warkahkomplot.github.io/JerayaWara/)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -38,13 +39,15 @@
 * **Dynamic Highway Corridor Scanning**: Calculates upcoming services along the active expressway polyline with real-time distance countdowns (e.g., *Petronas R&R Tapah · 18 km*).
 * **Filter Tabs**: Toggle between `[Semua / All]`, `[⛽ Petrol]`, and `[⚡ EV Charger]`.
 * **Verified Malaysian Brands**: Covers **Petronas**, **Shell**, **Caltex**, and **BHP**, alongside high-power DC fast chargers from **Gentari**, **ChargEV**, and **DC Handal** (with wattage tags, e.g. `150 kW DC`).
+* **Non-Intrusive Collapsible Design**: Collapsed by default into an ultra-slim status pill inside the Trip Summary drawer, ensuring 100% unobstructed full-screen map visibility during active navigation. Tapping expands station cards only when needed.
 
 ### 5. 🏍️ Motorcycle Rain Shelter Radar (*Pondok Berteduh Motosikal*)
 * **Rider Rain Protection**: Detects designated expressway overhead bridges (*jejantas*) with widened safety pull-in bays on PLUS E1, PLUS E2, Federal Highway Route 2, and KESAS E5.
 * **Automated Audio Alert**: When in **Motorcycle Mode** and rain is active, announces: *"Pondok teduhan hujan motosikal di hadapan pada KM 445."*
 
 ### 6. 📍 Saved Favorites & Client-Side GPX Route Export
-* **Quick Access Chips**: 1-tap quick buttons directly above the search bar: 🏠 *Rumah*, 💼 *Kerja*, 🌴 *Balik Kampung*.
+* **Quick Access Chips**: 1-tap quick buttons directly above the search bar: 🏠 *Rumah* (*Home*), 💼 *Kerja* (*Work*), 🌴 *Balik Kampung* (*Hometown*).
+* **Reset & Delete Favorite Locations**: Each saved favorite chip includes an intuitive `(X)` reset button with a safety confirmation prompt, allowing drivers to clear or re-pin saved GPS coordinates anytime.
 * **100% Private Offline Storage**: Stored locally in your phone's browser IndexedDB (Dexie.js).
 * **Standard GPX 1.1 Export**: Export any active route as a valid `.gpx` file with one tap inside the Trip Summary drawer—compatible with Strava, Garmin, Google Earth, and OsmAnd.
 
@@ -65,11 +68,14 @@
 * **Colloquial Malaysian Abbreviation Expansion**: Recognizes colloquial terms like `hosp` ➔ *hospital*, `bdr` ➔ *bandar*, `tmn` ➔ *taman*, `jln` ➔ *jalan*, `stn` ➔ *stesen*, `klia` ➔ *KLIA*, `klcc` ➔ *KLCC*, `hkl` ➔ *Hospital Kuala Lumpur*.
 * **Expanded Offline Landmark Directory (60+ Major Destinations)**: Malls (Mid Valley, Pavilion, 1 Utama, Sunway Pyramid, IOI City Mall), Airports (KLIA T1/T2, Subang), Hospitals (HKL, Hospital Kajang, Serdang), Universities (UM, UKM, UTM, USM, UiTM), and tourist hubs (Batu Caves, Genting, Cameron Highlands).
 
-### 10. 🗣️ Bilingual Voice Navigation (Bahasa Melayu & English)
-* **100% Offline Speech Synthesis**: Operates through the browser's native Web Speech API without any cloud API keys or mobile data usage.
-* **Interactive BM / EN Language Toggle**: Instant 1-tap language switch directly on the top TurnBanner:
-  * **Bahasa Melayu (BM)**: *"Memulakan navigasi menuju ke Seremban. Pandu dengan cermat."*, *"Di hadapan, belok kanan ke Jalan Bukit."*, *"Kekal di lorong kiri ke lebuh raya."*, *"Anda telah tiba di destinasi."*
-  * **English (EN)**: *"Starting navigation to Seremban. Drive safely."*, *"In front, turn right onto Jalan Bukit."*, *"Keep left onto expressway."*, *"You have arrived at your destination."*
+### 10. 🌐 🗣️ Comprehensive Bilingual UI & Voice System (Bahasa Melayu & English)
+* **Centralized Reactive i18n Dictionary (`translations.ts`)**: 1-tap global language toggle directly in the header (`BM / EN`) or TurnBanner that synchronously updates every single component across the entire app without page refreshes.
+* **100% Unified Interface Translation**:
+  * **Header**: Status indicators (`GPS Aktif` ⇄ `GPS Active`), (`Peta Luar Talian` ⇄ `Offline Maps`), and solar badges (`SIANG`/`MALAM` ⇄ `DAY`/`NIGHT`).
+  * **Turn-by-Turn Guidance**: Dynamic maneuver localization engine (`getLocalizedStepInstruction`) translates directions into natural Bahasa Melayu (*"Belok kiri ke..."*, *"Susur keluar kanan ke..."*, *"Kekal di lorong kanan ke..."*, *"Tiba di destinasi"*) or English (*"Turn left onto..."*, *"Take exit on right onto..."*, *"Arrive at destination"*) while preserving exact Malaysian highway numbers and road names.
+  * **Trip Summary & Drawer**: Traffic congestion badges, toll fare notes (`KADAR TOL` ⇄ `TOLL FARES`), turn counts, and action buttons (`Keluar Navigasi`, `Eksport GPX`, `Laluan GPS Langsung` ⇄ `Exit Navigation`, `Export GPX`, `Live GPS Route`).
+  * **Amenities & Modals**: Category filters, distance indicators, Toll Plaza Breakdown modal, and Offline Region Pack download modal are completely bilingual.
+* **100% Offline Speech Synthesis**: Native browser Web Speech API voice guidance that switches dynamically between natural Bahasa Melayu and English pronunciation.
 
 ### 11. 🚦 Smart Peak-Hour Traffic Congestion Engine (100% Offline)
 * **Malaysian Rush Hour Mathematical Modeling**:
@@ -147,9 +153,10 @@
 | **Map Rendering** | MapLibre GL JS (60 FPS Vector & Raster rendering, 3D tilt) |
 | **Offline Storage** | Dexie.js (IndexedDB wrapper) & CacheStorage Service Worker |
 | **Voice Navigation** | Web Speech API (`SpeechSynthesisUtterance`), Bilingual (BM / EN) |
+| **Bilingual Localization** | Centralized reactive i18n system (`translations.ts`) for all UI |
 | **Weather & Radar** | Open-Meteo API (Free/Zero-API-key) & Malaysian AwAS/AES DB |
 | **Screen Lock** | W3C Screen Wake Lock API with NoSleep video fallback |
-| **Testing** | Vitest, React Testing Library (**88 unit tests across 22 suites**) |
+| **Testing** | Vitest, React Testing Library (**100 unit tests across 25 suites**) |
 
 ---
 
@@ -166,7 +173,7 @@ npm install
 # Start local development server
 npm run dev
 
-# Run unit test suite (88 tests)
+# Run unit test suite (100 tests across 25 suites)
 npm test
 
 # Build production bundle with optimized code splitting
