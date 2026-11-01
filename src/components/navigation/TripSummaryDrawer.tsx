@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Download } from 'lucide-react';
+import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Download, Fuel } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
@@ -45,6 +45,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
   trafficCongestion
 }) => {
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
+  const [isServicesExpanded, setIsServicesExpanded] = useState(false);
   const [activeCat, setActiveCat] = useState<'all' | 'petrol' | 'ev'>(amenityCategory);
 
   const calculateETA = (minutes: number) => {
@@ -159,18 +160,48 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
         )}
       </div>
 
-      {/* En-Route Services Card (Petrol, EV, Shelters) */}
+      {/* En-Route Services Bar & Collapsible Card (Petrol, EV, Shelters) */}
       {((amenities && amenities.length > 0) || shelter) && (
         <div className="mt-3">
-          <EnRouteServicesCard
-            amenities={amenities || []}
-            activeCategory={activeCat}
-            onSelectCategory={cat => {
-              setActiveCat(cat);
-              onSelectAmenityCategory?.(cat);
-            }}
-            shelter={shelter}
-          />
+          <button
+            type="button"
+            data-testid="toggle-en-route-services"
+            onClick={() => setIsServicesExpanded(prev => !prev)}
+            aria-expanded={isServicesExpanded}
+            className="flex w-full items-center justify-between rounded-2xl bg-slate-800/80 hover:bg-slate-800 px-3.5 py-2.5 text-xs font-semibold text-slate-300 border border-slate-700/60 transition-all active:scale-[0.99] shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Fuel className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="font-bold text-slate-200">
+                {isServicesExpanded ? 'Stesen Minyak & EV Berdekatan' : 'Stesen Minyak & EV'}
+              </span>
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
+                {amenities?.length || 0} berdekatan
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400">
+              <span>{isServicesExpanded ? 'Sembunyi' : 'Papar'}</span>
+              {isServicesExpanded ? (
+                <ChevronUp className="h-4 w-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              )}
+            </div>
+          </button>
+
+          {isServicesExpanded && (
+            <div className="mt-2.5">
+              <EnRouteServicesCard
+                amenities={amenities || []}
+                activeCategory={activeCat}
+                onSelectCategory={cat => {
+                  setActiveCat(cat);
+                  onSelectAmenityCategory?.(cat);
+                }}
+                shelter={shelter}
+              />
+            </div>
+          )}
         </div>
       )}
 

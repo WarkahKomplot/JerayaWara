@@ -43,3 +43,15 @@ export async function deleteFavorite(id: string): Promise<void> {
   await favoritesDb.favorites.delete(id);
 }
 
+export async function deleteFavoriteByCategory(category: string): Promise<void> {
+  try {
+    const all = await favoritesDb.favorites.toArray();
+    const matching = all.filter(f => f.category === category);
+    for (const m of matching) {
+      await favoritesDb.favorites.delete(m.id);
+    }
+  } catch {
+    // ignore
+  }
+}
+

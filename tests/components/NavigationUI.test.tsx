@@ -293,8 +293,18 @@ describe('Navigation UI Components', () => {
     fireEvent.click(gpxBtn);
     expect(handleExportGpx).toHaveBeenCalledTimes(1);
 
-    // Verify en-route amenity displayed
+    // En-Route Services bar is displayed, collapsed by default to save screen space
+    const servicesToggle = screen.getByTestId('toggle-en-route-services');
+    expect(servicesToggle).toBeDefined();
+    expect(screen.queryByText(/Petronas R&R Seremban/i)).toBeNull();
+
+    // Expand services to view stations
+    fireEvent.click(servicesToggle);
     expect(screen.getByText(/Petronas R&R Seremban/i)).toBeDefined();
     expect(screen.getByText(/22.4 km/i)).toBeDefined();
+
+    // Collapse services again to restore full navigation map visibility
+    fireEvent.click(servicesToggle);
+    expect(screen.queryByText(/Petronas R&R Seremban/i)).toBeNull();
   });
 });

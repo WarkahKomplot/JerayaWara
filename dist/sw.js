@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jerayawara-v2';
+const CACHE_NAME = 'jerayawara-v3';
 
 self.addEventListener('install', (event) => {
   const scope = self.registration.scope;
@@ -35,6 +35,28 @@ self.addEventListener('fetch', (event) => {
   // Pass-through non-GET requests
   if (event.request.method !== 'GET') return;
 
+  const scope = self.registration.scope;
+
+  // Always use Network-First for navigation requests (HTML/App updates)
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(`${scope}index.html`).then((res) => res || caches.match(scope));
+        })
+    );
+    return;
+  }
+
   // Stale-while-revalidate / cache-first with network refresh for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -66,7 +88,6 @@ self.addEventListener('fetch', (event) => {
         .catch(() => {
           // If offline and request is an HTML navigation, serve offline cached index
           if (event.request.mode === 'navigate') {
-            const scope = self.registration.scope;
             return caches.match(`${scope}index.html`).then(res => res || caches.match(scope));
           }
         });
