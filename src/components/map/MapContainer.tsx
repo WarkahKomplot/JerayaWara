@@ -35,6 +35,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const isFirstMountRef = useRef(true);
   const prevRouteKeyRef = useRef<string>('');
   const [is3D, setIs3D] = useState(true);
+  const [isFollowMode, setIsFollowMode] = useState(false);
   const [currentBearing, setCurrentBearing] = useState(0);
   const rotateRafRef = useRef<number | null>(null);
 
@@ -80,10 +81,18 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       });
     });
 
+    map.on('dragstart', () => {
+      setIsFollowMode(false);
+    });
+
     map.on('click', (e) => {
       if (onMapClickRef.current) {
         onMapClickRef.current([e.lngLat.lng, e.lngLat.lat]);
       }
+    });
+
+    map.once('load', () => {
+      renderRouteOnMap();
     });
 
     return () => {
@@ -112,10 +121,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     if (!map) return;
 
     map.setStyle(getMapLibreStyle(theme));
-    map.once('style.load', () => {
+    map.once('styledata', () => {
       renderRouteOnMap();
     });
   }, [theme]);
+
+  // Reset follow mode when navigation ends
+  useEffect(() => {
+    if (!isNavigating) {
+      setIsFollowMode(false);
+    }
+  }, [isNavigating]);
 
   // Focus specific step when selected from turn list
   useEffect(() => {
@@ -128,7 +144,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
   }, [focusStepCoord]);
 
-  // Update User Location
+  // Update User Location & Follow Camera
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) return;
 
@@ -138,8 +154,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       puckHeadingElRef.current.style.transform = `rotate(${heading}deg)`;
     }
 
-    // Follow camera while navigating if not showing overview
-    if (isNavigating && (!routePolyline || routePolyline.length === 0)) {
+    // Follow camera while navigating when follow mode is active
+    if (isNavigating && isFollowMode) {
       mapRef.current.easeTo({
         center: userLocation,
         bearing: heading,
@@ -148,18 +164,23 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         duration: 800
       });
     }
-  }, [userLocation, heading, isNavigating, is3D]);
+  }, [userLocation, heading, isNavigating, isFollowMode, is3D]);
 
   // Helper to draw or update route polyline and destination pin
   const renderRouteOnMap = () => {
     const map = mapRef.current;
     if (!map) return;
 
+    // Must have a valid style before adding sources/layers
+    if (!map.getStyle()) return;
+
     if (!routePolyline || routePolyline.length < 2) {
-      if (map.getSource('active-route')) {
-        if (map.getLayer('active-route-casing')) map.removeLayer('active-route-casing');
+      try {
         if (map.getLayer('active-route-line')) map.removeLayer('active-route-line');
-        map.removeSource('active-route');
+        if (map.getLayer('active-route-casing')) map.removeLayer('active-route-casing');
+        if (map.getSource('active-route')) map.removeSource('active-route');
+      } catch {
+        // Ignored during cleanup
       }
       if (destinationMarkerRef.current) {
         destinationMarkerRef.current.remove();
@@ -178,14 +199,24 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       }
     };
 
-    if (map.getSource('active-route')) {
-      (map.getSource('active-route') as maplibregl.GeoJSONSource).setData(geojson);
+    const existingSource = map.getSource('active-route') as maplibregl.GeoJSONSource | undefined;
+    if (existingSource && typeof existingSource.setData === 'function') {
+      existingSource.setData(geojson);
     } else {
+      if (map.getSource('active-route')) {
+        try {
+          if (map.getLayer('active-route-line')) map.removeLayer('active-route-line');
+          if (map.getLayer('active-route-casing')) map.removeLayer('active-route-casing');
+          map.removeSource('active-route');
+        } catch {}
+      }
       map.addSource('active-route', {
         type: 'geojson',
         data: geojson
       });
+    }
 
+    if (!map.getLayer('active-route-casing')) {
       map.addLayer({
         id: 'active-route-casing',
         type: 'line',
@@ -200,7 +231,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           'line-opacity': 0.95
         }
       });
+    }
 
+    if (!map.getLayer('active-route-line')) {
       map.addLayer({
         id: 'active-route-line',
         type: 'line',
@@ -215,6 +248,12 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         }
       });
     }
+
+    // Ensure the route layers are rendered on the very top of the stack (above raster layer)
+    try {
+      map.moveLayer('active-route-casing');
+      map.moveLayer('active-route-line');
+    } catch {}
 
     // Update or create Destination Pin Marker
     const destCoord = routePolyline[routePolyline.length - 1];
@@ -249,22 +288,31 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     bounds.extend(userLocation);
     routePolyline.forEach(c => bounds.extend(c));
     map.fitBounds(bounds, {
-      padding: { top: 130, bottom: 250, left: 60, right: 60 },
+      padding: { top: 150, bottom: 250, left: 50, right: 50 },
       maxZoom: 15,
       duration: 1000
     });
   };
 
-  // Draw Route Polyline
+  // Draw Route Polyline immediately when routePolyline changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    if (map.isStyleLoaded()) {
-      renderRouteOnMap();
+    const tryRender = () => {
+      try {
+        renderRouteOnMap();
+      } catch (err) {
+        console.warn('Map style not fully ready yet, retrying on styledata:', err);
+        map.once('styledata', tryRender);
+      }
+    };
+
+    if (map.getStyle() || map.loaded()) {
+      tryRender();
     } else {
-      map.once('style.load', renderRouteOnMap);
-      map.once('load', renderRouteOnMap);
+      map.once('load', tryRender);
+      map.once('styledata', tryRender);
     }
   }, [routePolyline]);
 
@@ -272,13 +320,20 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const handleZoomOut = () => mapRef.current?.zoomOut();
   const handleResetBearing = () => mapRef.current?.resetNorth();
   const handleRecenter = () => {
+    setIsFollowMode(true);
     if (mapRef.current) {
       mapRef.current.flyTo({
         center: userLocation,
-        zoom: 16,
-        pitch: is3D ? 55 : 0
+        zoom: 16.5,
+        bearing: heading,
+        pitch: is3D ? 58 : 0,
+        duration: 800
       });
     }
+  };
+  const handleFitRouteOverview = () => {
+    setIsFollowMode(false);
+    fitRouteBounds();
   };
   const handleToggle3D = () => {
     const next3D = !is3D;
@@ -298,7 +353,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         is3D={is3D}
         bearing={currentBearing}
         hasActiveRoute={!!routePolyline && routePolyline.length >= 2}
-        onFitRouteOverview={fitRouteBounds}
+        onFitRouteOverview={handleFitRouteOverview}
         isNavigating={isNavigating}
       />
     </div>
