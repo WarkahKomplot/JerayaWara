@@ -3,8 +3,8 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway / Highway Voyager")* is a 100% zero-API-cost, offline-first Progressive Web App (PWA) navigation system engineered specifically for Malaysian driving conditions across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-100%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
-[![PWA](https://img.shields.io/badge/PWA-v6%20Offline-blueviolet?style=for-the-badge)](https://warkahkomplot.github.io/JerayaWara/)
+[![Tests](https://img.shields.io/badge/Vitest-116%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![PWA](https://img.shields.io/badge/PWA-v7%20Offline-blueviolet?style=for-the-badge)](https://warkahkomplot.github.io/JerayaWara/)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -35,10 +35,12 @@
 * **Weather & Manual Rain Correlation**: Automatically triggers when rain is detected (or when manually toggled in offline rain mode).
 * **Bilingual Voice Caution**: Announces: *"Awas: Kawasan berisiko banjir kilat di hadapan. Berhati-hati memandu."* or *"Caution: Flash flood risk area ahead. Drive with extra care."*
 
-### 4. ⛽ Expressway En-Route Petrol & EV Charger Planner
+### 4. ⛽ Expressway En-Route Petrol & EV Charger Planner (OSM + PlugShare)
 * **Dynamic Highway Corridor Scanning**: Calculates upcoming services along the active expressway polyline with real-time distance countdowns (e.g., *Petronas R&R Tapah · 18 km*).
 * **Filter Tabs**: Toggle between `[Semua / All]`, `[⛽ Petrol]`, and `[⚡ EV Charger]`.
-* **Verified Malaysian Brands**: Covers **Petronas**, **Shell**, **Caltex**, and **BHP**, alongside high-power DC fast chargers from **Gentari**, **ChargEV**, and **DC Handal** (with wattage tags, e.g. `150 kW DC`).
+* **Verified Malaysian Brands**: Covers **Petronas**, **Shell**, **Caltex**, and **BHP**, alongside high-power DC fast chargers from **Gentari**, **TNB Electron**, **Shell Recharge**, **DC Handal**, and **Tesla Supercharger** (with wattage tags, e.g. `150 kW DC`, `350 kW DC`).
+* **OpenStreetMap Overpass Live Sync (100% Free Open Data)**: Tap *"Kemas Kini EV (OSM)"* to query Overpass API nodes and ways for Malaysian charging stations (`amenity=charging_station`, `socket:type2_combo=*`), automatically cached locally into IndexedDB / localStorage for zero-latency offline access.
+* **1-Tap PlugShare Community Deep Link**: Every EV charging station card includes a direct `[PlugShare ↗]` link centered on the charger's exact GPS coordinates. Drivers can instantly view real-time community check-ins, user photos, pricing, and connector uptime without needing expensive commercial API keys.
 * **Non-Intrusive Collapsible Design**: Collapsed by default into an ultra-slim status pill inside the Trip Summary drawer, ensuring 100% unobstructed full-screen map visibility during active navigation. Tapping expands station cards only when needed.
 
 ### 5. 🏍️ Motorcycle Rain Shelter Radar (*Pondok Berteduh Motosikal*)

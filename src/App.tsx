@@ -117,10 +117,11 @@ export function App() {
 
   // Expressway En-Route Petrol & EV Fast Charger Stop Planner
   const [amenityCategory, setAmenityCategory] = useState<'all' | 'petrol' | 'ev'>('all');
+  const [amenityRefreshTrigger, setAmenityRefreshTrigger] = useState(0);
   const upcomingAmenities = useMemo(() => {
     if (!activeRoute) return [];
     return getUpcomingAmenities(activeRoute.coordinates, coords, amenityCategory, 3);
-  }, [activeRoute, radarCoordKey, amenityCategory]);
+  }, [activeRoute, radarCoordKey, amenityCategory, amenityRefreshTrigger]);
 
   // Voice alert when approaching AES camera (with 3-minute hysteresis to prevent boundary flutter)
   useEffect(() => {
@@ -601,6 +602,7 @@ export function App() {
               onSelectAmenityCategory={setAmenityCategory}
               shelter={nearbyMotorcycleShelter}
               lang={voiceLanguage}
+              onRefreshAmenities={() => setAmenityRefreshTrigger(c => c + 1)}
             />
           ) : undefined
         }

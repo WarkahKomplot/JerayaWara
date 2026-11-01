@@ -77,4 +77,37 @@ describe('EnRouteServicesCard Component', () => {
 
     expect(screen.getByText(/Pondok Teduhan Jejantas KM 312/i)).toBeDefined();
   });
+
+  it('renders PlugShare deep link button for EV fast charger stations', () => {
+    render(
+      <EnRouteServicesCard
+        amenities={mockAmenities}
+        activeCategory="ev"
+        onSelectCategory={vi.fn()}
+      />
+    );
+
+    const plugshareLink = screen.getByTestId('plugshare-link-ev-1') as HTMLAnchorElement;
+    expect(plugshareLink).toBeDefined();
+    expect(plugshareLink.href).toContain('https://www.plugshare.com/?latitude=4.020000&longitude=101.296000');
+    expect(plugshareLink.target).toBe('_blank');
+    expect(plugshareLink.rel).toBe('noopener noreferrer');
+    expect(screen.getByText(/PlugShare ↗/i)).toBeDefined();
+  });
+
+  it('renders EV sync button and handles sync action when in EV category', () => {
+    const handleRefresh = vi.fn();
+    render(
+      <EnRouteServicesCard
+        amenities={mockAmenities}
+        activeCategory="ev"
+        onSelectCategory={vi.fn()}
+        onRefreshAmenities={handleRefresh}
+      />
+    );
+
+    const syncBtn = screen.getByTestId('sync-osm-ev-btn');
+    expect(syncBtn).toBeDefined();
+    expect(screen.getByText(/Kemas Kini EV \(OSM\)/i)).toBeDefined();
+  });
 });

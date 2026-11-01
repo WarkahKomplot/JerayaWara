@@ -96,6 +96,11 @@ export const UI_TRANSLATIONS = {
     petrolCategory: 'Petrol',
     evCategory: 'EV Charger',
     noAmenitiesFound: 'Tiada stesen petrol/EV dikesan berhampiran koridor ini.',
+    plugshareLink: 'Buka di PlugShare',
+    syncOsmEv: 'Kemas Kini EV (OSM)',
+    syncingOsmEv: 'Memuat turun stesen...',
+    evSyncedSuccess: 'stesen EV dikemas kini',
+    osmEvCommunityNotice: 'Data sumber terbuka OpenStreetMap & ulasan PlugShare',
 
     // Toll Breakdown Modal
     tollModalTitle: 'Pecahan Tol Lebuhraya Malaysia',
@@ -224,6 +229,11 @@ export const UI_TRANSLATIONS = {
     petrolCategory: 'Petrol',
     evCategory: 'EV Charger',
     noAmenitiesFound: 'No petrol or EV charging stations detected along this corridor.',
+    plugshareLink: 'Open in PlugShare',
+    syncOsmEv: 'Sync EV (OSM)',
+    syncingOsmEv: 'Downloading stations...',
+    evSyncedSuccess: 'EV stations updated',
+    osmEvCommunityNotice: 'OpenStreetMap open data & PlugShare community check-ins',
 
     // Toll Breakdown Modal
     tollModalTitle: 'Malaysian Highway Toll Breakdown',

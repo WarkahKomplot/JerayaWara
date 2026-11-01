@@ -30,6 +30,7 @@ export interface TripSummaryDrawerProps {
   };
   initialExpanded?: boolean;
   lang?: Language;
+  onRefreshAmenities?: () => void;
 }
 
 export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
@@ -47,7 +48,8 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
   shelter,
   trafficCongestion,
   initialExpanded = false,
-  lang = 'ms'
+  lang = 'ms',
+  onRefreshAmenities
 }) => {
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(initialExpanded);
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
@@ -295,6 +297,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                 }}
                 shelter={shelter}
                 lang={lang}
+                onRefreshAmenities={onRefreshAmenities}
               />
             </div>
           )}

@@ -1,7 +1,8 @@
-import { EnRouteAmenityWithDistance } from './types';
+import { EnRouteAmenity, EnRouteAmenityWithDistance } from './types';
 import { MALAYSIA_EXPRESSWAY_AMENITIES } from './expresswayAmenitiesData';
+import { getCachedOsmEvStations } from './osmEvService';
 
-function haversineDistanceKm(
+export function haversineDistanceKm(
   coord1: [number, number],
   coord2: [number, number]
 ): number {
@@ -45,6 +46,30 @@ function minDistanceToRoute(
 }
 
 /**
+ * Retrieve combined baseline expressway amenities and cached OpenStreetMap EV stations,
+ * deduplicating entries within 150 meters.
+ */
+export function getAllAvailableAmenities(): EnRouteAmenity[] {
+  const cachedEv = getCachedOsmEvStations();
+  if (!cachedEv || cachedEv.length === 0) {
+    return MALAYSIA_EXPRESSWAY_AMENITIES;
+  }
+
+  const merged: EnRouteAmenity[] = [...MALAYSIA_EXPRESSWAY_AMENITIES];
+  for (const ev of cachedEv) {
+    const isDuplicate = MALAYSIA_EXPRESSWAY_AMENITIES.some(base => {
+      if (base.type !== 'ev_fast_charger') return false;
+      const d = haversineDistanceKm(base.coordinates, ev.coordinates);
+      return d < 0.15;
+    });
+    if (!isDuplicate) {
+      merged.push(ev);
+    }
+  }
+  return merged;
+}
+
+/**
  * Computes upcoming expressway amenities (petrol stations and EV fast chargers)
  * along the active navigation route polyline.
  */
@@ -79,8 +104,10 @@ export function getUpcomingAmenities(
   const bboxMinLat = minLat - buffer;
   const bboxMaxLat = maxLat + buffer;
 
+  const allAmenities = getAllAvailableAmenities();
+
   // Filter by category
-  const filtered = MALAYSIA_EXPRESSWAY_AMENITIES.filter(item => {
+  const filtered = allAmenities.filter(item => {
     if (category === 'all') return true;
     if (category === 'ev') return item.type === 'ev_fast_charger';
     if (category === 'petrol') return item.type !== 'ev_fast_charger';
