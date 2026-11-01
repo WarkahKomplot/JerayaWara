@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone } from 'lucide-react';
+import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp, Milestone, Camera } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
 
@@ -11,6 +11,7 @@ export interface TripSummaryDrawerProps {
   isFoldable?: boolean;
   onSelectStep?: (index: number) => void;
   currentStepIndex?: number;
+  onOpenCCTV?: () => void;
 }
 
 export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
@@ -20,7 +21,8 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
   onEndNavigation,
   isFoldable = false,
   onSelectStep,
-  currentStepIndex = 0
+  currentStepIndex = 0,
+  onOpenCCTV
 }) => {
   const [isStepsExpanded, setIsStepsExpanded] = useState(false);
 
@@ -45,7 +47,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
         isFoldable ? 'w-full' : 'w-full max-w-lg mx-auto'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-white tracking-tight">
@@ -73,6 +75,32 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
             )}
           </div>
 
+          {/* Traffic Condition Badge */}
+          {route.traffic && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border"
+                style={{
+                  backgroundColor: `${route.traffic.colorHex}25`,
+                  borderColor: `${route.traffic.colorHex}60`,
+                  color: route.traffic.colorHex
+                }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: route.traffic.colorHex }}
+                />
+                {route.traffic.label}
+                {route.traffic.delayMinutes > 0 && ` (+${route.traffic.delayMinutes}m)`}
+              </span>
+              {route.traffic.level === 'heavy' && (
+                <span className="text-[10px] text-amber-300 font-medium truncate max-w-[200px]">
+                  {route.traffic.reason}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Primary Highway Corridor Badge */}
           {primaryCorridor && (
             <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-sky-400">
@@ -82,30 +110,56 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = ({
           )}
         </div>
 
-        {/* Toll Cost Badge Button */}
-        {tollBreakdown && (
-          <button
-            onClick={onOpenTolls}
-            className={`flex items-center gap-2 rounded-2xl px-3.5 py-2.5 transition-all active:scale-95 border ${
-              tollBreakdown.totalCost > 0
-                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25'
-                : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
-            }`}
-          >
-            <CreditCard className="h-4 w-4" />
-            <div className="text-left">
-              <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                Toll Fares
+        {/* Action Badges Row (Tolls & Live CCTV) */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Live Highway CCTV Button */}
+          {route.cameras && route.cameras.length > 0 && onOpenCCTV && (
+            <button
+              onClick={onOpenCCTV}
+              className="flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-all active:scale-95 border bg-sky-500/15 border-sky-500/40 text-sky-400 hover:bg-sky-500/25"
+              title="Lihat Suapan Kamera CCTV Lebuhraya"
+            >
+              <div className="relative">
+                <Camera className="h-4 w-4" />
+                <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               </div>
-              <div className="text-xs font-black">
-                {tollBreakdown.totalCost > 0
-                  ? `RM ${tollBreakdown.totalCost.toFixed(2)}`
-                  : 'Free'}
+              <div className="text-left">
+                <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
+                  CCTV Live
+                </div>
+                <div className="text-xs font-black">
+                  {route.cameras.length} Cams
+                </div>
               </div>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-          </button>
-        )}
+              <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+            </button>
+          )}
+
+          {/* Toll Cost Badge Button */}
+          {tollBreakdown && (
+            <button
+              onClick={onOpenTolls}
+              className={`flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-all active:scale-95 border ${
+                tollBreakdown.totalCost > 0
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25'
+                  : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              <div className="text-left">
+                <div className="text-[9px] font-bold uppercase tracking-wider opacity-80">
+                  Toll Fares
+                </div>
+                <div className="text-xs font-black">
+                  {tollBreakdown.totalCost > 0
+                    ? `RM ${tollBreakdown.totalCost.toFixed(2)}`
+                    : 'Free'}
+                </div>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Expandable Step-by-Step Road Itinerary */}

@@ -5,6 +5,7 @@ import { ModeSelector } from './components/navigation/ModeSelector';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
 import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
+import { HighwayCCTVModal } from './components/traffic/HighwayCCTVModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
@@ -38,6 +39,7 @@ export function App() {
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+  const [isCCTVModalOpen, setIsCCTVModalOpen] = useState(false);
   const [autoDownloadNotice, setAutoDownloadNotice] = useState<string | null>(null);
   const noticeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastCheckedCoordRef = useRef<[number, number] | null>(null);
@@ -340,6 +342,7 @@ export function App() {
               isFoldable={isFoldableUnfolded}
               onSelectStep={handleSelectStep}
               currentStepIndex={currentStepIndex}
+              onOpenCCTV={() => setIsCCTVModalOpen(true)}
             />
           ) : undefined
         }
@@ -352,6 +355,8 @@ export function App() {
             onMapClick={handleMapClick}
             isNavigating={isNavigating}
             focusStepCoord={focusStepCoord}
+            cameras={activeRoute?.cameras}
+            onOpenCCTV={() => setIsCCTVModalOpen(true)}
           />
         }
       />
@@ -367,6 +372,14 @@ export function App() {
       <RegionDownloadModal
         isOpen={isRegionModalOpen}
         onClose={() => setIsRegionModalOpen(false)}
+      />
+
+      {/* Highway Live CCTV Viewer Modal */}
+      <HighwayCCTVModal
+        isOpen={isCCTVModalOpen}
+        onClose={() => setIsCCTVModalOpen(false)}
+        cameras={activeRoute?.cameras || []}
+        destinationName={activeRoute?.destinationName}
       />
     </>
   );

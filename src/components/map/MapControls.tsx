@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Compass, Navigation2, Route } from 'lucide-react';
+import { Plus, Minus, Compass, Navigation2, Route, Camera } from 'lucide-react';
 
 export interface MapControlsProps {
   onZoomIn: () => void;
@@ -12,6 +12,8 @@ export interface MapControlsProps {
   hasActiveRoute?: boolean;
   onFitRouteOverview?: () => void;
   isNavigating?: boolean;
+  cameraCount?: number;
+  onOpenCCTV?: () => void;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -24,7 +26,9 @@ export const MapControls: React.FC<MapControlsProps> = ({
   bearing,
   hasActiveRoute = false,
   onFitRouteOverview,
-  isNavigating = false
+  isNavigating = false,
+  cameraCount = 0,
+  onOpenCCTV
 }) => {
   return (
     <div
@@ -40,6 +44,20 @@ export const MapControls: React.FC<MapControlsProps> = ({
           title="Route Overview: View full road path (Lihat Semua Laluan)"
         >
           <Route className="h-5 w-5 stroke-[2.5]" />
+        </button>
+      )}
+
+      {/* Live Highway CCTV button (when cameras are detected along route) */}
+      {hasActiveRoute && cameraCount > 0 && onOpenCCTV && (
+        <button
+          onClick={onOpenCCTV}
+          className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-sky-600 text-white shadow-lg shadow-sky-500/30 transition-all active:scale-95 hover:bg-sky-500"
+          title={`Lihat ${cameraCount} Kamera CCTV Lebuhraya Live`}
+        >
+          <Camera className="h-5 w-5" />
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 text-[9px] font-black text-slate-900 border-2 border-slate-900 shadow">
+            {cameraCount}
+          </span>
         </button>
       )}
 

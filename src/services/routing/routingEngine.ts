@@ -6,6 +6,8 @@ import {
   distanceKm,
   findNearestRoadPath
 } from './malaysiaRoadNetwork';
+import { analyzeRouteTraffic } from '../traffic/malaysiaTrafficEngine';
+import { findCamerasAlongRoute } from '../traffic/highwayCCTVData';
 
 function mapOsrmManeuver(type: string, modifier?: string): ManeuverType {
   if (type === 'depart') return 'straight';
@@ -309,10 +311,13 @@ export function calculateOfflineRoute(
     profile
   );
 
+  const traffic = analyzeRouteTraffic(coordinates, durationMinutes, profile);
+  const cameras = findCamerasAlongRoute(coordinates, 3.5);
+
   return {
     coordinates,
     distanceKm: actualDistanceKm,
-    durationMinutes,
+    durationMinutes: traffic.totalMinutes,
     steps: [
       {
         id: 'step-gen-1',
@@ -344,7 +349,9 @@ export function calculateOfflineRoute(
     ],
     tollPlazaKeys: fallbackTolls,
     profile,
-    destinationName: destinationTitle || 'Destination'
+    destinationName: destinationTitle || 'Destination',
+    traffic,
+    cameras
   };
 }
 
@@ -434,14 +441,19 @@ export async function calculateRoute(
             profile
           );
 
+          const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal, profile);
+          const cameras = findCamerasAlongRoute(rawCoordinates, 3.5);
+
           return {
             coordinates: rawCoordinates,
             distanceKm: distanceKmVal,
-            durationMinutes: durationMinutesVal,
+            durationMinutes: traffic.totalMinutes,
             steps: turnSteps,
             tollPlazaKeys,
             profile,
-            destinationName: destinationTitle || 'Destination'
+            destinationName: destinationTitle || 'Destination',
+            traffic,
+            cameras
           };
         }
       }

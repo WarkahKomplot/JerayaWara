@@ -4,7 +4,9 @@ import { TurnBanner } from '../../src/components/navigation/TurnBanner';
 import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
+import { HighwayCCTVModal } from '../../src/components/traffic/HighwayCCTVModal';
 import { RouteResult } from '../../src/services/routing/types';
+import { HighwayCamera } from '../../src/services/traffic/types';
 
 describe('Navigation UI Components', () => {
   it('renders turn instruction and lane guidance accurately', () => {
@@ -92,5 +94,105 @@ describe('Navigation UI Components', () => {
     const exitBtn = screen.getByText(/Exit Navigation/i);
     fireEvent.click(exitBtn);
     expect(handleExit).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders live traffic congestion badge and CCTV button when cameras exist on route', () => {
+    const mockRoute: RouteResult = {
+      coordinates: [[101.789, 2.993], [101.938, 2.725]],
+      distanceKm: 42,
+      durationMinutes: 52,
+      steps: [
+        {
+          id: 'step-1',
+          instruction: 'Follow PLUS E2 South',
+          distanceMeters: 42000,
+          durationSeconds: 3120,
+          coordinates: [101.789, 2.993],
+          maneuver: 'straight'
+        }
+      ],
+      tollPlazaKeys: ['PLUS_KAJANG'],
+      profile: 'car',
+      destinationName: 'Seremban City Centre',
+      traffic: {
+        level: 'heavy',
+        label: 'Sesak Waktu Puncak',
+        labelEn: 'Peak Hour Congestion',
+        delayMinutes: 17,
+        totalMinutes: 52,
+        delayFactor: 1.48,
+        reason: 'Waktu Puncak Petang di PLUS E2',
+        colorHex: '#ef4444',
+        corridorsDetected: ['PLUS E2']
+      },
+      cameras: [
+        {
+          id: 'e2-bangi',
+          title: 'Persimpangan Bandar Baru Bangi (KM 289.4)',
+          highway: 'PLUS E2',
+          direction: 'Both',
+          coordinates: [101.765, 2.894],
+          imageUrl: 'https://example.com/bangi.jpg',
+          source: 'PLUS'
+        }
+      ]
+    };
+
+    const handleOpenCCTV = vi.fn();
+
+    render(
+      <TripSummaryDrawer
+        route={mockRoute}
+        tollBreakdown={null}
+        onOpenTolls={() => {}}
+        onEndNavigation={() => {}}
+        onOpenCCTV={handleOpenCCTV}
+      />
+    );
+
+    // Verify traffic condition badge
+    expect(screen.getByText(/Sesak Waktu Puncak/i)).toBeDefined();
+    expect(screen.getByText(/\+17m/i)).toBeDefined();
+
+    // Verify CCTV button
+    const cctvBtn = screen.getByText(/1 Cams/i);
+    expect(cctvBtn).toBeDefined();
+
+    fireEvent.click(cctvBtn);
+    expect(handleOpenCCTV).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders HighwayCCTVModal with camera feed cards and handles closing', () => {
+    const mockCameras: HighwayCamera[] = [
+      {
+        id: 'cam-1',
+        title: 'Plaza Tol Sungai Besi (Arah Utara)',
+        highway: 'PLUS E2',
+        km: 'KM 309.8',
+        direction: 'Northbound',
+        coordinates: [101.7126, 3.0531],
+        imageUrl: 'https://example.com/sgbesi.jpg',
+        source: 'PLUS'
+      }
+    ];
+
+    const handleClose = vi.fn();
+
+    render(
+      <HighwayCCTVModal
+        isOpen={true}
+        onClose={handleClose}
+        cameras={mockCameras}
+        destinationName="Seremban"
+      />
+    );
+
+    expect(screen.getByText(/Kamera Lebuhraya Live/i)).toBeDefined();
+    expect(screen.getAllByText(/Plaza Tol Sungai Besi/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/PLUS E2/i).length).toBeGreaterThan(0);
+
+    const closeBtn = screen.getByTitle(/Tutup/i);
+    fireEvent.click(closeBtn);
+    expect(handleClose).toHaveBeenCalledTimes(1);
   });
 });

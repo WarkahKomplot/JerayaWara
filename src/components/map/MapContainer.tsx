@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
+import { HighwayCamera } from '../../services/traffic/types';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
@@ -13,6 +14,8 @@ export interface MapContainerProps {
   onMapClick?: (coords: [number, number]) => void;
   isNavigating?: boolean;
   focusStepCoord?: [number, number] | null;
+  cameras?: HighwayCamera[];
+  onOpenCCTV?: () => void;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -22,12 +25,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   routePolyline,
   onMapClick,
   isNavigating = false,
-  focusStepCoord = null
+  focusStepCoord = null,
+  cameras = [],
+  onOpenCCTV
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const cameraMarkersRef = useRef<maplibregl.Marker[]>([]);
   const puckHeadingElRef = useRef<HTMLElement | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
@@ -97,6 +103,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     return () => {
       if (rotateRafRef.current) cancelAnimationFrame(rotateRafRef.current);
+      cameraMarkersRef.current.forEach(m => m.remove());
+      cameraMarkersRef.current = [];
       if (destinationMarkerRef.current) {
         destinationMarkerRef.current.remove();
         destinationMarkerRef.current = null;
@@ -110,6 +118,48 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       mapRef.current = null;
     };
   }, []);
+
+  // Render highway CCTV markers along route on map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing camera markers
+    cameraMarkersRef.current.forEach(m => m.remove());
+    cameraMarkersRef.current = [];
+
+    if (!cameras || cameras.length === 0 || !routePolyline || routePolyline.length < 2) {
+      return;
+    }
+
+    cameras.forEach(cam => {
+      const el = document.createElement('div');
+      el.className = 'group relative flex items-center justify-center cursor-pointer transition-transform hover:scale-125';
+      el.innerHTML = `
+        <div class="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-600 text-white shadow-lg shadow-sky-500/40 border-2 border-white">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </div>
+        <div class="absolute -bottom-5 scale-0 group-hover:scale-100 transition-all rounded bg-slate-900/90 text-white px-1.5 py-0.5 text-[9px] font-bold whitespace-nowrap border border-slate-700 pointer-events-none">
+          ${cam.highway} · ${cam.km || 'CCTV'}
+        </div>
+      `;
+      el.onclick = (e) => {
+        e.stopPropagation();
+        onOpenCCTV?.();
+      };
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat(cam.coordinates)
+        .addTo(map);
+
+      cameraMarkersRef.current.push(marker);
+    });
+
+    return () => {
+      cameraMarkersRef.current.forEach(m => m.remove());
+      cameraMarkersRef.current = [];
+    };
+  }, [cameras, routePolyline, onOpenCCTV]);
 
   // Update Theme (re-apply route after style reloads)
   useEffect(() => {
@@ -355,6 +405,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         hasActiveRoute={!!routePolyline && routePolyline.length >= 2}
         onFitRouteOverview={handleFitRouteOverview}
         isNavigating={isNavigating}
+        cameraCount={cameras?.length ?? 0}
+        onOpenCCTV={onOpenCCTV}
       />
     </div>
   );
