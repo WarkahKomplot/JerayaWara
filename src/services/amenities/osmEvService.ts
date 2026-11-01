@@ -250,6 +250,8 @@ export async function syncOsmEvStations(
           fetchedElements = json.elements;
           break; // Successfully received data!
         }
+      } else {
+        lastError = new Error(`Overpass HTTP ${response.status}`);
       }
     } catch (err: any) {
       clearTimeout(timeoutId);

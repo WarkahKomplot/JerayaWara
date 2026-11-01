@@ -339,6 +339,10 @@ export function findNearbyAESCamera(
       let camClosestSegIdx = -1;
 
       for (let j = userClosestSegIdx; j < routePolyline.length - 1; j++) {
+        // Performance optimization: stop lookahead once segments are far past camera proximity
+        if (j - userClosestSegIdx > 35 && distanceKm(cam.coordinates, routePolyline[j]) > 2.5) {
+          break;
+        }
         const d = distancePointToSegmentMeters(cam.coordinates, routePolyline[j], routePolyline[j + 1]);
         if (d < camMinDistToRoute) {
           camMinDistToRoute = d;

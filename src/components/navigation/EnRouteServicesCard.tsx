@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Fuel, Zap, ShieldAlert, MapPin, ExternalLink, RefreshCw } from 'lucide-react';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
 import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
@@ -24,6 +24,15 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
 }) => {
   const [isSyncingEv, setIsSyncingEv] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSyncOsmEv = async () => {
     setIsSyncingEv(true);
@@ -50,7 +59,8 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
       );
     } finally {
       setIsSyncingEv(false);
-      setTimeout(() => setSyncStatusMsg(null), 4000);
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = setTimeout(() => setSyncStatusMsg(null), 4000);
     }
   };
   const getBrandBadge = (type: string, brand: string) => {

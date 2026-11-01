@@ -34,7 +34,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const aesMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const aesMarkersMapRef = useRef<Map<string, { marker: maplibregl.Marker; el: HTMLElement; pingEl: HTMLElement | null }>>(new Map());
   const puckHeadingElRef = useRef<HTMLElement | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
@@ -110,9 +110,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         destinationMarkerRef.current.remove();
         destinationMarkerRef.current = null;
       }
-      if (aesMarkersRef.current) {
-        aesMarkersRef.current.forEach(m => m.remove());
-        aesMarkersRef.current = [];
+      if (aesMarkersMapRef.current) {
+        aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
+        aesMarkersMapRef.current.clear();
       }
       if (markerRef.current) {
         markerRef.current.remove();
@@ -167,46 +167,36 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
   }, [focusStepCoord]);
 
-  // Pinpoint AES Speed Cameras on Map
+  const activeAlertCamId = aesAlert?.camera.id || null;
+
+  // Render AES Speed Camera Pinpoints on Map (instantiated once or updated when language switches)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear existing markers
-    aesMarkersRef.current.forEach(m => m.remove());
-    aesMarkersRef.current = [];
+    // Remove existing markers if re-initializing
+    aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
+    aesMarkersMapRef.current.clear();
 
     MALAYSIA_AES_CAMERAS.forEach(cam => {
-      const isAlerted = aesAlert?.camera.id === cam.id;
       const camEl = document.createElement('div');
       camEl.className = 'group relative flex flex-col items-center cursor-pointer select-none';
-      camEl.style.zIndex = isAlerted ? '40' : '20';
+      camEl.setAttribute('data-cam-id', cam.id);
 
       const localizedName = lang === 'ms' ? cam.name : (cam.nameEn || cam.name);
-      const speedLimitLabel = `${cam.speedLimitKmH}`;
 
       camEl.innerHTML = `
         <div class="relative flex items-center justify-center">
-          ${
-            isAlerted
-              ? '<div class="absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>'
-              : ''
-          }
-          <div class="flex h-8 w-8 items-center justify-center rounded-xl ${
-            isAlerted
-              ? 'bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse'
-              : 'bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40'
-          } text-white transition-all transform hover:scale-110">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="${
-              isAlerted ? 'text-white' : 'text-red-400'
-            }">
+          <div class="aes-ping-ring hidden absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>
+          <div class="aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="aes-icon text-red-400">
               <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
               <circle cx="12" cy="13" r="3"/>
             </svg>
           </div>
         </div>
         <div class="mt-0.5 rounded-full bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-black font-mono text-amber-300 border border-amber-400/50 shadow">
-          ${speedLimitLabel}
+          ${cam.speedLimitKmH}
         </div>
       `;
 
@@ -227,14 +217,41 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         .setPopup(popup)
         .addTo(map);
 
-      aesMarkersRef.current.push(marker);
+      const pingEl = camEl.querySelector('.aes-ping-ring') as HTMLElement | null;
+      aesMarkersMapRef.current.set(cam.id, { marker, el: camEl, pingEl });
     });
 
     return () => {
-      aesMarkersRef.current.forEach(m => m.remove());
-      aesMarkersRef.current = [];
+      aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
+      aesMarkersMapRef.current.clear();
     };
-  }, [aesAlert, lang]);
+  }, [lang]);
+
+  // Dynamically update active camera alert highlighting without destroying DOM markers
+  useEffect(() => {
+    aesMarkersMapRef.current.forEach(({ el, pingEl }, camId) => {
+      const isAlerted = camId === activeAlertCamId;
+      el.style.zIndex = isAlerted ? '40' : '20';
+
+      const badge = el.querySelector('.aes-badge');
+      const icon = el.querySelector('.aes-icon');
+
+      if (pingEl) {
+        if (isAlerted) pingEl.classList.remove('hidden');
+        else pingEl.classList.add('hidden');
+      }
+
+      if (badge && icon) {
+        if (isAlerted) {
+          badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse text-white transition-all';
+          icon.className = 'aes-icon text-white';
+        } else {
+          badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110';
+          icon.className = 'aes-icon text-red-400';
+        }
+      }
+    });
+  }, [activeAlertCamId]);
 
   // Update User Location & Follow Camera
   useEffect(() => {
