@@ -10,6 +10,36 @@
     <link rel="manifest" href="/manifest.json" />
     <title>JerayaWara — Malaysia Navigation</title>
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script>
+      // Self-healing recovery for stale PWA chunks in Safari / WebKit
+      window.addEventListener('error', function(event) {
+        var target = event.target || event.srcElement;
+        if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+          var hasReloaded = sessionStorage.getItem('jw_chunk_retry');
+          if (!hasReloaded) {
+            sessionStorage.setItem('jw_chunk_retry', '1');
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+                if ('caches' in window) {
+                  caches.keys().then(function(keys) {
+                    Promise.all(keys.map(function(k) { return caches.delete(k); }))
+                      .finally(function() { window.location.reload(); });
+                  });
+                } else {
+                  window.location.reload();
+                }
+              });
+            } else {
+              window.location.reload();
+            }
+          }
+        }
+      }, true);
+      window.addEventListener('load', function() {
+        setTimeout(function() { sessionStorage.removeItem('jw_chunk_retry'); }, 3000);
+      });
+    </script>
   </head>
   <body class="bg-slate-900 text-slate-100 antialiased">
     <div id="root"></div>

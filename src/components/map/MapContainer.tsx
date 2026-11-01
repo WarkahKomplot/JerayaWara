@@ -52,15 +52,21 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: getMapLibreStyle(theme),
-      center: userLocation,
-      zoom: 15.5,
-      pitch: is3D ? 55 : 0,
-      bearing: heading,
-      attributionControl: false
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: getMapLibreStyle(theme),
+        center: userLocation,
+        zoom: 15.5,
+        pitch: is3D ? 55 : 0,
+        bearing: heading,
+        attributionControl: false
+      });
+    } catch (err) {
+      console.error('Failed to initialize MapLibre GL map in browser:', err);
+      return;
+    }
 
     mapRef.current = map;
 
