@@ -16,6 +16,7 @@ export interface TollBreakdown {
   items: TollItem[];
   vehicleClass: VehicleClass;
   note?: string;
+  hasMotorcycleRestriction?: boolean;
 }
 
 export interface TollPlazaDefinition {
@@ -26,4 +27,6 @@ export interface TollPlazaDefinition {
   motorcycleRate: number;
   paymentMethods: PaymentMethod[];
   system: 'open' | 'closed';
+  motorcycleProhibited?: boolean;
 }
+

@@ -19,3 +19,4 @@ describe('Search & Geocoding Engine', () => {
     expect(results.some(r => r.title.includes('Kuching'))).toBe(true);
   });
 });
+

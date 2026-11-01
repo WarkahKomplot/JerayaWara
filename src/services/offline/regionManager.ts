@@ -6,7 +6,8 @@ export interface DownloadProgress {
   progressPercent: number;
   downloadedMB: number;
   totalMB: number;
-  status: 'idle' | 'downloading' | 'completed' | 'error';
+  status: 'idle' | 'downloading' | 'completed' | 'quota_exceeded' | 'error';
+  errorMessage?: string;
 }
 
 export class RegionManager {
@@ -46,10 +47,21 @@ export class RegionManager {
 
   /**
    * Simulates/fetches regional package chunk and stores in IndexedDB
+   * Handles QuotaExceededError for iOS Safari and other storage-constrained devices
    */
   async downloadRegion(region: RegionPack): Promise<boolean> {
     const regionId = region.id;
     try {
+      // Check storage estimate if API is available
+      if (typeof navigator !== 'undefined' && 'storage' in navigator && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const availableBytes = (estimate.quota || 0) - (estimate.usage || 0);
+        const requiredBytes = region.sizeMB * 1024 * 1024;
+        if (estimate.quota && availableBytes < requiredBytes) {
+          throw new DOMException('Storage quota insufficient for this region.', 'QuotaExceededError');
+        }
+      }
+
       await offlineDb.regions.put({
         regionId,
         name: region.name,
@@ -84,13 +96,17 @@ export class RegionManager {
       });
 
       return true;
-    } catch {
+    } catch (err: any) {
+      const isQuota = err?.name === 'QuotaExceededError' || err?.code === 22;
       this.notifyProgress({
         regionId,
         progressPercent: 0,
         downloadedMB: 0,
         totalMB: region.sizeMB,
-        status: 'error'
+        status: isQuota ? 'quota_exceeded' : 'error',
+        errorMessage: isQuota
+          ? 'Storage quota exceeded on this device. Evict older regional packs to reclaim space.'
+          : 'Download failed. Check connection.'
       });
       return false;
     }
@@ -103,7 +119,7 @@ export class RegionManager {
 
   /**
    * Proactive boundary geofence check: if within 15km of an uncached region,
-   * automatically triggers background download.
+   * automatically triggers background download with exponential backoff retry.
    */
   async handleProximityGeofence(coord: [number, number]): Promise<string[]> {
     const nearbyRegions = detectProximityBoundary(coord, 15);
@@ -115,8 +131,18 @@ export class RegionManager {
 
       if (!ready && !isCurrentlyDownloading) {
         triggered.push(region.id);
-        // Start background download without blocking UI
-        this.downloadRegion(region).catch(() => {});
+        // Exponential backoff retry loop (tries up to 3 times: immediate, 2s, 6s)
+        (async () => {
+          let attempts = 0;
+          let success = false;
+          while (attempts < 3 && !success) {
+            attempts++;
+            success = await this.downloadRegion(region);
+            if (!success && attempts < 3) {
+              await new Promise(r => setTimeout(r, Math.pow(2, attempts) * 1000));
+            }
+          }
+        })();
       }
     }
 

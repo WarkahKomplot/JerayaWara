@@ -14,3 +14,4 @@ describe('Foldable Screen Detection', () => {
     expect(checkFoldableUnfolded(840, 840)).toBe(true);
   });
 });
+

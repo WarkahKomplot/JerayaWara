@@ -97,6 +97,12 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
                     {region.description}
                   </p>
 
+                  {progress?.status === 'quota_exceeded' && (
+                    <div className="mt-2 text-[11px] font-semibold text-amber-400 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                      ⚠️ {progress.errorMessage || 'Storage quota exceeded. Please evict an existing regional pack.'}
+                    </div>
+                  )}
+
                   {isDownloading && (
                     <div className="mt-2.5 w-full">
                       <div className="flex justify-between text-[10px] font-medium text-slate-400 mb-1">
@@ -153,3 +159,4 @@ export const RegionDownloadModal: React.FC<RegionDownloadModalProps> = ({
     </div>
   );
 };
+

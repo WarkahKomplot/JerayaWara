@@ -244,3 +244,4 @@ export const MALAYSIA_OFFLINE_POIS: SearchItem[] = [
     regionId: 'northern'
   }
 ];
+

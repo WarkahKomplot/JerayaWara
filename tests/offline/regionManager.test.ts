@@ -16,3 +16,4 @@ describe('Regional Offline Management', () => {
     expect(isLocationCached([101.703, 3.152], ['northern'])).toBe(false);
   });
 });
+

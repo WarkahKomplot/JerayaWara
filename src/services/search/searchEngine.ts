@@ -69,3 +69,4 @@ export async function searchDestinations(query: string, isOnline: boolean = fals
 
   return offlineMatches;
 }
+

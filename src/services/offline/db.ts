@@ -41,3 +41,4 @@ export class JerayaWaraDatabase extends Dexie {
 }
 
 export const offlineDb = new JerayaWaraDatabase();
+

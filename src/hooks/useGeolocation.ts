@@ -87,3 +87,4 @@ export function useGeolocation(enableHighAccuracy: boolean = true) {
 
   return location;
 }
+

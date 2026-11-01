@@ -49,3 +49,4 @@ export function useWakeLock() {
     releaseLock
   };
 }
+

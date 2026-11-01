@@ -19,7 +19,7 @@ import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
 import { SearchItem } from './services/search/types';
 import { regionManager } from './services/offline/regionManager';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite } from 'lucide-react';
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
@@ -133,6 +133,22 @@ export function App() {
         }
         topBanner={
           <div className="space-y-2">
+            {/* Motorcycle Tunnel / Expressway Restriction Alert */}
+            {vehicleMode === 'motorcycle' && tollBreakdown?.hasMotorcycleRestriction && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-600 px-3.5 py-2.5 text-xs font-black text-white shadow-xl animate-pulse border border-red-400/50">
+                <AlertOctagon className="h-5 w-5 flex-shrink-0" />
+                <span>RESTRICTION: Motorcycles prohibited on SMART Tunnel E38. Follow surface route.</span>
+              </div>
+            )}
+
+            {/* Complete GPS Signal Loss Alert */}
+            {isNavigating && !isGpsLocked && (
+              <div className="flex items-center gap-2 rounded-xl bg-rose-700/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-rose-500/40">
+                <Satellite className="h-4 w-4 animate-spin flex-shrink-0" />
+                <span>GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).</span>
+              </div>
+            )}
+
             {/* Auto Boundary Download Banner */}
             {autoDownloadNotice && (
               <div className="flex items-center gap-2 rounded-xl bg-emerald-600/90 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur animate-bounce">

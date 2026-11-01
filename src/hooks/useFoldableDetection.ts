@@ -37,3 +37,4 @@ export function useFoldableDetection() {
     isLandscape: windowDimensions.width > windowDimensions.height
   };
 }
+

@@ -24,4 +24,16 @@ describe('Malaysia Toll Calculator', () => {
     expect(result.totalCost).toBe(0);
     expect(result.note).toContain('Pedestrian');
   });
+
+  it('flags motorcycle prohibition on SMART Tunnel E38 with clear warning', () => {
+    const result = calculateRouteTolls(['SMART_TUNNEL'], 'motorcycle');
+    expect(result.hasMotorcycleRestriction).toBe(true);
+    expect(result.note).toContain('strictly prohibited');
+  });
+
+  it('falls back to maximum distance rate with warning for unmatched closed toll entry', () => {
+    const result = calculateRouteTolls(['PLUS_UNKNOWN_ENTRY'], 'car');
+    expect(result.totalCost).toBeGreaterThan(0);
+    expect(result.note).toContain('Maximum toll rate');
+  });
 });

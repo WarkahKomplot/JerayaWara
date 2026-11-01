@@ -12,3 +12,4 @@ describe('PWA Manifest & Icons', () => {
     expect(manifest.icons.length).toBeGreaterThan(0);
   });
 });
+

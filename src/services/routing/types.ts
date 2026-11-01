@@ -34,3 +34,4 @@ export interface RouteResult {
   profile: VehicleClass;
   destinationName?: string;
 }
+

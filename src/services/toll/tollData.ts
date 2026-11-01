@@ -154,7 +154,8 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     carRate: 3.00,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
-    system: 'open'
+    system: 'open',
+    motorcycleProhibited: true
   },
 
   // SPRINT E23
@@ -188,3 +189,4 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     system: 'open'
   }
 };
+

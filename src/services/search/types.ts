@@ -9,3 +9,4 @@ export interface SearchItem {
   expressway?: string;
   regionId: string;
 }
+
