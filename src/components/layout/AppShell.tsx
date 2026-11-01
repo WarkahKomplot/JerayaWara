@@ -7,7 +7,7 @@ export interface AppShellProps {
   bottomDrawer?: ReactNode;
   sidePanelContent?: ReactNode;
   headerBar?: ReactNode;
-  isNavigating: boolean;
+  isNavigating?: boolean;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({
@@ -15,8 +15,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   topBanner,
   bottomDrawer,
   sidePanelContent,
-  headerBar,
-  isNavigating
+  headerBar
 }) => {
   const { isFoldableUnfolded } = useFoldableDetection();
 

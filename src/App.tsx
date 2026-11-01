@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer } from './components/map/MapContainer';
 import { TurnBanner } from './components/navigation/TurnBanner';
 import { ModeSelector } from './components/navigation/ModeSelector';

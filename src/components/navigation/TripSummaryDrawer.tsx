@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Navigation, CreditCard, X, ChevronRight } from 'lucide-react';
+import { Clock, CreditCard, X, ChevronRight } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
 

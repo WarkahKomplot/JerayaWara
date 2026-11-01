@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Compass, Navigation2, Layers } from 'lucide-react';
+import { Plus, Minus, Compass, Navigation2 } from 'lucide-react';
 
 export interface MapControlsProps {
   onZoomIn: () => void;

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import React from 'react';
 import { TurnBanner } from '../../src/components/navigation/TurnBanner';
 import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 

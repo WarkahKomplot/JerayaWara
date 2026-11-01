@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, X, Navigation, Building2, Coffee, CornerUpRight } from 'lucide-react';
+import { Search, MapPin, X, Building2, Coffee, CornerUpRight } from 'lucide-react';
 import { SearchItem } from '../../services/search/types';
 import { searchDestinations } from '../../services/search/searchEngine';
 

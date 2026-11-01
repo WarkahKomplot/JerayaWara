@@ -1,4 +1,4 @@
-import { MALAYSIA_REGIONS, RegionPack, detectProximityBoundary } from './regions';
+import { RegionPack, detectProximityBoundary } from './regions';
 import { offlineDb, CachedRegionRecord } from './db';
 
 export interface DownloadProgress {

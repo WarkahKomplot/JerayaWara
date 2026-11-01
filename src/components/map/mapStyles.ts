@@ -2,13 +2,7 @@ import { AppTheme } from '../../hooks/useDeviceTheme';
 
 export function getMapLibreStyle(theme: AppTheme): any {
   const isNight = theme === 'night';
-
   const backgroundColor = isNight ? '#090d16' : '#f8fafc';
-  const waterColor = isNight ? '#0f172a' : '#bfdbfe';
-  const landuseColor = isNight ? '#111827' : '#e2e8f0';
-  const roadColor = isNight ? '#1e293b' : '#ffffff';
-  const highwayColor = isNight ? '#334155' : '#fde047';
-  const textColor = isNight ? '#94a3b8' : '#334155';
 
   return {
     version: 8,

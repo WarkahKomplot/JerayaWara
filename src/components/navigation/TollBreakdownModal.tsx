@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CreditCard, AlertCircle, ShieldCheck } from 'lucide-react';
+import { X, CreditCard, ShieldCheck } from 'lucide-react';
 import { TollBreakdown } from '../../services/toll/types';
 
 export interface TollBreakdownModalProps {
