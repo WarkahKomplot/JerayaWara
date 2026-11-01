@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer } from './components/map/MapContainer';
+import { MapErrorBoundary } from './components/map/MapErrorBoundary';
 import { TurnBanner } from './components/navigation/TurnBanner';
 import { SpeedometerOverlay } from './components/navigation/SpeedometerOverlay';
 import { ModeSelector } from './components/navigation/ModeSelector';
@@ -617,17 +618,19 @@ export function App() {
         }
         childrenMap={
           <div className="relative h-full w-full">
-            <MapContainer
-              userLocation={coords}
-              heading={heading}
-              theme={theme}
-              routePolyline={activeRoute?.coordinates}
-              onMapClick={handleMapClick}
-              isNavigating={isNavigating}
-              focusStepCoord={focusStepCoord}
-              lang={voiceLanguage}
-              aesAlert={nearbyAESAlert}
-            />
+            <MapErrorBoundary>
+              <MapContainer
+                userLocation={coords}
+                heading={heading}
+                theme={theme}
+                routePolyline={activeRoute?.coordinates}
+                onMapClick={handleMapClick}
+                isNavigating={isNavigating}
+                focusStepCoord={focusStepCoord}
+                lang={voiceLanguage}
+                aesAlert={nearbyAESAlert}
+              />
+            </MapErrorBoundary>
 
             {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}
             <SpeedometerOverlay

@@ -24,7 +24,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   private handleHardReset = async () => {
-    // Purge service worker registrations & cache storage to self-heal stale chunk errors
     try {
       if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -35,6 +34,12 @@ export class ErrorBoundary extends Component<Props, State> {
       if (typeof window !== 'undefined' && 'caches' in window) {
         const cacheKeys = await window.caches.keys();
         await Promise.all(cacheKeys.map(k => window.caches.delete(k)));
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.clear();
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.clear();
       }
     } catch (err) {
       console.warn('Cache purge failed:', err);
@@ -58,6 +63,21 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="mt-2 text-xs text-slate-400 max-w-sm">
             Kemas kini sistem terbaharu dikesan. Tekan butang di bawah untuk menyegarkan cache pelayar anda.
           </p>
+
+          {/* Diagnostic Error Details */}
+          {this.state.error && (
+            <div className="mt-4 max-w-lg w-full rounded-2xl bg-slate-900 border border-red-500/30 p-3.5 text-left shadow-2xl">
+              <div className="text-xs font-bold text-red-400 break-words mb-1">
+                {this.state.error.name}: {this.state.error.message}
+              </div>
+              {this.state.error.stack && (
+                <div className="text-[10px] text-slate-400 font-mono max-h-36 overflow-y-auto whitespace-pre-wrap break-all mt-2 bg-black/50 p-2.5 rounded-lg border border-slate-800">
+                  {this.state.error.stack}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             <button
               onClick={this.handleHardReset}

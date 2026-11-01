@@ -111,22 +111,28 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
 
     return () => {
-      if (rotateRafRef.current) cancelAnimationFrame(rotateRafRef.current);
-      if (destinationMarkerRef.current) {
-        destinationMarkerRef.current.remove();
-        destinationMarkerRef.current = null;
+      try {
+        if (rotateRafRef.current) cancelAnimationFrame(rotateRafRef.current);
+        if (destinationMarkerRef.current) {
+          destinationMarkerRef.current.remove();
+          destinationMarkerRef.current = null;
+        }
+        if (aesMarkersMapRef.current) {
+          aesMarkersMapRef.current.forEach(({ marker }) => {
+            try { marker.remove(); } catch {}
+          });
+          aesMarkersMapRef.current.clear();
+        }
+        if (markerRef.current) {
+          markerRef.current.remove();
+          markerRef.current = null;
+        }
+        puckHeadingElRef.current = null;
+        map.remove();
+        mapRef.current = null;
+      } catch (err) {
+        console.warn('MapLibre cleanup error suppressed:', err);
       }
-      if (aesMarkersMapRef.current) {
-        aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
-        aesMarkersMapRef.current.clear();
-      }
-      if (markerRef.current) {
-        markerRef.current.remove();
-        markerRef.current = null;
-      }
-      puckHeadingElRef.current = null;
-      map.remove();
-      mapRef.current = null;
     };
   }, []);
 
@@ -181,54 +187,62 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     if (!map) return;
 
     // Remove existing markers if re-initializing
-    aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
+    aesMarkersMapRef.current.forEach(({ marker }) => {
+      try { marker.remove(); } catch {}
+    });
     aesMarkersMapRef.current.clear();
 
     MALAYSIA_AES_CAMERAS.forEach(cam => {
-      const camEl = document.createElement('div');
-      camEl.className = 'group relative flex flex-col items-center cursor-pointer select-none';
-      camEl.setAttribute('data-cam-id', cam.id);
+      try {
+        const camEl = document.createElement('div');
+        camEl.className = 'group relative flex flex-col items-center cursor-pointer select-none';
+        camEl.setAttribute('data-cam-id', cam.id);
 
-      const localizedName = lang === 'ms' ? cam.name : (cam.nameEn || cam.name);
+        const localizedName = lang === 'ms' ? cam.name : (cam.nameEn || cam.name);
 
-      camEl.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <div class="aes-ping-ring hidden absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>
-          <div class="aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="aes-icon text-red-400">
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-              <circle cx="12" cy="13" r="3"/>
-            </svg>
-          </div>
-        </div>
-        <div class="mt-0.5 rounded-full bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-black font-mono text-amber-300 border border-amber-400/50 shadow">
-          ${cam.speedLimitKmH}
-        </div>
-      `;
-
-      const popup = new maplibregl.Popup({ offset: 20, closeButton: false })
-        .setHTML(`
-          <div style="font-family: system-ui, sans-serif; font-size: 11px; padding: 3px; min-width: 140px;">
-            <div style="font-weight: 800; color: #ef4444; text-transform: uppercase;">📷 ${localizedName}</div>
-            <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">${cam.highway} · ${cam.km}</div>
-            <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-top: 2px;">
-              ${lang === 'ms' ? 'Had Laju' : 'Speed Limit'}: ${cam.speedLimitKmH} km/h
+        camEl.innerHTML = `
+          <div class="relative flex items-center justify-center">
+            <div class="aes-ping-ring hidden absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>
+            <div class="aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="aes-icon text-red-400">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
             </div>
-            <div style="font-size: 9px; color: #64748b; margin-top: 2px;">${cam.locationDescription}</div>
           </div>
-        `);
+          <div class="mt-0.5 rounded-full bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-black font-mono text-amber-300 border border-amber-400/50 shadow">
+            ${cam.speedLimitKmH}
+          </div>
+        `;
 
-      const marker = new maplibregl.Marker({ element: camEl })
-        .setLngLat(cam.coordinates)
-        .setPopup(popup)
-        .addTo(map);
+        const popup = new maplibregl.Popup({ offset: 20, closeButton: false })
+          .setHTML(`
+            <div style="font-family: system-ui, sans-serif; font-size: 11px; padding: 3px; min-width: 140px;">
+              <div style="font-weight: 800; color: #ef4444; text-transform: uppercase;">📷 ${localizedName}</div>
+              <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">${cam.highway} · ${cam.km}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-top: 2px;">
+                ${lang === 'ms' ? 'Had Laju' : 'Speed Limit'}: ${cam.speedLimitKmH} km/h
+              </div>
+              <div style="font-size: 9px; color: #64748b; margin-top: 2px;">${cam.locationDescription}</div>
+            </div>
+          `);
 
-      const pingEl = camEl.querySelector('.aes-ping-ring') as HTMLElement | null;
-      aesMarkersMapRef.current.set(cam.id, { marker, el: camEl, pingEl });
+        const marker = new maplibregl.Marker({ element: camEl })
+          .setLngLat(cam.coordinates)
+          .setPopup(popup)
+          .addTo(map);
+
+        const pingEl = camEl.querySelector('.aes-ping-ring') as HTMLElement | null;
+        aesMarkersMapRef.current.set(cam.id, { marker, el: camEl, pingEl });
+      } catch (err) {
+        console.warn('Failed to add AES camera pin to map:', err);
+      }
     });
 
     return () => {
-      aesMarkersMapRef.current.forEach(({ marker }) => marker.remove());
+      aesMarkersMapRef.current.forEach(({ marker }) => {
+        try { marker.remove(); } catch {}
+      });
       aesMarkersMapRef.current.clear();
     };
   }, [lang]);
