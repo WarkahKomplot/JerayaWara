@@ -1,6 +1,9 @@
 import { TollPlazaDefinition } from './types';
+import { CLOSED_TOLL_REGISTRY } from './closedTollNetwork';
 
 export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
+  ...CLOSED_TOLL_REGISTRY,
+
   // MEX E20
   'MEX_SALAK_SELATAN': {
     id: 'MEX_SALAK_SELATAN',

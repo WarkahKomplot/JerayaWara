@@ -63,4 +63,56 @@ describe('Routing Engine', () => {
     expect(offlineRoute.steps.some(s => s.instruction.includes('E1') || s.instruction.includes('PLUS'))).toBe(true);
     expect(offlineRoute.tollPlazaKeys).toContain('PLUS_E1_JALAN_DUTA_TAPAH');
   });
+
+  describe('Pagoh / Paya Redan Closed-System PLUS Toll Calculation', () => {
+    const payaRedanCoords: [number, number] = [102.7836, 2.1616]; // Paya Redan, Pagoh, Muar, Johor
+    const jbCoords: [number, number] = [103.757, 1.465]; // Johor Bahru / Skudai
+    const yongPengCoords: [number, number] = [103.060, 2.010]; // Yong Peng
+    const ayerKerohCoords: [number, number] = [102.280, 2.280]; // Ayer Keroh Melaka
+
+    it('calculates exact Northbound PLUS toll from Johor Bahru/Skudai to Paya Redan, Pagoh (RM 18.50)', () => {
+      const route = calculateOfflineRoute(jbCoords, payaRedanCoords, 'car', 'Paya Redan, Pagoh');
+      expect(route.tollPlazaKeys.length).toBeGreaterThan(0);
+      expect(route.tollPlazaKeys).toContain('PLUS_E2_SKUDAI_PAGOH');
+
+      const toll = calculateRouteTolls(route.tollPlazaKeys, 'car');
+      expect(toll.totalCost).toBe(18.50);
+      expect(toll.items[0].plazaName).toContain('Skudai');
+      expect(toll.items[0].plazaName).toContain('Pagoh');
+    });
+
+    it('calculates exact Southbound PLUS toll from KL to Paya Redan, Pagoh (RM 24.60)', () => {
+      const route = calculateOfflineRoute(klCoords, payaRedanCoords, 'car', 'Paya Redan, Pagoh');
+      expect(route.tollPlazaKeys.length).toBeGreaterThan(0);
+      expect(route.tollPlazaKeys).toContain('PLUS_E2_SG_BESI_PAGOH');
+
+      const toll = calculateRouteTolls(route.tollPlazaKeys, 'car');
+      expect(toll.totalCost).toBe(24.60);
+      expect(toll.items[0].plazaName).toContain('Sungai Besi');
+      expect(toll.items[0].plazaName).toContain('Pagoh');
+    });
+
+    it('calculates intermediate PLUS toll from Melaka to Paya Redan, Pagoh (RM 9.00)', () => {
+      const route = calculateOfflineRoute(ayerKerohCoords, payaRedanCoords, 'car', 'Paya Redan, Pagoh');
+      expect(route.tollPlazaKeys).toContain('PLUS_E2_AYER_KEROH_PAGOH');
+
+      const toll = calculateRouteTolls(route.tollPlazaKeys, 'car');
+      expect(toll.totalCost).toBe(9.00);
+    });
+
+    it('calculates short-distance PLUS toll from Yong Peng to Paya Redan, Pagoh (RM 3.90)', () => {
+      const route = calculateOfflineRoute(yongPengCoords, payaRedanCoords, 'car', 'Paya Redan, Pagoh');
+      expect(route.tollPlazaKeys).toContain('PLUS_E2_YONG_PENG_PAGOH');
+
+      const toll = calculateRouteTolls(route.tollPlazaKeys, 'car');
+      expect(toll.totalCost).toBe(3.90);
+    });
+
+    it('exempts motorcycles from toll to Paya Redan, Pagoh (RM 0.00)', () => {
+      const route = calculateOfflineRoute(jbCoords, payaRedanCoords, 'motorcycle', 'Paya Redan, Pagoh');
+      const toll = calculateRouteTolls(route.tollPlazaKeys, 'motorcycle');
+      expect(toll.totalCost).toBe(0.00);
+      expect(toll.note).toContain('exempt');
+    });
+  });
 });
