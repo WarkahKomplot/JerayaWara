@@ -261,15 +261,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         else pingEl.classList.add('hidden');
       }
 
-      if (badge && icon) {
-        if (isAlerted) {
-          badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse text-white transition-all';
-          icon.className = 'aes-icon text-white';
-        } else {
-          badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110';
-          icon.className = 'aes-icon text-red-400';
+        if (badge && icon) {
+          if (isAlerted) {
+            badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse text-white transition-all';
+            icon.setAttribute('class', 'aes-icon text-white');
+          } else {
+            badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110';
+            icon.setAttribute('class', 'aes-icon text-red-400');
+          }
         }
-      }
     });
   }, [activeAlertCamId]);
 
