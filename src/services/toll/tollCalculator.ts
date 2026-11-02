@@ -22,10 +22,18 @@ export function estimateRouteTolls(
   vehicleClass: VehicleClass,
   routeCoordinates?: [number, number][]
 ): TollBreakdown {
+  const keyword = calculateRouteTolls(plazaKeys, vehicleClass);
   if (routeCoordinates && routeCoordinates.length >= 2) {
     const geometric = calculatePhysicalRouteTolls(routeCoordinates, vehicleClass);
+    if (geometric.items.length === 0 && keyword.items.length > 0) {
+      // Simplified preview geometry can pass km away from canopies and detect
+      // nothing. Closed-system chainage keys (PLUS pairs) depend on trip
+      // endpoints, not canopy passes, so keyword evidence stays valid there.
+      // Open barrier plazas need a real crossing — geometry stays authoritative.
+      const onlyClosedSystem = keyword.items.every(i => i.id.startsWith('PLUS_'));
+      if (onlyClosedSystem) return keyword;
+    }
     const gatedIds = new Set(PHYSICAL_TOLL_GATES.map(g => g.id));
-    const keyword = calculateRouteTolls(plazaKeys, vehicleClass);
     for (const item of keyword.items) {
       // Plazas covered (or excluded) by geometry, and the closed-system fallback item
       if (gatedIds.has(item.id) || item.id.startsWith('PLUS_')) continue;
@@ -36,7 +44,7 @@ export function estimateRouteTolls(
     return geometric;
   }
 
-  return calculateRouteTolls(plazaKeys, vehicleClass);
+  return keyword;
 }
 
 export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {

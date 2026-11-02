@@ -1,5 +1,5 @@
 import { VehicleClass, TollItem, TollBreakdown } from './types';
-import { PLUS_E1_INTERCHANGES, PLUS_E2_INTERCHANGES } from './closedTollNetwork';
+import { PLUS_E1_INTERCHANGES, PLUS_E2_INTERCHANGES, ClosedInterchange } from './closedTollNetwork';
 
 export interface PhysicalTollGate {
   id: string;
@@ -299,14 +299,16 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     motorcycleRate: 1.40
   },
 
-  // PLUS E2 Major Plaza Canopies
+  // PLUS E2 Major Plaza Canopies — coordinates snapped to the real E2 carriageway
+  // via OSRM full geometry (old values were 0.8–4.9 km off, so the 45m proximity
+  // check never fired and closed-system trips came out RM 0.00)
   {
     id: 'PLUS_E2_GATE_SG_BESI',
     name: 'Plaza Tol Sungai Besi (PLUS E2)',
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.7121, 3.0520],
+    coordinates: [101.7052, 3.0520],
     bearing: 165
   },
   {
@@ -315,7 +317,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.9381, 2.7252],
+    coordinates: [101.9194, 2.7124],
     bearing: 165
   },
   {
@@ -324,7 +326,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [102.2801, 2.2802],
+    coordinates: [102.2850, 2.2709],
     bearing: 145
   },
   {
@@ -333,18 +335,18 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [103.6601, 1.5302],
+    coordinates: [103.6681, 1.5738],
     bearing: 150
   },
 
-  // PLUS E1 Major Plaza Canopies
+  // PLUS E1 Major Plaza Canopies — snapped to the real E1 carriageway (see note above)
   {
     id: 'PLUS_E1_GATE_JALAN_DUTA',
     name: 'Plaza Tol Jalan Duta (PLUS E1)',
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.6682, 3.1782],
+    coordinates: [101.6615, 3.1762],
     bearing: 340
   },
   {
@@ -353,7 +355,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.0902, 4.5971],
+    coordinates: [101.1039, 4.6273],
     bearing: 350
   },
   {
@@ -362,7 +364,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [100.4192, 5.3212],
+    coordinates: [100.4505, 5.3223],
     bearing: 350
   }
 ];
@@ -388,6 +390,35 @@ export function calculatePhysicalRouteTolls(
   const items: TollItem[] = [];
   let totalCost = 0;
   let hasMotorcycleRestriction = false;
+
+  // Resolves chainage fare for a closed-system entry/exit pair by interchange id
+  // and appends the combined item. Physical gate hits prove the expressway was
+  // transited; the chainage table prices it.
+  const pushClosedPair = (entryGate: PhysicalTollGate, exitGate: PhysicalTollGate, cls: VehicleClass) => {
+    const table = entryGate.expressway.includes('E1') ? PLUS_E1_INTERCHANGES : PLUS_E2_INTERCHANGES;
+    const resolveInterchange = (gateId: string) => {
+      const suffix = gateId.split('_GATE_')[1];
+      return table.find(ic => ic.id === suffix);
+    };
+    const icEntry = resolveInterchange(entryGate.id);
+    const icExit = resolveInterchange(exitGate.id);
+
+    let closedCost = 0;
+    if (icEntry && icExit && cls === 'car') {
+      closedCost = Math.abs(icExit.chainageFare - icEntry.chainageFare);
+    } else if (cls === 'car') {
+      closedCost = 4.10; // Default verified transit segment
+    }
+
+    totalCost += closedCost;
+    items.push({
+      id: `${entryGate.id}_TO_${exitGate.id}`,
+      plazaName: `${entryGate.name.replace('Plaza Tol ', '')} → ${exitGate.name.replace('Plaza Tol ', '')}`,
+      expressway: entryGate.expressway,
+      cost: closedCost,
+      paymentMethods: ['TnG', 'RFID']
+    });
+  };
 
   const hits: GateCrossingHit[] = [];
 
@@ -420,38 +451,49 @@ export function calculatePhysicalRouteTolls(
     }
   }
 
-  // Process closed PLUS toll pairs (e.g. Entry -> Exit)
+  // Closed PLUS system: a physical mainline canopy hit proves the expressway
+  // was actually used (no false tolls on parallel arterials). The entry/exit
+  // interchange pair is then resolved per trip end: snap the endpoint to the
+  // nearest chainage-table interchange when the access leg is short (< 8 km);
+  // when it isn't (city-center starts ~10 km from Sg Besi), fall back to the
+  // first/last physically crossed mainline canopy, whose gate id maps to a
+  // table interchange directly.
   const plusHits = hits.filter(h => h.gate.operator === 'PLUS' && h.gate.system === 'closed');
-  if (plusHits.length >= 2) {
-    const entryHit = plusHits[0];
-    const exitHit = plusHits[plusHits.length - 1];
-
-    if (entryHit.gate.id !== exitHit.gate.id && exitHit.routeOffsetMeters - entryHit.routeOffsetMeters > 500) {
-      // Gate ids follow PLUS_E{1,2}_GATE_{INTERCHANGE} — resolve chainage from the
-      // matching expressway's interchange table by that suffix, not by display name.
-      const table = entryHit.gate.expressway.includes('E1') ? PLUS_E1_INTERCHANGES : PLUS_E2_INTERCHANGES;
-      const resolveInterchange = (gateId: string) => {
-        const suffix = gateId.split('_GATE_')[1];
-        return table.find(ic => ic.id === suffix);
-      };
-      const icEntry = resolveInterchange(entryHit.gate.id);
-      const icExit = resolveInterchange(exitHit.gate.id);
-
-      let closedCost = 0;
-      if (icEntry && icExit && vehicleClass === 'car') {
-        closedCost = Math.abs(icExit.chainageFare - icEntry.chainageFare);
-      } else if (vehicleClass === 'car') {
-        closedCost = 4.10; // Default verified transit segment
+  if (plusHits.length > 0) {
+    const expressway = plusHits[0].gate.expressway;
+    const table = expressway.includes('E1') ? PLUS_E1_INTERCHANGES : PLUS_E2_INTERCHANGES;
+    const prefix = expressway.includes('E1') ? 'PLUS_E1' : 'PLUS_E2';
+    const toGate = (ic: ClosedInterchange): PhysicalTollGate => ({
+      id: `${prefix}_GATE_${ic.id}`,
+      name: `Plaza Tol ${ic.name}`,
+      expressway,
+      operator: 'PLUS',
+      system: 'closed',
+      coordinates: ic.coord
+    });
+    const snapNearest = (p: [number, number]): ClosedInterchange | null => {
+      let best: ClosedInterchange | null = null;
+      let bestDist = Infinity;
+      for (const ic of table) {
+        const [dx, dy] = tollXY(p, ic.coord);
+        const d = Math.hypot(dx, dy);
+        if (d < bestDist) {
+          bestDist = d;
+          best = ic;
+        }
       }
+      return bestDist <= 8000 ? best : null;
+    };
+    const icFromGate = (gateId: string): ClosedInterchange | null =>
+      table.find(ic => ic.id === gateId.split('_GATE_')[1]) ?? null;
 
-      totalCost += closedCost;
-      items.push({
-        id: `${entryHit.gate.id}_TO_${exitHit.gate.id}`,
-        plazaName: `${entryHit.gate.name.replace('Plaza Tol ', '')} → ${exitHit.gate.name.replace('Plaza Tol ', '')}`,
-        expressway: entryHit.gate.expressway,
-        cost: closedCost,
-        paymentMethods: ['TnG', 'RFID']
-      });
+    const firstHit = plusHits[0];
+    const lastHit = plusHits[plusHits.length - 1];
+    const icStart = snapNearest(points[0]) ?? icFromGate(firstHit.gate.id);
+    const icEnd = snapNearest(points[points.length - 1]) ?? icFromGate(lastHit.gate.id);
+
+    if (icStart && icEnd && icStart.id !== icEnd.id) {
+      pushClosedPair(toGate(icStart), toGate(icEnd), vehicleClass);
     }
   }
 

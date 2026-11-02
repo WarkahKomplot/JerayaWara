@@ -73,4 +73,25 @@ describe('estimateRouteTolls (geometry-first toll estimation)', () => {
     const result = estimateRouteTolls([], 'car', route);
     expect(result.items.some(i => i.id === 'MEX_SALAK_SELATAN')).toBe(false);
   });
+
+  it('charges full chainage when the trip ends near an interchange with no modeled exit canopy (KL → AEON Ayer Keroh)', () => {
+    // Regression: real OSRM geometry from KL to AEON Ayer Keroh crosses the Sg Besi
+    // canopy but leaves via the Ayer Keroh ramp, which is not a modeled gate — the
+    // trip used to come out RM 0.00. The endpoint snap must resolve the exit.
+    const sgBes = PHYSICAL_TOLL_GATES.find(g => g.id === 'PLUS_E2_GATE_SG_BESI')!;
+    const ayerKerohIc = { coord: [102.2850, 2.2709] as [number, number] }; // near AEON, past the interchange
+    const route: [number, number][] = [];
+    const steps = 25;
+    for (let i = 0; i <= steps; i++) {
+      const r = i / steps;
+      route.push([
+        sgBes.coordinates[0] + (ayerKerohIc.coord[0] - sgBes.coordinates[0]) * r,
+        sgBes.coordinates[1] + (ayerKerohIc.coord[1] - sgBes.coordinates[1]) * r
+      ]);
+    }
+    const result = estimateRouteTolls([], 'car', route);
+    const closed = result.items.find(i => i.id.includes('_TO_'));
+    expect(closed).toBeDefined();
+    expect(closed!.cost).toBe(15.60);
+  });
 });
