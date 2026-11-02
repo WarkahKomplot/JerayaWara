@@ -20,10 +20,9 @@ export type { PhysicalTollGate, GateCrossingHit } from './tollCrossing';
 export function estimateRouteTolls(
   plazaKeys: string[],
   vehicleClass: VehicleClass,
-  routeCoordinates?: [number, number][],
-  isApproximate?: boolean
+  routeCoordinates?: [number, number][]
 ): TollBreakdown {
-  if (!isApproximate && routeCoordinates && routeCoordinates.length >= 2) {
+  if (routeCoordinates && routeCoordinates.length >= 2) {
     const geometric = calculatePhysicalRouteTolls(routeCoordinates, vehicleClass);
     const gatedIds = new Set(PHYSICAL_TOLL_GATES.map(g => g.id));
     const keyword = calculateRouteTolls(plazaKeys, vehicleClass);

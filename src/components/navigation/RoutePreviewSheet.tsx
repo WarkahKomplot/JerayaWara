@@ -8,6 +8,8 @@ export interface RoutePreviewSheetProps {
   route: RouteResult | null;
   tolls: TollBreakdown | null;
   isCalculating: boolean;
+  /** Honest failure message (e.g. no connection) shown when route is null. */
+  errorMessage?: string | null;
   lang?: Language;
   onStart: () => void;
   onCancel: () => void;
@@ -22,6 +24,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
   route,
   tolls,
   isCalculating,
+  errorMessage,
   lang = 'ms',
   onStart,
   onCancel
@@ -37,9 +40,36 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
     );
   }
 
+  // Honest failure: routing is online-only, so no connection means no route.
+  if (!route && errorMessage) {
+    return (
+      <div className="fixed bottom-4 left-1/2 z-40 w-[min(92vw,26rem)] -translate-x-1/2">
+        <div className="overflow-hidden rounded-2xl bg-slate-900/95 border border-amber-700 shadow-2xl backdrop-blur text-white">
+          <div className="flex items-start gap-3 px-4 py-4">
+            <WifiOff className="h-5 w-5 flex-shrink-0 text-amber-400 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">{errorMessage}</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {lang === 'ms'
+                  ? 'JerayaWara hanya menggunakan data jalan sebenar — tiada laluan karangan.'
+                  : 'JerayaWara only uses real road data — no fabricated routes.'}
+              </p>
+            </div>
+            <button
+              onClick={onCancel}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white flex-shrink-0"
+              aria-label={lang === 'ms' ? 'Batal' : 'Cancel'}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!route) return null;
 
-  const isOfflineSource = route.isApproximate === true;
   const trafficDelay = route.traffic?.delayMinutes ?? 0;
 
   return (
@@ -54,17 +84,8 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
             <div className="min-w-0">
               <p className="text-sm font-bold truncate">{route.destinationName}</p>
               <p className="flex items-center gap-1 text-[10px] text-slate-400">
-                {isOfflineSource ? (
-                  <>
-                    <WifiOff className="h-3 w-3" />
-                    {lang === 'ms' ? 'Laluan anggaran (offline)' : 'Approximate route (offline)'}
-                  </>
-                ) : (
-                  <>
-                    <Wifi className="h-3 w-3" />
-                    {lang === 'ms' ? 'Laluan jalan sebenar' : 'Real road route'}
-                  </>
-                )}
+                <Wifi className="h-3 w-3" />
+                {lang === 'ms' ? 'Laluan jalan sebenar' : 'Real road route'}
               </p>
             </div>
           </div>

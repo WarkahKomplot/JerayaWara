@@ -17,32 +17,25 @@ function mexRouteThroughSalakSelatan(): [number, number][] {
 
 describe('estimateRouteTolls (geometry-first toll estimation)', () => {
   it('detects MEX Salak Selatan physically when real route geometry passes the gate', () => {
-    const result = estimateRouteTolls([], 'car', mexRouteThroughSalakSelatan(), false);
+    const result = estimateRouteTolls([], 'car', mexRouteThroughSalakSelatan());
     expect(result.items.some(i => i.id === 'MEX_SALAK_SELATAN')).toBe(true);
     expect(result.totalCost).toBe(2.00);
   });
 
-  it('falls back to keyword plaza keys for approximate routes even with coordinates', () => {
-    // Same geometry, but flagged approximate → geometry must NOT be trusted
-    const result = estimateRouteTolls(['MEX_SALAK_SELATAN'], 'car', mexRouteThroughSalakSelatan(), true);
-    expect(result.totalCost).toBe(2.00);
-    expect(result.items.map(i => i.id)).toContain('MEX_SALAK_SELATAN');
-  });
-
   it('uses keyword fallback when no coordinates are available', () => {
-    const result = estimateRouteTolls(['MEX_SALAK_SELATAN'], 'car', undefined, false);
+    const result = estimateRouteTolls(['MEX_SALAK_SELATAN'], 'car', undefined);
     expect(result.totalCost).toBe(2.00);
   });
 
   it('does not charge KESAS when geometry never crosses the Sunway plaza', () => {
     // KL city route far from KESAS Sunway — keyword key says KESAS, geometry says no
     const klShortRoute: [number, number][] = [[101.6868, 3.1390], [101.6950, 3.1510]];
-    const result = estimateRouteTolls(['KESAS_SUNWAY'], 'car', klShortRoute, false);
+    const result = estimateRouteTolls(['KESAS_SUNWAY'], 'car', klShortRoute);
     expect(result.items.some(i => i.id === 'KESAS_SUNWAY')).toBe(false);
   });
 
   it('returns zero tolls for empty keyword keys and no coordinates', () => {
-    const result = estimateRouteTolls([], 'car', undefined, false);
+    const result = estimateRouteTolls([], 'car', undefined);
     expect(result.totalCost).toBe(0);
     expect(result.items).toHaveLength(0);
   });
@@ -61,7 +54,7 @@ describe('estimateRouteTolls (geometry-first toll estimation)', () => {
         sgBes.coordinates[1] + (ayerKeroh.coordinates[1] - sgBes.coordinates[1]) * r
       ]);
     }
-    const result = estimateRouteTolls([], 'car', route, false);
+    const result = estimateRouteTolls([], 'car', route);
     const closed = result.items.find(i => i.id.includes('_TO_'));
     expect(closed).toBeDefined();
     expect(closed!.cost).toBe(15.60);
@@ -77,7 +70,7 @@ describe('estimateRouteTolls (geometry-first toll estimation)', () => {
       [lng - 0.005, lat - 0.0004],
       [lng - 0.01, lat - 0.0003]
     ];
-    const result = estimateRouteTolls([], 'car', route, false);
+    const result = estimateRouteTolls([], 'car', route);
     expect(result.items.some(i => i.id === 'MEX_SALAK_SELATAN')).toBe(false);
   });
 });

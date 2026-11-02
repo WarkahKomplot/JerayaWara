@@ -41,18 +41,25 @@ describe('RoutePreviewSheet (pre-departure confirmation)', () => {
     expect(screen.getByText('KLCC')).toBeTruthy();
   });
 
-  it('labels approximate routes honestly', () => {
+  it('shows an honest no-connection error instead of a fabricated route', () => {
     render(
       <RoutePreviewSheet
-        route={{ ...realRoute, isApproximate: true }}
-        tolls={tolls}
+        route={null}
+        tolls={null}
         isCalculating={false}
+        errorMessage="No internet connection. Navigation requires internet."
         lang="en"
         onStart={vi.fn()}
         onCancel={vi.fn()}
       />
     );
-    expect(screen.getByText(/Approximate route \(offline\)/)).toBeTruthy();
+    expect(screen.getByText(/No internet connection/)).toBeTruthy();
+    expect(screen.getByText(/no fabricated routes/i)).toBeTruthy();
+  });
+
+  it('renders nothing when no route and no error', () => {
+    const { container } = render(<RoutePreviewSheet route={null} tolls={null} isCalculating={false} onStart={vi.fn()} onCancel={vi.fn()} />);
+    expect(container.innerHTML).toBe('');
   });
 
   it('labels real road routes', () => {

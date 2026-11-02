@@ -121,7 +121,7 @@ export function useAutoReroute({
         destTitle || route.destinationName
       );
 
-      const newTolls = estimateRouteTolls(newRoute.tollPlazaKeys, mode, newRoute.coordinates, newRoute.isApproximate);
+      const newTolls = estimateRouteTolls(newRoute.tollPlazaKeys, mode, newRoute.coordinates);
       updateCallback(newRoute, newTolls);
       offRouteCountRef.current = 0;
       setIsOffRoute(false);
@@ -130,41 +130,8 @@ export function useAutoReroute({
     } finally {
       setIsRerouting(false);
       isCalculatingRef.current = false;
-      // One-shot upgrade: re-arm after any completed recalculation so a later
-      // connectivity regain can trigger a fresh upgrade
-      upgradingRef.current = false;
     }
   }, []);
-
-  // Connectivity upgrade: when signal returns mid-navigation and the active route
-  // came from the offline tier (no OSRM source flag exists, so approximate and
-  // corridor-snapped routes are inferred by absence of fine-grained steps), fire
-  // one recalculation — the liveness check inside calculateRoute does the rest.
-  const wasOfflineRef = useRef(false);
-  const upgradingRef = useRef(false);
-  useEffect(() => {
-    if (!isNavigating) {
-      wasOfflineRef.current = false;
-      upgradingRef.current = false;
-      return;
-    }
-    const onlineNow = typeof navigator !== 'undefined' ? navigator.onLine : false;
-    if (!onlineNow) {
-      wasOfflineRef.current = true;
-      return;
-    }
-    if (
-      wasOfflineRef.current &&
-      !upgradingRef.current &&
-      activeRoute &&
-      activeRoute.coordinates &&
-      activeRoute.coordinates.length >= 2
-    ) {
-      wasOfflineRef.current = false;
-      upgradingRef.current = true;
-      triggerReroute();
-    }
-  }, [isNavigating, activeRoute, triggerReroute]);
 
   useEffect(() => {
     if (!isNavigating || !activeRoute || !activeRoute.coordinates || activeRoute.coordinates.length < 2) {

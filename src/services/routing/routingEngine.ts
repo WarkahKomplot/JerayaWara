@@ -2,13 +2,17 @@ import { RouteResult, TurnStep, ManeuverType } from './types';
 import { VehicleClass } from '../toll/types';
 import { findClosedSystemTollPlazas } from '../toll/closedTollNetwork';
 import { registerDynamicTollPlaza } from '../toll/tollData';
-import {
-  distanceKm,
-  findNearestRoadPathChained
-} from './malaysiaRoadNetwork';
 import { analyzeRouteTraffic } from '../traffic/malaysiaTrafficEngine';
 export { routeGapMeters, verifyRouteIntegrity } from './routeIntegrity';
 export type { RouteIntegrityOptions, RouteIntegrityResult } from './routeIntegrity';
+
+/** Thrown when no real road route can be calculated — the app is online-only by design. */
+export class RouteUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RouteUnavailableError';
+  }
+}
 
 /**
  * Extracts lane guidance from OSRM intersection data. OSRM returns `lanes` per
@@ -205,241 +209,10 @@ export function determineRouteTollPlazas(
 }
 
 /**
- * Calculates a 100% offline-ready route snapped to the real Malaysian road network.
- * Guarantees routes follow actual road curves and expressways rather than straight lines.
- */
-export function calculateOfflineRoute(
-  start: [number, number],
-  destination: [number, number],
-  profile: VehicleClass,
-  destinationTitle?: string
-): RouteResult {
-  const straightDist = distanceKm(start, destination);
-
-  // 1. Pedestrian / Short City Trips (< 2.5 km)
-  if (profile === 'walker' || straightDist < 2.5) {
-    const midLng = start[0];
-    const midLat = destination[1];
-    const coordinates: [number, number][] = [
-      start,
-      [midLng, (start[1] + midLat) / 2],
-      [midLng, midLat],
-      [(midLng + destination[0]) / 2, midLat],
-      destination
-    ];
-
-    const actualDistKm = Math.round(straightDist * 1.25 * 10) / 10;
-    const speed = profile === 'walker' ? 4.5 : 40;
-    const durationMinutes = Math.max(1, Math.round((actualDistKm / speed) * 60));
-
-    const steps: TurnStep[] = [
-      {
-        id: 'off-walk-1',
-        maneuver: 'straight',
-        instruction: profile === 'walker'
-          ? 'Head on pedestrian footpath / sidewalk'
-          : 'Head on local street toward primary junction',
-        distanceMeters: Math.round(actualDistKm * 400),
-        durationSeconds: Math.round(durationMinutes * 25),
-        coordinates: start
-      },
-      {
-        id: 'off-walk-2',
-        maneuver: 'turn_right',
-        instruction: profile === 'walker'
-          ? 'Turn onto safe sidewalk (expressways strictly avoided)'
-          : 'Turn onto connecting street',
-        distanceMeters: Math.round(actualDistKm * 600),
-        durationSeconds: Math.round(durationMinutes * 35),
-        coordinates: [midLng, midLat]
-      },
-      {
-        id: 'off-walk-3',
-        maneuver: 'arrive',
-        instruction: `Arrive at ${destinationTitle || 'destination'}`,
-        distanceMeters: 0,
-        durationSeconds: 0,
-        coordinates: destination
-      }
-    ];
-
-    return {
-      coordinates,
-      distanceKm: actualDistKm,
-      durationMinutes,
-      steps,
-      tollPlazaKeys: [],
-      profile,
-      destinationName: destinationTitle || 'Destination',
-      isApproximate: true
-    };
-  }
-
-  // 2. Highway & Arterial Road Network Snapper (multi-corridor chaining, e.g.
-  //    E2 → ELITE → MEX, falling back to single-corridor snap)
-  const roadMatch = findNearestRoadPathChained(start, destination);
-  if (roadMatch) {
-    const fullCoordinates: [number, number][] = [
-      start,
-      ...roadMatch.pathCoordinates,
-      destination
-    ];
-
-    let totalHighwayDist = 0;
-    for (let i = 0; i < roadMatch.pathCoordinates.length - 1; i++) {
-      totalHighwayDist += distanceKm(roadMatch.pathCoordinates[i], roadMatch.pathCoordinates[i + 1]);
-    }
-    const accessDist = distanceKm(start, roadMatch.entryPoint) + distanceKm(roadMatch.exitPoint, destination);
-    const totalDistKm = Math.round((totalHighwayDist + accessDist) * 10) / 10;
-    const avgSpeed = profile === 'motorcycle' ? 80 : 95;
-    const durationMinutes = Math.max(1, Math.round((totalDistKm / avgSpeed) * 60));
-
-    const steps: TurnStep[] = [
-      {
-        id: 'step-arterial-1',
-        maneuver: 'straight',
-        instruction: `Head on access road toward ${roadMatch.corridor.name}`,
-        distanceMeters: Math.round(distanceKm(start, roadMatch.entryPoint) * 1000),
-        durationSeconds: 180,
-        coordinates: start,
-        speedLimitKmH: 60,
-        speedLimitSource: 'estimated'
-      },
-      {
-        id: 'step-highway-merge',
-        maneuver: 'exit_right',
-        instruction: profile === 'motorcycle'
-          ? `Merge onto ${roadMatch.corridor.name} (Keep left for motorcycle lane)`
-          : `Merge onto ${roadMatch.corridor.name}`,
-        distanceMeters: Math.round(totalHighwayDist * 1000),
-        durationSeconds: Math.round((totalHighwayDist / 100) * 3600),
-        coordinates: roadMatch.entryPoint,
-        speedLimitKmH: roadMatch.corridor.speedLimit,
-        speedLimitSource: 'verified',
-        isMotorcycleLane: profile === 'motorcycle',
-        laneGuidance: profile === 'motorcycle' ? 'Use dedicated motorcycle lane (Lorong Motosikal)' : undefined
-      },
-      {
-        id: 'step-highway-exit',
-        maneuver: 'exit_left',
-        instruction: `Take exit ramp toward ${destinationTitle || 'destination area'}`,
-        distanceMeters: Math.round(distanceKm(roadMatch.exitPoint, destination) * 1000),
-        durationSeconds: 120,
-        coordinates: roadMatch.exitPoint,
-        speedLimitKmH: 60,
-        speedLimitSource: 'estimated'
-      },
-      {
-        id: 'step-arrive',
-        maneuver: 'arrive',
-        instruction: `Arrive at ${destinationTitle || 'destination'}`,
-        distanceMeters: 0,
-        durationSeconds: 0,
-        coordinates: destination
-      }
-    ];
-
-    const tollPlazaKeys = determineRouteTollPlazas(
-      start,
-      destination,
-      destinationTitle || roadMatch.corridor.name,
-      [roadMatch.corridor.name],
-      totalDistKm,
-      profile
-    );
-
-    const traffic = analyzeRouteTraffic(fullCoordinates, durationMinutes, profile);
-
-    return {
-      coordinates: fullCoordinates,
-      distanceKm: totalDistKm,
-      durationMinutes: traffic.totalMinutes,
-      steps,
-      tollPlazaKeys,
-      profile,
-      destinationName: destinationTitle || roadMatch.corridor.name,
-      traffic,
-      // Corridor polylines are coarse hand-placed waypoints, not OSRM geometry —
-      // must be flagged approximate so the UI never shows "real road route".
-      isApproximate: true
-    };
-  }
-
-  // 3. Realistic Arterial Road Curvature
-  const actualDistanceKm = Math.round(straightDist * 1.25 * 10) / 10;
-  const avgSpeed = profile === 'motorcycle' ? 65 : 75;
-  const durationMinutes = Math.max(1, Math.round((actualDistanceKm / avgSpeed) * 60));
-
-  const stepsCount = Math.max(5, Math.min(12, Math.round(actualDistanceKm / 4)));
-  const coordinates: [number, number][] = [];
-  for (let i = 0; i <= stepsCount; i++) {
-    const ratio = i / stepsCount;
-    const curve1 = Math.sin(ratio * Math.PI) * 0.015;
-    const curve2 = Math.cos(ratio * Math.PI * 2) * 0.007;
-    const lng = start[0] + (destination[0] - start[0]) * ratio + curve1;
-    const lat = start[1] + (destination[1] - start[1]) * ratio + curve2;
-    coordinates.push([lng, lat]);
-  }
-
-  const fallbackTolls = determineRouteTollPlazas(
-    start,
-    destination,
-    destinationTitle || 'Destination',
-    [],
-    actualDistanceKm,
-    profile
-  );
-
-  const traffic = analyzeRouteTraffic(coordinates, durationMinutes, profile);
-
-  return {
-    coordinates,
-    distanceKm: actualDistanceKm,
-    durationMinutes: traffic.totalMinutes,
-    steps: [
-      {
-        id: 'step-gen-1',
-        maneuver: 'straight',
-        instruction: profile === 'motorcycle' ? 'Proceed on main road, watch for motorcycle lanes' : 'Proceed on primary road',
-        distanceMeters: Math.round(actualDistanceKm * 300),
-        durationSeconds: 180,
-        coordinates: start,
-        speedLimitKmH: 60,
-        speedLimitSource: 'estimated',
-        isMotorcycleLane: profile === 'motorcycle'
-      },
-      {
-        id: 'step-gen-2',
-        maneuver: 'turn_right',
-        instruction: 'Turn onto connecting trunk road',
-        distanceMeters: Math.round(actualDistanceKm * 700),
-        durationSeconds: 300,
-        coordinates: coordinates[Math.floor(coordinates.length / 2)],
-        speedLimitKmH: 80,
-        speedLimitSource: 'estimated'
-      },
-      {
-        id: 'step-gen-3',
-        maneuver: 'arrive',
-        instruction: `Arrive at ${destinationTitle || 'destination'}`,
-        distanceMeters: 0,
-        durationSeconds: 0,
-        coordinates: destination
-      }
-    ],
-    tollPlazaKeys: fallbackTolls,
-    profile,
-    destinationName: destinationTitle || 'Destination',
-    traffic,
-    isApproximate: true
-  };
-}
-
-/**
  * navigator.onLine only reports that a network interface is up — captive portals
  * and Wi-Fi-with-no-internet still return true. This cheap probe verifies actual
- * reachability in 2s so dead zones fall straight to the offline tier instead of
- * hanging on a doomed OSRM request for 6s. Cached for 15s to avoid probing on
+ * reachability in 2s so dead zones fail fast with RouteUnavailableError instead
+ * of hanging on a doomed OSRM request for 6s. Cached for 15s to avoid probing on
  * every route calculation.
  */
 let lastLivenessCheck = { at: 0, alive: false };
@@ -478,8 +251,10 @@ export async function isActuallyOnline(): Promise<boolean> {
 }
 
 /**
- * Calculates a route using real road network vectors (via redundant OSRM open routing servers when online,
- * or the snapped Malaysia Highway/Arterial network when offline).
+ * Calculates a route using real road network vectors via redundant OSRM open
+ * routing servers. Routing is online-only by design: when no OSRM endpoint is
+ * reachable this throws RouteUnavailableError rather than drawing a synthetic
+ * line that does not follow real roads.
  *
  * geometryDetail: 'simplified' (route preview — small polyline, same distance/ETA
  * metrics) or 'full' (active navigation — complete geometry for turn-by-turn).
@@ -493,7 +268,13 @@ export async function calculateRoute(
 ): Promise<RouteResult> {
   const isOnline = await isActuallyOnline();
 
-  if (isOnline) {
+  if (!isOnline) {
+    throw new RouteUnavailableError(
+      'No connection to routing service. Navigation requires internet.'
+    );
+  }
+
+  {
     const mode = profile === 'walker' ? 'foot' : 'driving';
     // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
     const routerEndpoints = [
@@ -610,6 +391,7 @@ export async function calculateRoute(
     }
   }
 
-  // Complete offline fallback using real Malaysian highway corridors
-  return calculateOfflineRoute(start, destination, profile, destinationTitle);
+  throw new RouteUnavailableError(
+    'All routing services unreachable. Please check your internet connection.'
+  );
 }

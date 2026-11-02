@@ -46,7 +46,5 @@ export interface RouteResult {
   profile: VehicleClass;
   destinationName?: string;
   traffic?: TrafficAnalysis;
-  /** True when the geometry is synthetically generated (no real road data), not snapped or OSRM-derived. */
-  isApproximate?: boolean;
 }
 

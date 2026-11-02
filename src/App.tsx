@@ -8,7 +8,6 @@ import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { RoutePreviewSheet } from './components/navigation/RoutePreviewSheet';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
 import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
-import { ApproximateRouteModal } from './components/offline/ApproximateRouteModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
@@ -25,7 +24,7 @@ import { useStepProgress } from './hooks/useStepProgress';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { PwaInstallBanner } from './components/common/PwaInstallBanner';
 
-import { calculateRoute } from './services/routing/routingEngine';
+import { calculateRoute, RouteUnavailableError } from './services/routing/routingEngine';
 import { estimateRouteTolls } from './services/toll/tollCalculator';
 import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
@@ -79,9 +78,8 @@ export function App() {
   const [previewTolls, setPreviewTolls] = useState<TollBreakdown | null>(null);
   const [isCalculatingPreview, setIsCalculatingPreview] = useState(false);
 
-  // Pending approximate route awaiting user consent before it can be previewed
-  const [pendingApproxRoute, setPendingApproxRoute] = useState<RouteResult | null>(null);
-  const [pendingApproxTolls, setPendingApproxTolls] = useState<TollBreakdown | null>(null);
+  // Honest failure state: routing is online-only, so no connection = no route
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   // Original destination title from the selected SearchItem, preserved across reroutes
   const [activeDestinationTitle, setActiveDestinationTitle] = useState<string | undefined>(undefined);
@@ -305,24 +303,29 @@ export function App() {
     setTollBreakdown(null);
     setManualStepOverride(null);
     setIsCalculatingPreview(true);
+    setRouteError(null);
     setActiveDestinationTitle(item.title);
 
     // Preview only draws a line — simplified geometry keeps the request small on
     // mobile data. Distance/ETA/toll metrics are identical either way.
-    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title, 'simplified');
-    const tolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
-    setIsCalculatingPreview(false);
-
-    // Synthetic geometry (offline + uncovered area): require explicit consent
-    // before even previewing a route that does not follow real roads.
-    if (route.isApproximate) {
-      setPendingApproxRoute(route);
-      setPendingApproxTolls(tolls);
-      return;
+    try {
+      const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title, 'simplified');
+      const tolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates);
+      setIsCalculatingPreview(false);
+      setPreviewRoute(route);
+      setPreviewTolls(tolls);
+    } catch (err) {
+      setIsCalculatingPreview(false);
+      setRouteError(
+        err instanceof RouteUnavailableError
+          ? voiceLanguage === 'ms'
+            ? 'Tiada sambungan internet. Navigasi memerlukan talian.'
+            : 'No internet connection. Navigation requires internet.'
+          : voiceLanguage === 'ms'
+          ? 'Gagal mengira laluan. Sila cuba lagi.'
+          : 'Failed to calculate route. Please try again.'
+      );
     }
-
-    setPreviewRoute(route);
-    setPreviewTolls(tolls);
   };
 
   // Begin active navigation from a confirmed preview. If the preview came back
@@ -333,14 +336,12 @@ export function App() {
 
     let route = previewRoute;
     let tolls = previewTolls;
-    if (route.coordinates.length > 0 && !route.isApproximate && route.steps.length > 0 && route.steps[0].id?.startsWith('osrm-')) {
+    if (route.coordinates.length > 0 && route.steps.length > 0 && route.steps[0].id?.startsWith('osrm-')) {
       const startCoord = route.coordinates[0];
       const destCoord = route.coordinates[route.coordinates.length - 1];
       const fullRoute = await calculateRoute(startCoord, destCoord, route.profile, route.destinationName, 'full');
-      if (!fullRoute.isApproximate) {
-        route = fullRoute;
-        tolls = estimateRouteTolls(route.tollPlazaKeys, route.profile, route.coordinates, route.isApproximate);
-      }
+      route = fullRoute;
+      tolls = estimateRouteTolls(route.tollPlazaKeys, route.profile, route.coordinates);
     }
 
     setActiveRoute(route);
@@ -355,19 +356,7 @@ export function App() {
   const handleCancelPreview = () => {
     setPreviewRoute(null);
     setPreviewTolls(null);
-  };
-
-  const handleConfirmApproxRoute = () => {
-    if (!pendingApproxRoute) return;
-    setPreviewRoute(pendingApproxRoute);
-    setPreviewTolls(pendingApproxTolls);
-    setPendingApproxRoute(null);
-    setPendingApproxTolls(null);
-  };
-
-  const handleCancelApproxRoute = () => {
-    setPendingApproxRoute(null);
-    setPendingApproxTolls(null);
+    setRouteError(null);
   };
 
   // Direct map click to start navigation to any point in Malaysia
@@ -392,7 +381,7 @@ export function App() {
       if (dest) {
         const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName, 'full');
         setActiveRoute(reRoute);
-        setTollBreakdown(estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates, reRoute.isApproximate));
+        setTollBreakdown(estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates));
       }
     }
   };
@@ -664,18 +653,6 @@ export function App() {
               </div>
             )}
 
-            {/* Approximate Route Warning — synthetic geometry, no real road data */}
-            {isNavigating && activeRoute?.isApproximate && (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-600/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-amber-400/50">
-                <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-                <span>
-                  {voiceLanguage === 'ms'
-                    ? 'Laluan anggaran sahaja — geometri jalan sebenar tidak tersedia offline. Jangan guna sebagai panduan utama.'
-                    : 'Approximate route only — real road geometry unavailable offline. Do not rely on it as primary guidance.'}
-                </span>
-              </div>
-            )}
-
             {/* Arrival Cue: destination within walking distance */}
             {isNavigating && isNearDestination && (
               <div className="flex items-center gap-2 rounded-xl bg-emerald-600/95 border border-emerald-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
@@ -902,18 +879,10 @@ export function App() {
         route={previewRoute}
         tolls={previewTolls}
         isCalculating={isCalculatingPreview}
+        errorMessage={routeError}
         lang={voiceLanguage}
         onStart={handleStartNavigation}
         onCancel={handleCancelPreview}
-      />
-
-      {/* Approximate Route Confirmation Modal */}
-      <ApproximateRouteModal
-        isOpen={pendingApproxRoute !== null}
-        destinationName={pendingApproxRoute?.destinationName}
-        lang={voiceLanguage}
-        onCancel={handleCancelApproxRoute}
-        onContinue={handleConfirmApproxRoute}
       />
     </>
   );
