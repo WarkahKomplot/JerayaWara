@@ -121,10 +121,18 @@ export function detectGateCrossing(
 
     // Longitudinal continuation verify — endpoint-at-gate sides are relaxed:
     // a route beginning/ending at the canopy is a genuine paid transit.
-    if (!startsAtGate && projBefore > -50) {
+    // The linear projection assumes the road is straight through the gate and
+    // false-rejects curved ramp plazas (e.g. DUKE Segambut) where the 80m-back
+    // along-route point is spatially "ahead" of the crossing on the segment
+    // axis. The correct invariant: a real transit sweeps through the gate's
+    // axis — the along-axis coordinate must change sign between the crossing
+    // segment's start and its continuation points. A touch-and-reverse (T
+    // junction tap) stays on one side and is still rejected.
+    const sweepsThrough = a[0] > 0 !== w[0] > 0 || a[0] > 0 !== v[0] > 0;
+    if (!startsAtGate && projBefore > -50 && !sweepsThrough) {
       continue;
     }
-    if (!endsAtGate && projAfter < 50) {
+    if (!endsAtGate && projAfter < 50 && !sweepsThrough) {
       continue;
     }
 
@@ -215,6 +223,30 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     coordinates: [101.5281, 3.0125],
     bearing: 90,
     carRate: 2.00,
+    motorcycleRate: 0.00
+  },
+
+  // DUKE E33 (Duta-Ulu Klang Expressway) — interchange barriers, RM 1.60 class 1
+  {
+    id: 'DUKE_SEGAMBUT',
+    name: 'Plaza Tol Segambut (DUKE)',
+    expressway: 'DUKE E33',
+    operator: 'DUKE',
+    system: 'open',
+    coordinates: [101.6555, 3.1874],
+    bearing: 350,
+    carRate: 1.60,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'DUKE_SENTUL_PASAR',
+    name: 'Plaza Tol Sentul Pasar (DUKE)',
+    expressway: 'DUKE E33',
+    operator: 'DUKE',
+    system: 'open',
+    coordinates: [101.6995, 3.1965],
+    bearing: 355,
+    carRate: 1.60,
     motorcycleRate: 0.00
   },
 
@@ -432,6 +464,44 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     carRate: 3.00,
     motorcycleRate: 0.00,
     motorcycleProhibited: true
+  },
+
+  // Penang Bridge 2 (Sultan Abdul Halim Muadzam Shah Bridge, E28) — RM 7.00 class 1
+  // Plaza sits at the island-end approach (Batu Maung); toll charged entering the island
+  {
+    id: 'PENANG_BRIDGE_2',
+    name: 'Plaza Tol Jambatan Kedua Pulau Pinang (Arah Pulau)',
+    expressway: 'Penang Bridge 2',
+    operator: 'PENANG_BRIDGE',
+    system: 'open',
+    coordinates: [100.2947, 5.2914],
+    bearing: 65,
+    carRate: 8.50,
+    motorcycleRate: 1.70
+  },
+
+  // LPT2 E8 (East Coast — Kuantan stretch)
+  {
+    id: 'LPT_TEMERLOH',
+    name: 'Plaza Tol Temerloh (LPT2)',
+    expressway: 'LPT2 E8',
+    operator: 'LPT',
+    system: 'open',
+    coordinates: [102.4041, 3.5044],
+    bearing: 65,
+    carRate: 5.00,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'LPT_JABOR',
+    name: 'Plaza Tol Jabor (LPT2)',
+    expressway: 'LPT2 E8',
+    operator: 'LPT',
+    system: 'open',
+    coordinates: [103.3176, 3.9455],
+    bearing: 60,
+    carRate: 4.50,
+    motorcycleRate: 0.00
   },
 
   // Penang Bridges

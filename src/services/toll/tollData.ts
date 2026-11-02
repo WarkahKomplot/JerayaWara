@@ -355,6 +355,15 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
   },
 
   // DUKE E33
+  'DUKE_SEGAMBUT': {
+    id: 'DUKE_SEGAMBUT',
+    plazaName: 'Segambut Toll Plaza',
+    expressway: 'DUKE E33',
+    carRate: 1.60,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
   'DUKE_BATU': {
     id: 'DUKE_BATU',
     plazaName: 'Batu Toll Plaza',
@@ -516,6 +525,26 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     plazaName: 'Ampangan Toll Plaza',
     expressway: 'LEKAS E21',
     carRate: 2.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
+  // LPT2 E8
+  'LPT_TEMERLOH': {
+    id: 'LPT_TEMERLOH',
+    plazaName: 'Temerloh Toll Plaza',
+    expressway: 'LPT2 E8',
+    carRate: 5.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'LPT_JABOR': {
+    id: 'LPT_JABOR',
+    plazaName: 'Jabor Toll Plaza',
+    expressway: 'LPT2 E8',
+    carRate: 4.50,
     motorcycleRate: 0.00,
     paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
     system: 'open'

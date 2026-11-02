@@ -190,6 +190,11 @@ export function determineRouteTollPlazas(
     }
   }
 
+  // DUKE E33 (Duta-Ulu Klang)
+  if (/\b(e33|duke|duta.ulu klang|klang valley? (inner|northern) expressway)\b/i.test(roadText)) {
+    keys.push('DUKE_SEGAMBUT');
+  }
+
   // KESAS E5
   if (/\b(e5|kesas|shah alam expressway|lebuhraya shah alam|kem-shah|klang valley expressway)\b/i.test(roadText)) {
     keys.push('KESAS_SUNWAY');
@@ -226,6 +231,16 @@ export function determineRouteTollPlazas(
   // LDP E11
   if (/\b(e11|ldp|damansara-puchong|damansara puchong|lebuhraya damansara)\b/i.test(roadText)) {
     keys.push('LDP_PENCHALA');
+  }
+
+  // Penang Bridge 2 (Second Bridge / Sultan Abdul Halim Muadzam Shah, E28)
+  if (/\b(e28|second bridge|jambatan kedua|sultan abdul halim)\b/i.test(roadText)) {
+    keys.push('PENANG_BRIDGE_2');
+  }
+
+  // LPT2 E8 (East Coast expressway past Kuantan)
+  if (/\b(lpt2|lpt 2|jabor|temerloh)\b/i.test(roadText)) {
+    keys.push('LPT_TEMERLOH', 'LPT_JABOR');
   }
 
   // SMART E38
