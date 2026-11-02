@@ -20,6 +20,7 @@ import { useWakeLock } from './hooks/useWakeLock';
 import { useFoldableDetection } from './hooks/useFoldableDetection';
 import { useVoiceNavigation } from './hooks/useVoiceNavigation';
 import { useAutoReroute } from './hooks/useAutoReroute';
+import { useStepProgress } from './hooks/useStepProgress';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { PwaInstallBanner } from './components/common/PwaInstallBanner';
 
@@ -38,7 +39,7 @@ import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExpor
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
 import { t, getLocalizedStepInstruction } from './services/i18n/translations';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
@@ -51,12 +52,31 @@ export function App() {
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const [tollBreakdown, setTollBreakdown] = useState<TollBreakdown | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // GPS-driven turn-by-turn progress: advances steps and computes approach distances
+  const {
+    currentStepIndex: gpsStepIndex,
+    metersToNextTurn,
+    approachingStep,
+    isNearDestination
+  } = useStepProgress(isNavigating, activeRoute, coords, {
+    advanceWarningMeters: 400,
+    stepSwitchRadiusMeters: 40,
+    arrivalRadiusMeters: 60
+  });
+
+  // Manual step selection (from step list) overrides GPS progression until GPS catches up
+  const [manualStepOverride, setManualStepOverride] = useState<number | null>(null);
+  const currentStepIndex = manualStepOverride !== null && manualStepOverride >= gpsStepIndex
+    ? manualStepOverride
+    : gpsStepIndex;
   const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
 
   // Pending approximate route awaiting user confirmation before navigation starts
   const [pendingApproxRoute, setPendingApproxRoute] = useState<RouteResult | null>(null);
   const [pendingApproxTolls, setPendingApproxTolls] = useState<TollBreakdown | null>(null);
+
+  // Original destination title from the selected SearchItem, preserved across reroutes
+  const [activeDestinationTitle, setActiveDestinationTitle] = useState<string | undefined>(undefined);
 
   // Windshield HUD Mode state
   const [isHudOpen, setIsHudOpen] = useState(false);
@@ -70,6 +90,7 @@ export function App() {
     toggleVoiceLanguage,
     announceStart,
     announceStep,
+    announceApproach,
     announceArrive,
     resetVoiceAnnouncements
   } = useVoiceNavigation();
@@ -85,10 +106,11 @@ export function App() {
     maxDriftMeters: 75,
     consecutiveOffRouteThreshold: 3,
     cooldownMs: 15000,
+    destinationTitle: activeDestinationTitle,
     onRouteUpdated: (newRoute, newTolls) => {
       setActiveRoute(newRoute);
       setTollBreakdown(newTolls);
-      setCurrentStepIndex(0);
+      setManualStepOverride(null);
     }
   });
 
@@ -271,7 +293,7 @@ export function App() {
   // Handle destination selection from search, favorites, or map click
   const handleSelectDestination = async (item: SearchItem) => {
     setTollBreakdown(null);
-    setCurrentStepIndex(0);
+    setManualStepOverride(null);
     setIsNavigating(true);
     requestLock();
 
@@ -279,6 +301,8 @@ export function App() {
 
     // Synthetic geometry (offline + uncovered area): require explicit user consent
     // before navigating on a route that does not follow real roads.
+    setActiveDestinationTitle(item.title);
+
     if (route.isApproximate) {
       setIsNavigating(false);
       releaseLock();
@@ -298,6 +322,7 @@ export function App() {
 
   const handleConfirmApproxRoute = () => {
     if (!pendingApproxRoute) return;
+    setActiveDestinationTitle(pendingApproxRoute.destinationName);
     setActiveRoute(pendingApproxRoute);
     setTollBreakdown(pendingApproxTolls);
     setIsNavigating(true);
@@ -343,13 +368,14 @@ export function App() {
     setIsNavigating(false);
     setActiveRoute(null);
     setTollBreakdown(null);
+    setActiveDestinationTitle(undefined);
     setFocusStepCoord(null);
     releaseLock();
     resetVoiceAnnouncements();
   };
 
   const handleSelectStep = (idx: number) => {
-    setCurrentStepIndex(idx);
+    setManualStepOverride(idx);
     if (activeRoute?.steps[idx]?.coordinates) {
       setFocusStepCoord(activeRoute.steps[idx].coordinates);
     }
@@ -399,6 +425,13 @@ export function App() {
       }
     }
   }, [isNavigating, activeRoute, currentStepIndex, announceStep, announceArrive]);
+
+  // Advance Warning Voice: "In 300 meters, turn left" spoken once as the junction nears
+  useEffect(() => {
+    if (isNavigating && approachingStep) {
+      announceApproach(approachingStep, gpsStepIndex + 1, metersToNextTurn);
+    }
+  }, [isNavigating, approachingStep, gpsStepIndex, metersToNextTurn, announceApproach]);
 
   // Current turn instruction
   const currentStep = activeRoute?.steps[currentStepIndex] || (activeRoute ? activeRoute.steps[0] : null);
@@ -581,6 +614,18 @@ export function App() {
               </div>
             )}
 
+            {/* Arrival Cue: destination within walking distance */}
+            {isNavigating && isNearDestination && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-600/95 border border-emerald-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? `Tiba di destinasi: ${activeRoute?.destinationName || 'destinasi'}`
+                    : `Arriving at destination: ${activeRoute?.destinationName || 'destination'}`}
+                </span>
+              </div>
+            )}
+
             {/* Auto Rerouting Banner */}
             {(isRerouting || isOffRoute) && (
               <div className="flex items-center gap-2 rounded-xl bg-blue-600/95 border border-blue-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
@@ -674,7 +719,7 @@ export function App() {
                 {activeRoute.steps.map((s, idx) => (
                   <div
                     key={s.id}
-                    onClick={() => setCurrentStepIndex(idx)}
+                    onClick={() => setManualStepOverride(idx)}
                     className={`cursor-pointer rounded-xl p-3 text-xs transition-all border ${
                       idx === currentStepIndex
                         ? 'bg-blue-600/20 border-blue-500/50 text-white font-bold'

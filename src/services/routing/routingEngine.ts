@@ -4,7 +4,7 @@ import { findClosedSystemTollPlazas } from '../toll/closedTollNetwork';
 import { registerDynamicTollPlaza } from '../toll/tollData';
 import {
   distanceKm,
-  findNearestRoadPath
+  findNearestRoadPathChained
 } from './malaysiaRoadNetwork';
 import { analyzeRouteTraffic } from '../traffic/malaysiaTrafficEngine';
 export { routeGapMeters, verifyRouteIntegrity } from './routeIntegrity';
@@ -239,8 +239,9 @@ export function calculateOfflineRoute(
     };
   }
 
-  // 2. Highway & Arterial Road Network Snapper
-  const roadMatch = findNearestRoadPath(start, destination);
+  // 2. Highway & Arterial Road Network Snapper (multi-corridor chaining, e.g.
+  //    E2 → ELITE → MEX, falling back to single-corridor snap)
+  const roadMatch = findNearestRoadPathChained(start, destination);
   if (roadMatch) {
     const fullCoordinates: [number, number][] = [
       start,

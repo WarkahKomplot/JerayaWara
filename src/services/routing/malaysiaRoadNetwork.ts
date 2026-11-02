@@ -360,3 +360,225 @@ export function findNearestRoadPath(
   return bestMatch;
 }
 
+const CORRIDOR_TRANSFER_MAX_KM = 12;
+
+interface CorridorApproach {
+  corridor: RoadCorridor;
+  nodeIndex: number;
+  point: [number, number];
+  distKm: number;
+}
+
+/** Nearest node on each corridor to an arbitrary point. */
+function nearestNodePerCorridor(point: [number, number]): CorridorApproach[] {
+  const approaches: CorridorApproach[] = [];
+  for (const corridor of MALAYSIA_ROAD_CORRIDORS) {
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < corridor.coordinates.length; i++) {
+      const d = distanceKm(point, corridor.coordinates[i]);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) {
+      approaches.push({ corridor, nodeIndex: bestIdx, point: corridor.coordinates[bestIdx], distKm: bestDist });
+    }
+  }
+  return approaches;
+}
+
+interface ChainedSegment {
+  corridor: RoadCorridor;
+  fromIdx: number;
+  toIdx: number;
+}
+
+/**
+ * Routes across MULTIPLE corridors by treating shared/nearby corridor nodes as
+ * transfer points (e.g. KL → Kuantan via E8, or KL → Putrajaya via E2 → ELITE
+ * → MEX). Uses Dijkstra over corridor nodes: edge weights are along-corridor
+ * segment distances, plus small access/transfer penalties so it prefers
+ * staying on one corridor and transferring where corridors actually meet.
+ *
+ * Falls back to null when no chain beats simply snapping to one corridor —
+ * the caller (findNearestRoadPathChained) then uses the single-corridor match.
+ */
+export interface ChainedCorridorMatch {
+  segments: ChainedSegment[];
+  entryPoint: [number, number];
+  exitPoint: [number, number];
+  pathCoordinates: [number, number][];
+  corridorsUsed: RoadCorridor[];
+}
+
+export function findChainedCorridorPath(
+  start: [number, number],
+  dest: [number, number]
+): ChainedCorridorMatch | null {
+  // Node key: `${corridorId}:${nodeIndex}`
+  const adjacency = new Map<string, { to: string; distKm: number }[]>();
+
+  const addEdge = (from: string, to: string, distKm: number) => {
+    if (!adjacency.has(from)) adjacency.set(from, []);
+    adjacency.get(from)!.push({ to, distKm });
+  };
+
+  // Along-corridor edges (bidirectional)
+  for (const corridor of MALAYSIA_ROAD_CORRIDORS) {
+    for (let i = 0; i < corridor.coordinates.length - 1; i++) {
+      const d = distanceKm(corridor.coordinates[i], corridor.coordinates[i + 1]);
+      addEdge(`${corridor.id}:${i}`, `${corridor.id}:${i + 1}`, d);
+      addEdge(`${corridor.id}:${i + 1}`, `${corridor.id}:${i}`, d);
+    }
+  }
+
+  // Transfer edges between corridors at nodes within walking-of-an-interchange distance
+  for (let c = 0; c < MALAYSIA_ROAD_CORRIDORS.length; c++) {
+    for (let d = c + 1; d < MALAYSIA_ROAD_CORRIDORS.length; d++) {
+      const a = MALAYSIA_ROAD_CORRIDORS[c];
+      const b = MALAYSIA_ROAD_CORRIDORS[d];
+      for (let i = 0; i < a.coordinates.length; i++) {
+        for (let j = 0; j < b.coordinates.length; j++) {
+          const gap = distanceKm(a.coordinates[i], b.coordinates[j]);
+          if (gap <= CORRIDOR_TRANSFER_MAX_KM) {
+            // 2.5x penalty so direct corridor travel beats hopping between
+            // loosely-adjacent corridors when both options exist
+            addEdge(`${a.id}:${i}`, `${b.id}:${j}`, gap * 2.5);
+            addEdge(`${b.id}:${j}`, `${a.id}:${i}`, gap * 2.5);
+          }
+        }
+      }
+    }
+  }
+
+  // Virtual source/target nodes connect to the nearest node on every corridor.
+  // Access legs beyond ~40km mean the destination isn't realistically served by
+  // the corridor network — caller falls back in that case via single-corridor snap.
+  const SOURCE = '__source__';
+  const TARGET = '__target__';
+  const startApproaches = nearestNodePerCorridor(start);
+  const destApproaches = nearestNodePerCorridor(dest);
+
+  for (const a of startApproaches) {
+    addEdge(SOURCE, `${a.corridor.id}:${a.nodeIndex}`, a.distKm * 1.2);
+  }
+  for (const a of destApproaches) {
+    addEdge(`${a.corridor.id}:${a.nodeIndex}`, TARGET, a.distKm * 1.2);
+  }
+
+  // Dijkstra
+  const dist = new Map<string, number>([[SOURCE, 0]]);
+  const prev = new Map<string, string>();
+  const visited = new Set<string>();
+  const queue: [string, number][] = [[SOURCE, 0]];
+
+  while (queue.length > 0) {
+    queue.sort((x, y) => x[1] - y[1]);
+    const [node] = queue.shift()!;
+    if (visited.has(node)) continue;
+    visited.add(node);
+
+    if (node === TARGET) break;
+
+    for (const edge of adjacency.get(node) || []) {
+      const nd = (dist.get(node) ?? Infinity) + edge.distKm;
+      if (nd < (dist.get(edge.to) ?? Infinity)) {
+        dist.set(edge.to, nd);
+        prev.set(edge.to, node);
+        queue.push([edge.to, nd]);
+      }
+    }
+  }
+
+  if (!dist.has(TARGET)) return null;
+
+  // Reconstruct node path (excluding virtual endpoints)
+  const nodePath: string[] = [];
+  let cur: string | undefined = TARGET;
+  while (cur && cur !== SOURCE) {
+    nodePath.unshift(cur);
+    cur = prev.get(cur);
+  }
+  const realNodes = nodePath.filter(k => k !== TARGET && k !== SOURCE);
+  if (realNodes.length < 2) return null;
+
+  // Parse into per-corridor segments
+  const parse = (key: string) => {
+    const [corridorId, idxStr] = key.split(':');
+    const corridor = MALAYSIA_ROAD_CORRIDORS.find(c => c.id === corridorId);
+    return corridor ? { corridor, idx: parseInt(idxStr, 10) } : null;
+  };
+
+  const segments: ChainedSegment[] = [];
+  for (const key of realNodes) {
+    const parsed = parse(key);
+    if (!parsed) continue;
+    const last = segments[segments.length - 1];
+    if (last && last.corridor.id === parsed.corridor.id) {
+      if (last.toIdx !== parsed.idx) {
+        // Extend segment toward the new node (handles both directions)
+        last.toIdx = parsed.idx;
+      }
+    } else {
+      segments.push({ corridor: parsed.corridor, fromIdx: parsed.idx, toIdx: parsed.idx });
+    }
+  }
+  // Drop degenerate single-node segments (transfer entered+left at same node)
+  const realSegments = segments.filter(s => s.fromIdx !== s.toIdx);
+  if (realSegments.length === 0) return null;
+
+  // Stitch coordinates
+  const pathCoordinates: [number, number][] = [];
+  for (const seg of realSegments) {
+    const sliceStart = Math.min(seg.fromIdx, seg.toIdx);
+    const sliceEnd = Math.max(seg.fromIdx, seg.toIdx);
+    const slice = seg.corridor.coordinates.slice(sliceStart, sliceEnd + 1);
+    if (seg.fromIdx > seg.toIdx) slice.reverse();
+    // Avoid duplicate junction nodes between consecutive segments
+    for (const coord of slice) {
+      const lastCoord = pathCoordinates[pathCoordinates.length - 1];
+      if (!lastCoord || lastCoord[0] !== coord[0] || lastCoord[1] !== coord[1]) {
+        pathCoordinates.push(coord);
+      }
+    }
+  }
+
+  const firstParsed = parse(realNodes[0])!;
+  const lastParsed = parse(realNodes[realNodes.length - 1])!;
+
+  return {
+    segments: realSegments,
+    entryPoint: firstParsed.corridor.coordinates[firstParsed.idx],
+    exitPoint: lastParsed.corridor.coordinates[lastParsed.idx],
+    pathCoordinates,
+    corridorsUsed: realSegments.map(s => s.corridor)
+  };
+}
+
+/**
+ * Multi-corridor snap: prefers a chained multi-highway route when it exists,
+ * otherwise falls back to the classic single-corridor match.
+ */
+export function findNearestRoadPathChained(
+  start: [number, number],
+  dest: [number, number]
+): SnappedCorridorMatch | null {
+  const chained = findChainedCorridorPath(start, dest);
+  if (chained && chained.segments.length > 0) {
+    const primary = chained.segments[0].corridor;
+    const lastSeg = chained.segments[chained.segments.length - 1];
+    const firstSeg = chained.segments[0];
+    return {
+      corridor: primary,
+      startIndex: firstSeg.fromIdx,
+      endIndex: lastSeg.toIdx,
+      entryPoint: chained.entryPoint,
+      exitPoint: chained.exitPoint,
+      pathCoordinates: chained.pathCoordinates
+    };
+  }
+  return findNearestRoadPath(start, dest);
+}
+

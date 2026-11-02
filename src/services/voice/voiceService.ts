@@ -120,6 +120,30 @@ export function generateVoiceInstruction(
 }
 
 /**
+ * Advance warning spoken ~300–500m before a junction: "In 300 meters, turn left".
+ */
+export function generateApproachInstruction(
+  step: TurnStep,
+  metersAhead: number,
+  lang: VoiceLanguage = 'ms'
+): string {
+  const isBM = lang === 'ms';
+  // Round to a natural spoken increment
+  const rounded =
+    metersAhead >= 900 ? Math.round(metersAhead / 100) * 100 :
+    metersAhead >= 300 ? Math.round(metersAhead / 50) * 50 :
+    Math.round(metersAhead / 10) * 10;
+  const distanceText = isBM
+    ? (rounded >= 1000 ? `${(rounded / 1000).toFixed(1)} kilometer` : `${rounded} meter`)
+    : (rounded >= 1000 ? `${(rounded / 1000).toFixed(1)} kilometers` : `${rounded} meters`);
+  const inText = isBM ? 'Dalam' : 'In';
+  const core = generateVoiceInstruction('turn', step, undefined, lang)
+    // Strip the leading "In front, "/"Di hadapan, " since we prefix our own distance phrase
+    .replace(/^(In front,\s*|Di hadapan,\s*)/i, '');
+  return `${inText} ${distanceText}, ${core}`;
+}
+
+/**
  * Reference to current speaking utterance to prevent browser garbage collection cutoffs
  */
 let activeUtterance: SpeechSynthesisUtterance | null = null;

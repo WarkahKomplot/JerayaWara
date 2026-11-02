@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   generateVoiceInstruction,
+  generateApproachInstruction,
   speakNavigationVoice,
   stopVoiceGuidance,
   isVoiceGuidanceSupported,
@@ -100,6 +101,17 @@ export function useVoiceNavigation() {
     [isVoiceEnabled, voiceLanguage]
   );
 
+  const announceApproach = useCallback(
+    (step: TurnStep, index: number, metersAhead: number) => {
+      const key = `approach-${index}-${step.id || step.instruction}-${voiceLanguage}`;
+      if (lastSpokenKeyRef.current === key) return;
+      lastSpokenKeyRef.current = key;
+      const text = generateApproachInstruction(step, metersAhead, voiceLanguage);
+      speakNavigationVoice(text, isVoiceEnabled, voiceLanguage);
+    },
+    [isVoiceEnabled, voiceLanguage]
+  );
+
   const announceArrive = useCallback(
     (destinationName?: string) => {
       const key = `arrive-${destinationName}-${voiceLanguage}`;
@@ -131,6 +143,7 @@ export function useVoiceNavigation() {
     toggleVoiceLanguage,
     announceStart,
     announceStep,
+    announceApproach,
     announceArrive,
     resetVoiceAnnouncements,
     isSupported: isVoiceGuidanceSupported()

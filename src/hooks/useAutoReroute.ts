@@ -16,6 +16,8 @@ export interface UseAutoRerouteOptions {
   maxDriftMeters?: number; // Default 75 meters deviation from polyline
   consecutiveOffRouteThreshold?: number; // Default 3 consecutive ticks
   cooldownMs?: number; // Default 15 seconds between reroutes
+  /** Original POI/destination title, so rerouted trips arrive at the named place, not just its snapped coordinate. */
+  destinationTitle?: string;
   onRouteUpdated: (newRoute: RouteResult, newTolls: TollBreakdown) => void;
 }
 
@@ -35,6 +37,7 @@ export function useAutoReroute({
   maxDriftMeters = 75,
   consecutiveOffRouteThreshold = 3,
   cooldownMs = 15000,
+  destinationTitle,
   onRouteUpdated
 }: UseAutoRerouteOptions): UseAutoRerouteResult {
   const [isRerouting, setIsRerouting] = useState(false);
@@ -54,6 +57,7 @@ export function useAutoReroute({
     voiceLanguage,
     isVoiceEnabled,
     cooldownMs,
+    destinationTitle,
     onRouteUpdated
   });
 
@@ -66,6 +70,7 @@ export function useAutoReroute({
       voiceLanguage,
       isVoiceEnabled,
       cooldownMs,
+      destinationTitle,
       onRouteUpdated
     };
   });
@@ -79,6 +84,7 @@ export function useAutoReroute({
       voiceLanguage: lang,
       isVoiceEnabled: voice,
       cooldownMs: cooldown,
+      destinationTitle: destTitle,
       onRouteUpdated: updateCallback
     } = optionsRef.current;
 
@@ -106,11 +112,13 @@ export function useAutoReroute({
     speakNavigationVoice(voiceMsg, voice, lang);
 
     try {
+      // Prefer the caller-provided original destination title; fall back to the
+      // route's own name so the rerouted trip still targets the named POI.
       const newRoute = await calculateRoute(
         currentCoords,
         destCoord,
         mode,
-        route.destinationName
+        destTitle || route.destinationName
       );
 
       const newTolls = estimateRouteTolls(newRoute.tollPlazaKeys, mode, newRoute.coordinates, newRoute.isApproximate);
