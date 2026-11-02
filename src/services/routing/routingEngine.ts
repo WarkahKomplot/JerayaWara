@@ -358,7 +358,10 @@ export function calculateOfflineRoute(
       tollPlazaKeys,
       profile,
       destinationName: destinationTitle || roadMatch.corridor.name,
-      traffic
+      traffic,
+      // Corridor polylines are coarse hand-placed waypoints, not OSRM geometry —
+      // must be flagged approximate so the UI never shows "real road route".
+      isApproximate: true
     };
   }
 
@@ -458,9 +461,10 @@ export async function isActuallyOnline(): Promise<boolean> {
   const timeoutId = setTimeout(() => controller.abort(), 2000);
   try {
     // Minimal OSRM route query: tiny overview, verified reachable (the bare root
-    // and /monitor paths return 400). CORS-enabled, same service we route through.
+    // and /monitor paths return 400). Coordinates must be valid non-zero lng,lat
+    // — OSRM rejects 0,0 outright, which made this probe report offline forever.
     const res = await fetch(
-      'https://router.project-osrm.org/route/v1/driving/0,0;0.001,0.001?overview=false&steps=false&alternatives=false',
+      'https://router.project-osrm.org/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false',
       { signal: controller.signal, cache: 'no-store' }
     );
     lastLivenessCheck = { at: now, alive: res.ok };
