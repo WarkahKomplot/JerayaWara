@@ -96,14 +96,13 @@ export function detectGateCrossing(
     // 1. Gate Proximity Check
     if (lateralDist > maxGateDistanceMeters) continue;
 
-    // A route starting at a closed-system gate canopy is a genuine entry (ticket
-    // collected there), and one ending at a closed-system gate is a genuine exit
-    // (fare settled there). Open barrier gates stay strict: ending at the canopy
-    // without passing through is an incomplete transit. Mid-route gates always
-    // need 80m of driven road on both sides.
+    // A route starting or ending at a gate canopy is still a genuine paid
+    // transit: closed systems take the ticket/settle the fare there, and open
+    // barrier plazas are paid at the barrier itself — a trip ending exactly at
+    // the canopy (e.g. LEKAS Ampangan, the last toll before Seremban) has paid.
+    // Mid-route gates always need 80m of driven road on both sides.
     const startsAtGate = crossingOffset < minContinuationMeters;
     const endsAtGate = totalRouteLen - crossingOffset < minContinuationMeters;
-    const endpointRelaxationAllowed = gate.system === 'closed';
 
     // Verify trajectory does not stop or take an immediate ramp turn right at the gate
     let beforeIdx = i;
@@ -120,13 +119,8 @@ export function detectGateCrossing(
     const projBefore = (v[0] * dx + v[1] * dy) / segLen;
     const projAfter = (w[0] * dx + w[1] * dy) / segLen;
 
-    // Longitudinal continuation verify — relaxed only for the endpoint-at-gate side
-    if (!endpointRelaxationAllowed && startsAtGate) {
-      continue;
-    }
-    if (!endpointRelaxationAllowed && endsAtGate) {
-      continue;
-    }
+    // Longitudinal continuation verify — endpoint-at-gate sides are relaxed:
+    // a route beginning/ending at the canopy is a genuine paid transit.
     if (!startsAtGate && projBefore > -50) {
       continue;
     }
@@ -248,6 +242,135 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     motorcycleRate: 0.00
   },
 
+  // SILK E18 (Kajang Dispersal Link) — 4 barrier plazas, RM 1.66 each
+  {
+    id: 'SILK_SG_BALAK',
+    name: 'Plaza Tol Sungai Balak (SILK)',
+    expressway: 'SILK E18',
+    operator: 'SILK',
+    system: 'open',
+    coordinates: [101.7704, 3.0079],
+    bearing: 45,
+    carRate: 1.66,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'SILK_SG_RAMAL',
+    name: 'Plaza Tol Sungai Ramal (SILK)',
+    expressway: 'SILK E18',
+    operator: 'SILK',
+    system: 'open',
+    coordinates: [101.7754, 2.9795],
+    bearing: 135,
+    carRate: 1.66,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'SILK_BUKIT_KAJANG',
+    name: 'Plaza Tol Bukit Kajang (SILK)',
+    expressway: 'SILK E18',
+    operator: 'SILK',
+    system: 'open',
+    coordinates: [101.8152, 2.9753],
+    bearing: 225,
+    carRate: 1.66,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'SILK_SG_LONG',
+    name: 'Plaza Tol Sungai Long (SILK)',
+    expressway: 'SILK E18',
+    operator: 'SILK',
+    system: 'open',
+    coordinates: [101.8102, 3.0277],
+    bearing: 315,
+    carRate: 1.66,
+    motorcycleRate: 0.00
+  },
+
+  // BESRAYA E9 (Sungai Besi Expressway) — RM 1.85 per plaza
+  {
+    id: 'BESRAYA_LOKE_YEW',
+    name: 'Plaza Tol Loke Yew (BESRAYA)',
+    expressway: 'BESRAYA E9',
+    operator: 'BESRAYA',
+    system: 'open',
+    coordinates: [101.7246, 3.1210],
+    bearing: 190,
+    carRate: 1.85,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'BESRAYA_MINES',
+    name: 'Plaza Tol Mines (BESRAYA)',
+    expressway: 'BESRAYA E9',
+    operator: 'BESRAYA',
+    system: 'open',
+    coordinates: [101.7084, 3.0440],
+    bearing: 200,
+    carRate: 1.85,
+    motorcycleRate: 0.00
+  },
+
+  // NPE E10 (New Pantai Expressway) — direction-specific plazas
+  {
+    id: 'NPE_PJS2',
+    name: 'Plaza Tol PJS 2 (NPE)',
+    expressway: 'NPE E10',
+    operator: 'NPE',
+    system: 'open',
+    coordinates: [101.6314, 3.0840],
+    bearing: 80,
+    carRate: 1.00,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'NPE_PJS5',
+    name: 'Plaza Tol PJS 5 (NPE)',
+    expressway: 'NPE E10',
+    operator: 'NPE',
+    system: 'open',
+    coordinates: [101.6234, 3.0792],
+    bearing: 260,
+    carRate: 2.30,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'NPE_PANTAI_DALAM',
+    name: 'Plaza Tol Pantai Dalam (NPE)',
+    expressway: 'NPE E10',
+    operator: 'NPE',
+    system: 'open',
+    coordinates: [101.6706, 3.0919],
+    bearing: 250,
+    carRate: 2.30,
+    motorcycleRate: 0.00
+  },
+
+  // LEKAS E21 (Kajang-Seremban) — RM 3.20 + RM 2.30 = RM 5.50 full length
+  {
+    id: 'LEKAS_KAJANG_SELATAN',
+    name: 'Plaza Tol Kajang Selatan (LEKAS)',
+    expressway: 'LEKAS E21',
+    operator: 'LEKAS',
+    system: 'open',
+    coordinates: [101.8349, 2.9730],
+    bearing: 130,
+    carRate: 3.20,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'LEKAS_AMPANGAN',
+    name: 'Plaza Tol Ampangan (LEKAS)',
+    expressway: 'LEKAS E21',
+    operator: 'LEKAS',
+    system: 'open',
+    coordinates: [101.9676, 2.7597],
+    bearing: 130,
+    carRate: 2.30,
+    motorcycleRate: 0.00
+  },
+
   // LDP E11
   {
     id: 'LDP_PENCHALA',
@@ -273,24 +396,25 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
   },
 
   // Karak & LPT1 (E8)
+  // Coordinates from OSM (old values were 750m / 3km off the E8 alignment)
   {
     id: 'LPT_GOMBAK',
     name: 'Plaza Tol Gombak (Karak)',
     expressway: 'Karak E8',
     operator: 'LPT',
     system: 'open',
-    coordinates: [101.7385, 3.2425],
+    coordinates: [101.7272, 3.2420],
     bearing: 45,
     carRate: 6.00,
     motorcycleRate: 0.00
   },
   {
     id: 'LPT_BENTONG',
-    name: 'Plaza Tol Bentong (Karak)',
+    name: 'Plaza Tol Karak / Bentong (E8)',
     expressway: 'Karak E8',
     operator: 'LPT',
     system: 'open',
-    coordinates: [101.8951, 3.4982],
+    coordinates: [102.0275, 3.4437],
     bearing: 65,
     carRate: 3.50,
     motorcycleRate: 0.00
@@ -317,8 +441,8 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'Penang Bridge',
     operator: 'PENANG_BRIDGE',
     system: 'open',
-    coordinates: [100.3621, 5.3521],
-    bearing: 270,
+    coordinates: [100.3933, 5.3575],
+    bearing: 225,
     carRate: 5.74,
     motorcycleRate: 1.40
   },

@@ -200,6 +200,29 @@ export function determineRouteTollPlazas(
     keys.push('GRAND_SAGA_BATU_9');
   }
 
+  // SILK E18 (Kajang Dispersal Link) — ring road, up to 4 plazas on a full loop
+  if (/\b(e18|silk|kajang dispersal|lingkaran kajang)\b/i.test(roadText)) {
+    keys.push('SILK_SG_BALAK');
+    if (roadText.includes('ramal') || roadText.includes('kajang')) keys.push('SILK_SG_RAMAL');
+  }
+
+  // BESRAYA E9 (Sungai Besi Expressway)
+  if (/\b(e9|besraya|sungai besi expressway|lebuhraya sungai besi)\b/i.test(roadText)) {
+    keys.push('BESRAYA_MINES');
+    if (roadText.includes('loke yew') || roadText.includes('pudu')) keys.push('BESRAYA_LOKE_YEW');
+  }
+
+  // NPE E10 (New Pantai Expressway)
+  if (/\b(e10|npe|new pantai|pantai expressway|lebuhraya baru pantai)\b/i.test(roadText)) {
+    keys.push('NPE_PANTAI_DALAM');
+  }
+
+  // LEKAS E21 (Kajang-Seremban)
+  if (/\b(e21|lekas|kajang.seremban expressway|lebuhraya kajang)\b/i.test(roadText)) {
+    keys.push('LEKAS_KAJANG_SELATAN');
+    if (roadText.includes('seremban') || roadText.includes('ampangan')) keys.push('LEKAS_AMPANGAN');
+  }
+
   // LDP E11
   if (/\b(e11|ldp|damansara-puchong|damansara puchong|lebuhraya damansara)\b/i.test(roadText)) {
     keys.push('LDP_PENCHALA');

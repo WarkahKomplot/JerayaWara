@@ -414,6 +414,113 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     system: 'open'
   },
 
+  // SILK E18 (Kajang Dispersal Link)
+  'SILK_SG_BALAK': {
+    id: 'SILK_SG_BALAK',
+    plazaName: 'Sungai Balak Toll Plaza',
+    expressway: 'SILK E18',
+    carRate: 1.66,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'SILK_SG_RAMAL': {
+    id: 'SILK_SG_RAMAL',
+    plazaName: 'Sungai Ramal Toll Plaza',
+    expressway: 'SILK E18',
+    carRate: 1.66,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'SILK_BUKIT_KAJANG': {
+    id: 'SILK_BUKIT_KAJANG',
+    plazaName: 'Bukit Kajang Toll Plaza',
+    expressway: 'SILK E18',
+    carRate: 1.66,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'SILK_SG_LONG': {
+    id: 'SILK_SG_LONG',
+    plazaName: 'Sungai Long Toll Plaza',
+    expressway: 'SILK E18',
+    carRate: 1.66,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
+  // BESRAYA E9
+  'BESRAYA_LOKE_YEW': {
+    id: 'BESRAYA_LOKE_YEW',
+    plazaName: 'Loke Yew Toll Plaza',
+    expressway: 'BESRAYA E9',
+    carRate: 1.85,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'BESRAYA_MINES': {
+    id: 'BESRAYA_MINES',
+    plazaName: 'Mines Toll Plaza',
+    expressway: 'BESRAYA E9',
+    carRate: 1.85,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
+  // NPE E10
+  'NPE_PJS2': {
+    id: 'NPE_PJS2',
+    plazaName: 'PJS 2 Toll Plaza',
+    expressway: 'NPE E10',
+    carRate: 1.00,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'NPE_PJS5': {
+    id: 'NPE_PJS5',
+    plazaName: 'PJS 5 Toll Plaza',
+    expressway: 'NPE E10',
+    carRate: 2.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'NPE_PANTAI_DALAM': {
+    id: 'NPE_PANTAI_DALAM',
+    plazaName: 'Pantai Dalam Toll Plaza',
+    expressway: 'NPE E10',
+    carRate: 2.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
+  // LEKAS E21
+  'LEKAS_KAJANG_SELATAN': {
+    id: 'LEKAS_KAJANG_SELATAN',
+    plazaName: 'Kajang Selatan Toll Plaza',
+    expressway: 'LEKAS E21',
+    carRate: 3.20,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'LEKAS_AMPANGAN': {
+    id: 'LEKAS_AMPANGAN',
+    plazaName: 'Ampangan Toll Plaza',
+    expressway: 'LEKAS E21',
+    carRate: 2.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
   // LDP E11
   'LDP_PENCHALA': {
     id: 'LDP_PENCHALA',

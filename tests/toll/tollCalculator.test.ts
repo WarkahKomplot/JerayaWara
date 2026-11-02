@@ -63,17 +63,30 @@ describe('Malaysia Toll Calculator', () => {
       expect(hit?.distanceToGateMeters).toBeLessThan(10);
     });
 
-    it('rejects crossing when route terminates within 80m of the toll gate (incomplete transit)', () => {
-      // Driver stops 30m after entering the plaza or terminates right before canopy
+    it('accepts a crossing when the route terminates at the gate (paid at the barrier)', () => {
+      // A trip ending exactly on the canopy is a genuine paid transit: open
+      // barrier plazas are paid at the barrier, closed systems settle there.
       const shortRoute: [number, number][] = [
         [101.7048, 3.0970],
-        [101.7058, 3.0945] // stops right on the gate canopy (0m continuation after)
+        [101.7058, 3.0945] // ends right on the gate canopy
       ];
 
       const offsets = computeRouteOffsets(shortRoute);
       const hit = detectGateCrossing(shortRoute, salakGate, offsets);
 
-      // Must be rejected by the 80m continuation rule!
+      expect(hit).not.toBeNull();
+    });
+
+    it('rejects a 30m "touch" where the route approaches and reverses away (no transit)', () => {
+      // Route dips toward the gate but turns off before crossing — parallel
+      // service road within 45m, no passage through the canopy line.
+      const touchRoute: [number, number][] = [
+        [101.7058 - 0.001, 3.0945],
+        [101.7058 - 0.0002, 3.0945],
+        [101.7058 - 0.001, 3.0950]
+      ];
+      const offsets = computeRouteOffsets(touchRoute);
+      const hit = detectGateCrossing(touchRoute, salakGate, offsets);
       expect(hit).toBeNull();
     });
 
