@@ -394,6 +394,26 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     system: 'open'
   },
 
+  // Grand Saga E7 (Cheras-Kajang)
+  'GRAND_SAGA_BATU_9': {
+    id: 'GRAND_SAGA_BATU_9',
+    plazaName: 'Batu 9 Toll Plaza',
+    expressway: 'Grand Saga E7',
+    carRate: 1.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+  'GRAND_SAGA_BATU_11': {
+    id: 'GRAND_SAGA_BATU_11',
+    plazaName: 'Batu 11 Toll Plaza',
+    expressway: 'Grand Saga E7',
+    carRate: 1.30,
+    motorcycleRate: 0.00,
+    paymentMethods: ['TnG', 'RFID', 'SmartTAG'],
+    system: 'open'
+  },
+
   // LDP E11
   'LDP_PENCHALA': {
     id: 'LDP_PENCHALA',

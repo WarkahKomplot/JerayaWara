@@ -94,4 +94,27 @@ describe('estimateRouteTolls (geometry-first toll estimation)', () => {
     expect(closed).toBeDefined();
     expect(closed!.cost).toBe(15.60);
   });
+
+  it('charges Grand Saga Batu 9 via near-miss rule on decimated preview geometry', () => {
+    // Regression: 33-point simplified polylines miss the Batu 9 canopy by ~120m,
+    // above the 45m physical threshold. Road names say Grand Saga and the gate is
+    // within 400m of the route — the toll must still be charged (RM 1.30).
+    const sagas = PHYSICAL_TOLL_GATES.find(g => g.id === 'GRAND_SAGA_BATU_9')!;
+    const [lng, lat] = sagas.coordinates;
+    // Decimated northbound E7 polyline passing ~120m east of the canopy
+    const route: [number, number][] = [
+      [lng + 0.0012, lat - 0.004],
+      [lng + 0.0010, lat],
+      [lng + 0.0008, lat + 0.004]
+    ];
+    const result = estimateRouteTolls(['GRAND_SAGA_BATU_9'], 'car', route);
+    expect(result.items.some(i => i.id === 'GRAND_SAGA_BATU_9')).toBe(true);
+    expect(result.totalCost).toBe(1.30);
+  });
+
+  it('does not charge Grand Saga when the route is nowhere near the plaza', () => {
+    const farRoute: [number, number][] = [[101.6868, 3.1390], [101.6950, 3.1510]];
+    const result = estimateRouteTolls(['GRAND_SAGA_BATU_9'], 'car', farRoute);
+    expect(result.items.some(i => i.id === 'GRAND_SAGA_BATU_9')).toBe(false);
+  });
 });

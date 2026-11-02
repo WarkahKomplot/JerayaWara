@@ -224,6 +224,30 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     motorcycleRate: 0.00
   },
 
+  // Grand Saga E7 (Cheras-Kajang)
+  {
+    id: 'GRAND_SAGA_BATU_9',
+    name: 'Plaza Tol Batu 9 (Grand Saga)',
+    expressway: 'Grand Saga E7',
+    operator: 'GRAND_SAGA',
+    system: 'open',
+    coordinates: [101.7604, 3.0745],
+    bearing: 190,
+    carRate: 1.30,
+    motorcycleRate: 0.00
+  },
+  {
+    id: 'GRAND_SAGA_BATU_11',
+    name: 'Plaza Tol Batu 11 (Grand Saga)',
+    expressway: 'Grand Saga E7',
+    operator: 'GRAND_SAGA',
+    system: 'open',
+    coordinates: [101.7753, 3.0372],
+    bearing: 10,
+    carRate: 1.30,
+    motorcycleRate: 0.00
+  },
+
   // LDP E11
   {
     id: 'LDP_PENCHALA',

@@ -195,6 +195,11 @@ export function determineRouteTollPlazas(
     keys.push('KESAS_SUNWAY');
   }
 
+  // Grand Saga E7 (Cheras-Kajang)
+  if (/\b(e7|grand saga|cheras.kajang expressway|lebuhraya cheras)\b/i.test(roadText)) {
+    keys.push('GRAND_SAGA_BATU_9');
+  }
+
   // LDP E11
   if (/\b(e11|ldp|damansara-puchong|damansara puchong|lebuhraya damansara)\b/i.test(roadText)) {
     keys.push('LDP_PENCHALA');

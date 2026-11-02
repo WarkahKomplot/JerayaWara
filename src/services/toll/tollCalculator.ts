@@ -29,9 +29,18 @@ export function estimateRouteTolls(
       // Simplified preview geometry can pass km away from canopies and detect
       // nothing. Closed-system chainage keys (PLUS pairs) depend on trip
       // endpoints, not canopy passes, so keyword evidence stays valid there.
-      // Open barrier plazas need a real crossing — geometry stays authoritative.
       const onlyClosedSystem = keyword.items.every(i => i.id.startsWith('PLUS_'));
       if (onlyClosedSystem) return keyword;
+
+      // Open barrier plazas: decimated preview polylines can miss a canopy by
+      // 100–300 m even when the road truly passes through it. Accept keyword
+      // open plazas as a "near miss" when every claimed gate sits within 400 m
+      // of the route; a route genuinely elsewhere (km away) stays toll-free.
+      const allNearMiss = keyword.items.every(i => {
+        const gate = PHYSICAL_TOLL_GATES.find(g => g.id === i.id);
+        return gate && gate.system === 'open' && minDistanceToRouteMeters(routeCoordinates, gate.coordinates) <= 400;
+      });
+      if (allNearMiss) return keyword;
     }
     const gatedIds = new Set(PHYSICAL_TOLL_GATES.map(g => g.id));
     for (const item of keyword.items) {
@@ -47,8 +56,21 @@ export function estimateRouteTolls(
   return keyword;
 }
 
-export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {
-  if (vehicleClass === 'walker') {
+/** Closest approach of a polyline to a point, in meters (local planar projection). */
+function minDistanceToRouteMeters(route: [number, number][], point: [number, number]): number {
+  const cosLat = Math.cos((point[1] * Math.PI) / 180);
+  let best = Infinity;
+  for (const p of route) {
+    const d = Math.hypot(
+      (p[0] - point[0]) * 111320 * cosLat,
+      (p[1] - point[1]) * 110574
+    );
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {  if (vehicleClass === 'walker') {
     return {
       totalCost: 0,
       currency: 'MYR',
