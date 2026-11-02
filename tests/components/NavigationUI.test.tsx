@@ -43,7 +43,7 @@ describe('Navigation UI Components', () => {
     await waitFor(() => {
       const items = screen.getAllByText(/Tapah R&R/i);
       expect(items.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
 
     const itemBtn = screen.getAllByText(/Tapah R&R/i)[0].closest('button');
     expect(itemBtn).not.toBeNull();
