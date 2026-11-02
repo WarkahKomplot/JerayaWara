@@ -44,6 +44,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const rotateRafRef = useRef<number | null>(null);
   const lastCameraCenterRef = useRef<[number, number]>([0, 0]);
   const lastCameraBearingRef = useRef<number>(-1);
+  const isNavigatingRef = useRef(isNavigating);
+  isNavigatingRef.current = isNavigating;
 
   // Initialize Map
   useEffect(() => {
@@ -156,6 +158,30 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   useEffect(() => {
     if (!isNavigating) {
       setIsFollowMode(false);
+    }
+  }, [isNavigating]);
+
+  // Entering navigation snaps the camera into Google-Maps-style follow mode
+  // immediately: zoomed close, pitched forward, following the puck — instead of
+  // zooming out to the whole-route overview and staying there.
+  const navigationStartedRef = useRef(false);
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (isNavigating && !navigationStartedRef.current) {
+      navigationStartedRef.current = true;
+      setIsFollowMode(true);
+      lastCameraCenterRef.current = userLocation;
+      lastCameraBearingRef.current = heading;
+      mapRef.current.flyTo({
+        center: userLocation,
+        zoom: 17,
+        bearing: heading,
+        pitch: is3D ? 58 : 0,
+        duration: 900
+      });
+    }
+    if (!isNavigating) {
+      navigationStartedRef.current = false;
     }
   }, [isNavigating]);
 
@@ -310,11 +336,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       destinationMarkerRef.current.setLngLat(destCoord);
     }
 
-    // Auto-fit bounds when a new route is activated
+    // Auto-fit bounds when a new route is activated — but NOT during active
+    // navigation, where the camera must stay in follow mode on the puck
+    // (zooming out to the whole-route overview feels broken mid-drive).
     const currentRouteKey = `${routePolyline[0][0]},${routePolyline[0][1]}->${destCoord[0]},${destCoord[1]}`;
     if (currentRouteKey !== prevRouteKeyRef.current) {
       prevRouteKeyRef.current = currentRouteKey;
-      fitRouteBounds();
+      if (!isNavigatingRef.current) {
+        fitRouteBounds();
+      }
     }
   };
 
