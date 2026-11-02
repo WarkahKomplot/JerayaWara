@@ -91,6 +91,7 @@ export function App() {
     announceStart,
     announceStep,
     announceApproach,
+    announceNow,
     announceArrive,
     resetVoiceAnnouncements
   } = useVoiceNavigation();
@@ -364,6 +365,19 @@ export function App() {
     }
   };
 
+  // Auto-end navigation ~10s after arrival so the driver doesn't have to tap
+  const autoEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (isNavigating && isNearDestination) {
+      autoEndTimerRef.current = setTimeout(() => {
+        handleEndNavigation();
+      }, 10000);
+      return () => {
+        if (autoEndTimerRef.current) clearTimeout(autoEndTimerRef.current);
+      };
+    }
+  }, [isNavigating, isNearDestination]);
+
   const handleEndNavigation = () => {
     setIsNavigating(false);
     setActiveRoute(null);
@@ -433,8 +447,24 @@ export function App() {
     }
   }, [isNavigating, approachingStep, gpsStepIndex, metersToNextTurn, announceApproach]);
 
+  // Second-stage Voice: "Now, turn left" at the junction mouth (<=80m)
+  useEffect(() => {
+    if (isNavigating && approachingStep && metersToNextTurn > 0 && metersToNextTurn <= 80) {
+      announceNow(approachingStep, gpsStepIndex + 1);
+    }
+  }, [isNavigating, approachingStep, gpsStepIndex, metersToNextTurn, announceNow]);
+
   // Current turn instruction
   const currentStep = activeRoute?.steps[currentStepIndex] || (activeRoute ? activeRoute.steps[0] : null);
+
+  // Side-of-road from OSRM arrive modifier ('left'/'right') stored on the final step
+  const lastStep = activeRoute?.steps[activeRoute.steps.length - 1];
+  const destinationSide: 'left' | 'right' | null =
+    lastStep?.id?.startsWith('osrm-step') && (lastStep as any)?.destinationSide === 'left'
+      ? 'left'
+      : lastStep?.id?.startsWith('osrm-step') && (lastStep as any)?.destinationSide === 'right'
+      ? 'right'
+      : null;
 
   return (
     <>
@@ -619,7 +649,11 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-emerald-600/95 border border-emerald-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
+                  {destinationSide
+                    ? voiceLanguage === 'ms'
+                      ? `Destinasi di ${destinationSide === 'left' ? 'kiri' : 'kanan'} jalan: ${activeRoute?.destinationName || 'destinasi'}`
+                      : `Destination on your ${destinationSide}: ${activeRoute?.destinationName || 'destination'}`
+                    : voiceLanguage === 'ms'
                     ? `Tiba di destinasi: ${activeRoute?.destinationName || 'destinasi'}`
                     : `Arriving at destination: ${activeRoute?.destinationName || 'destination'}`}
                 </span>

@@ -31,7 +31,11 @@ export function useStepProgress(
   route: RouteResult | null,
   coords: [number, number] | null,
   options?: {
-    /** Distance from the next junction at which the "approaching" warning fires. Default 350m. */
+    /**
+     * Base distance from the next junction at which the "approaching" warning
+     * fires. Scaled by the next step's speed limit when available — highway
+     * speeds need more lane-change time. Default 350m at 80 km/h reference.
+     */
     advanceWarningMeters?: number;
     /** Distance from the next junction at which the current step is advanced. Default 40m. */
     stepSwitchRadiusMeters?: number;
@@ -103,11 +107,23 @@ export function useStepProgress(
 
   const steps = route?.steps || [];
   const nextIdx = currentStepIndex + 1;
+
+  // Scale the warning window to the next step's speed limit:
+  // 60 km/h city → ~300m, 80 km/h → ~400m, 110 km/h highway → ~550m.
+  // Reference is 80 km/h at the base distance; clamped 250–700m. The upcoming
+  // junction's speed matters, not the current road's.
+  const nextStep = steps[nextIdx];
+  const refSpeed = nextStep?.speedLimitKmH ?? 80;
+  const scaledWarning = Math.max(
+    250,
+    Math.min(700, Math.round(advanceWarningMeters * (refSpeed / 80)))
+  );
+
   const approaching =
     isNavigating &&
     nextIdx < steps.length &&
     metersToNextTurn > 0 &&
-    metersToNextTurn <= advanceWarningMeters
+    metersToNextTurn <= scaledWarning
       ? steps[nextIdx]
       : null;
 

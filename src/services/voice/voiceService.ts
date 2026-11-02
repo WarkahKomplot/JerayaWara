@@ -144,6 +144,21 @@ export function generateApproachInstruction(
 }
 
 /**
+ * Final-stage instruction spoken when the junction is immediate (<100m):
+ * "Sekarang, belok kiri" / "Now, turn left".
+ */
+export function generateNowInstruction(
+  step: TurnStep,
+  lang: VoiceLanguage = 'ms'
+): string {
+  const isBM = lang === 'ms';
+  const nowText = isBM ? 'Sekarang' : 'Now';
+  const core = generateVoiceInstruction('turn', step, undefined, lang)
+    .replace(/^(In front,\s*|Di hadapan,\s*)/i, '');
+  return `${nowText}, ${core}`;
+}
+
+/**
  * Reference to current speaking utterance to prevent browser garbage collection cutoffs
  */
 let activeUtterance: SpeechSynthesisUtterance | null = null;

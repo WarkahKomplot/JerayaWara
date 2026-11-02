@@ -10,6 +10,42 @@ import { analyzeRouteTraffic } from '../traffic/malaysiaTrafficEngine';
 export { routeGapMeters, verifyRouteIntegrity } from './routeIntegrity';
 export type { RouteIntegrityOptions, RouteIntegrityResult } from './routeIntegrity';
 
+/**
+ * Extracts lane guidance from OSRM intersection data. OSRM returns `lanes` per
+ * intersection — an array where each entry is a lane object; entries with
+ * `valid: true` lead onto the next road. Produces "Use lane 2 of 3" style
+ * hints, but only where it adds value (multi-lane turns with a subset of
+ * valid lanes). Tolerates missing/malformed lane data on mirror servers.
+ */
+export function extractOsrmLaneGuidance(step: any, maneuver: ManeuverType): string | undefined {
+  if (!step?.intersections || !Array.isArray(step.intersections)) return undefined;
+  // Only meaningful for direction-changing maneuvers
+  if (maneuver === 'straight' || maneuver === 'arrive' || maneuver === 'roundabout') return undefined;
+
+  const lanes = step.intersections[0]?.lanes;
+  if (!Array.isArray(lanes) || lanes.length < 2) return undefined;
+
+  const validCount = lanes.filter((l: any) => l?.valid).length;
+  const totalCount = lanes.length;
+
+  // All or no lanes valid = no useful guidance
+  if (validCount === 0 || validCount === totalCount) return undefined;
+
+  // Human lane numbering: leftmost = lane 1
+  const validPositions = lanes
+    .map((l: any, i: number) => (l?.valid ? i + 1 : -1))
+    .filter((i: number) => i > 0);
+
+  const laneText =
+    validCount === 1
+      ? `Use lane ${validPositions[0]}`
+      : validPositions.length === 2 && validPositions[1] - validPositions[0] === 1
+      ? `Use lanes ${validPositions[0]} and ${validPositions[1]}`
+      : `Keep to the ${validPositions[0] <= totalCount / 2 ? 'left' : 'right'} lanes`;
+
+  return `${laneText} of ${totalCount} for the upcoming turn`;
+}
+
 function mapOsrmManeuver(type: string, modifier?: string): ManeuverType {
   if (type === 'depart') return 'straight';
   if (type === 'arrive') return 'arrive';
@@ -392,6 +428,47 @@ export function calculateOfflineRoute(
 }
 
 /**
+ * navigator.onLine only reports that a network interface is up — captive portals
+ * and Wi-Fi-with-no-internet still return true. This cheap probe verifies actual
+ * reachability in 2s so dead zones fall straight to the offline tier instead of
+ * hanging on a doomed OSRM request for 6s. Cached for 15s to avoid probing on
+ * every route calculation.
+ */
+let lastLivenessCheck = { at: 0, alive: false };
+
+/** Test-only: clears the 15s liveness cache between tests. */
+export function resetLivenessCacheForTest(): void {
+  lastLivenessCheck = { at: 0, alive: false };
+}
+export async function isActuallyOnline(): Promise<boolean> {
+  if (typeof navigator === 'undefined') return false;
+  if (!navigator.onLine) return false;
+
+  const now = Date.now();
+  if (now - lastLivenessCheck.at < 15000) {
+    return lastLivenessCheck.alive;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+  try {
+    // Minimal OSRM route query: tiny overview, verified reachable (the bare root
+    // and /monitor paths return 400). CORS-enabled, same service we route through.
+    const res = await fetch(
+      'https://router.project-osrm.org/route/v1/driving/0,0;0.001,0.001?overview=false&steps=false&alternatives=false',
+      { signal: controller.signal, cache: 'no-store' }
+    );
+    lastLivenessCheck = { at: now, alive: res.ok };
+    return res.ok;
+  } catch {
+    lastLivenessCheck = { at: now, alive: false };
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * Calculates a route using real road network vectors (via redundant OSRM open routing servers when online,
  * or the snapped Malaysia Highway/Arterial network when offline).
  */
@@ -401,7 +478,7 @@ export async function calculateRoute(
   profile: VehicleClass,
   destinationTitle?: string
 ): Promise<RouteResult> {
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
+  const isOnline = await isActuallyOnline();
 
   if (isOnline) {
     const mode = profile === 'walker' ? 'foot' : 'driving';
@@ -446,9 +523,14 @@ export async function calculateRoute(
 
               const isMoto = profile === 'motorcycle' && isMalaysianExpressway(s.name);
 
+              const osrmLaneHint = extractOsrmLaneGuidance(s, maneuver);
+
               turnSteps.push({
                 id: `osrm-step-${idx}`,
                 maneuver: isLast ? 'arrive' : maneuver,
+                destinationSide: isLast && (s.maneuver?.modifier === 'left' || s.maneuver?.modifier === 'right')
+                  ? s.maneuver.modifier
+                  : undefined,
                 instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, profile, exitNum),
                 distanceMeters: Math.round(s.distance),
                 durationSeconds: Math.round(s.duration),
@@ -457,6 +539,8 @@ export async function calculateRoute(
                 isMotorcycleLane: isMoto,
                 laneGuidance: isMoto
                   ? 'Use dedicated motorcycle lane (Lorong Motosikal)'
+                  : osrmLaneHint
+                  ? osrmLaneHint
                   : maneuver === 'flyover'
                   ? 'Use middle or right lanes for flyover'
                   : maneuver === 'underpass'

@@ -27,6 +27,8 @@ export interface TurnStep {
   tollPlazaKey?: string;
   laneGuidance?: string;
   exitNumber?: number; // Roundabout exit number (1, 2, 3, etc.)
+  /** OSRM arrive modifier — which side of the road the destination sits on. */
+  destinationSide?: 'left' | 'right';
 }
 
 export interface RouteResult {
