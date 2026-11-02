@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { calculateRoute, calculateOfflineRoute } from '../../src/services/routing/routingEngine';
+import {
+  calculateRoute,
+  calculateOfflineRoute,
+  routeGapMeters,
+  verifyRouteIntegrity
+} from '../../src/services/routing/routingEngine';
 import { calculateRouteTolls } from '../../src/services/toll/tollCalculator';
 
 describe('Routing Engine', () => {
@@ -113,6 +118,72 @@ describe('Routing Engine', () => {
       const toll = calculateRouteTolls(route.tollPlazaKeys, 'motorcycle');
       expect(toll.totalCost).toBe(0.00);
       expect(toll.note).toContain('exempt');
+    });
+  });
+
+  describe('Route Drift & Geometry Integrity (routeGap Algorithm)', () => {
+    const referenceCorridor: [number, number][] = [
+      [101.693, 3.141],
+      [101.710, 3.050],
+      [101.745, 2.981],
+      [101.770, 2.930],
+      [101.800, 2.810],
+      [101.938, 2.725]
+    ];
+
+    it('computes exact zero/near-zero gap for points lying on the corridor', () => {
+      const onCorridorPoint: [number, number] = [101.745, 2.981];
+      const gap = routeGapMeters(onCorridorPoint, referenceCorridor);
+      expect(gap).toBeLessThan(1.0); // Less than 1 meter
+    });
+
+    it('computes accurate gap in meters for points offset from the corridor', () => {
+      // Point offset slightly (~110m away)
+      const offsetPoint: [number, number] = [101.746, 2.981];
+      const gap = routeGapMeters(offsetPoint, referenceCorridor);
+      expect(gap).toBeGreaterThan(80);
+      expect(gap).toBeLessThan(150);
+    });
+
+    it('validates a conforming route corridor with isValid: true and hasDrifted: false', () => {
+      // Candidate route tightly following the reference corridor
+      const candidate: [number, number][] = referenceCorridor.map(([lng, lat]) => [
+        lng + 0.0001, // ~11m jitter
+        lat + 0.0001
+      ]);
+
+      const result = verifyRouteIntegrity(candidate, referenceCorridor, {
+        maxAllowedGapMeters: 150,
+        maxMissPercentage: 0.05
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.hasDrifted).toBe(false);
+      expect(result.driftPercentage).toBe(0);
+      expect(result.maxObservedGapMeters).toBeLessThan(50);
+    });
+
+    it('flags a drifted route when candidate deviates onto an unauthorized detour > 150m away', () => {
+      // Candidate route that detours into a distant area halfway through
+      const detouredRoute: [number, number][] = [
+        [101.693, 3.141],
+        [101.710, 3.050],
+        [101.850, 3.050], // Detours > 10 km away to the East!
+        [101.890, 3.010],
+        [101.800, 2.810],
+        [101.938, 2.725]
+      ];
+
+      const result = verifyRouteIntegrity(detouredRoute, referenceCorridor, {
+        maxAllowedGapMeters: 150,
+        maxMissPercentage: 0.05
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.hasDrifted).toBe(true);
+      expect(result.driftPercentage).toBeGreaterThan(5);
+      expect(result.maxObservedGapMeters).toBeGreaterThan(1000);
+      expect(result.reason).toContain('Route drifted');
     });
   });
 });

@@ -1,7 +1,24 @@
 import { SearchItem } from './types';
 import { MALAYSIA_OFFLINE_POIS } from './malaysiaPOIData';
+import { searchBulkPOIs, syncBulkPOIsInStore } from './bulkPOIDbService';
+export { searchOvertureIndex, bucketHash } from './overturePOIService';
+export type { OvertureIndexData } from './overturePOIService';
+export { syncBulkPOIsInStore, searchBulkPOIs };
 
 const MALAYSIAN_ABBREVIATIONS: Record<string, string> = {
+  // Common brand abbreviations
+  mcd: 'mcdonald',
+  mcdonalds: 'mcdonald',
+  "mcdonald's": 'mcdonald',
+  bk: 'burger king',
+  sbux: 'starbucks',
+  starbuck: 'starbucks',
+  speedmart: '99 speedmart',
+  '99speedmart': '99 speedmart',
+  familymart: 'family mart',
+  tealive: 'tealive',
+
+  // Facilities & location prefixes
   hosp: 'hospital',
   bdr: 'bandar',
   tmn: 'taman',
@@ -15,19 +32,62 @@ const MALAYSIAN_ABBREVIATIONS: Record<string, string> = {
   klia: 'kuala lumpur international airport',
   klia2: 'klia terminal 2',
   klcc: 'kuala lumpur city centre',
-  midvalley: 'mid valley',
-  pavillion: 'pavilion',
+  lowyat: 'plaza low yat',
+  'low yat': 'plaza low yat',
+  plazalowyat: 'plaza low yat',
+  trx: 'the exchange trx',
+  tunrazakexchange: 'the exchange trx',
+  midvalley: 'mid valley megamall',
+  pavillion: 'pavilion kuala lumpur',
+  pavilion: 'pavilion kuala lumpur',
+  sunwaypyramid: 'sunway pyramid',
+  digitalmall: 'digital mall',
+  sungeiwang: 'sungei wang',
+  ioicitymall: 'ioi city mall',
+  '1utama': '1 utama',
+  oneutama: '1 utama',
+  ikeadamansara: 'ikea damansara',
+  ikeacheras: 'ikea cheras',
+  mytown: 'mytown shopping centre',
+  metrokajang: 'plaza metro kajang',
+  'metro kajang': 'plaza metro kajang',
+  vape: 'vapor',
+  'vape hub': 'vapor hub',
+  'vape hub kajang': 'vapor hub kajang',
   hkl: 'hospital kuala lumpur',
   hsa: 'hospital sultanah aminah',
   hsb: 'hospital sungai buloh',
-  ktmb: 'keretapi tanah melayu'
+  ktmb: 'keretapi tanah melayu',
+  onesentrum: '1 sentrum',
+  'one sentrum': '1 sentrum',
+  'menara one sentrum': 'menara 1 sentrum',
+  onesentral: '1 sentral',
+  'one sentral': '1 sentral',
+  'menara one sentral': 'menara 1 sentral',
+  'one utama': '1 utama',
+  oneutamashopping: '1 utama'
 };
 
 /**
- * Expand colloquial Malaysian abbreviations (e.g., 'hosp kajang' -> 'hospital kajang')
+ * Expand colloquial Malaysian abbreviations and common compound place names.
  */
 export function expandAbbreviations(query: string): string {
-  const words = query.trim().toLowerCase().split(/\s+/);
+  const clean = query.trim().toLowerCase();
+  // Check exact full match first (e.g. 'lowyat', 'plazalowyat', 'trx')
+  if (MALAYSIAN_ABBREVIATIONS[clean]) {
+    return MALAYSIAN_ABBREVIATIONS[clean];
+  }
+
+  // Strip standalone trailing modifiers like 'dt' / 'd/t' (drive-thru) or 'rnr' that don't exist in registered POI names
+  const cleanStripped = clean.replace(/\b(?:dt|d\/t)\b/g, '').replace(/\s+/g, ' ').trim();
+
+  // Generic number-word normalization (e.g. "one sentrum" -> "1 sentrum", "two" -> "2")
+  const normalizedNumberQuery = cleanStripped
+    .replace(/\bone\b/g, '1')
+    .replace(/\btwo\b/g, '2')
+    .replace(/\bthree\b/g, '3');
+
+  const words = normalizedNumberQuery.split(/\s+/);
   const expanded = words.map(w => MALAYSIAN_ABBREVIATIONS[w] || w);
   return expanded.join(' ');
 }
@@ -101,7 +161,30 @@ export function parseCoordinatesOrMapLink(input: string): SearchItem | null {
   return null;
 }
 
-export async function searchDestinations(query: string, isOnline: boolean = false): Promise<SearchItem[]> {
+export function calculateDistanceKm(
+  coord1: [number, number],
+  coord2: [number, number]
+): number {
+  const [lon1, lat1] = coord1;
+  const [lon2, lat2] = coord2;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
+
+export async function searchDestinations(
+  query: string,
+  isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true,
+  userLocation?: [number, number]
+): Promise<SearchItem[]> {
   const cleanQuery = query.trim().toLowerCase();
   if (!cleanQuery) return [];
 
@@ -153,76 +236,223 @@ export async function searchDestinations(query: string, isOnline: boolean = fals
     return 0;
   });
 
-  if (!isOnline) {
-    return offlineMatches;
+  // Query Tier 2: Bulk IndexedDB POIs
+  let bulkMatches: SearchItem[] = [];
+  try {
+    bulkMatches = await searchBulkPOIs(expandedQuery, 5, userLocation);
+  } catch {
+    // Graceful fallback
   }
 
-  // 2. If online, fetch from open Nominatim API (Malaysia restricted)
+  const combinedOffline = [...offlineMatches];
+  const seenOfflineIds = new Set(offlineMatches.map(m => m.id));
+  for (const b of bulkMatches) {
+    if (!seenOfflineIds.has(b.id)) {
+      combinedOffline.push(b);
+      seenOfflineIds.add(b.id);
+    }
+  }
+
+  if (!isOnline) {
+    if (userLocation) {
+      return combinedOffline
+        .map(item => ({
+          ...item,
+          distanceKm: item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
+        }))
+        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+    }
+    return combinedOffline;
+  }
+
+  // 2. If online, fetch from open Nominatim API and Photon fallback (Malaysia restricted)
   let timeoutId: any;
   try {
     const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 2500);
+    timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const searchQueryParam = expandedQuery !== cleanQuery ? expandedQuery : query;
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-      searchQueryParam
-    )}&countrycodes=my&format=json&addressdetails=1&limit=8`;
+    const fetchNominatim = async (q: string) => {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        q
+      )}&countrycodes=my&format=json&addressdetails=1&limit=8`;
+      const r = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'JerayaWara-Malaysia-Nav-PWA/1.0'
+        }
+      });
+      return r.ok ? await r.json() : [];
+    };
 
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'JerayaWara-Malaysia-Nav-PWA/1.0'
+    const fetchPhoton = async (q: string): Promise<SearchItem[]> => {
+      try {
+        const centerLat = userLocation ? userLocation[1].toFixed(4) : '3.1390';
+        const centerLng = userLocation ? userLocation[0].toFixed(4) : '101.6869';
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${centerLat}&lon=${centerLng}&limit=8`;
+        const r = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' }
+        });
+        if (!r.ok) return [];
+        const geojson = await r.json();
+        return (geojson.features || [])
+          .filter((f: any) => {
+            const country = (f.properties?.country || f.properties?.countrycode || '').toLowerCase();
+            return country.includes('malaysia') || country === 'my';
+          })
+          .map((f: any) => {
+            const p = f.properties || {};
+            const subtitleParts = [p.street, p.locality, p.city, p.state].filter(Boolean);
+            return {
+              id: `photon-${p.osm_id || Math.random()}`,
+              title: p.name || query,
+              subtitle: subtitleParts.join(', ') || 'Malaysia',
+              category: (p.osm_key === 'shop' || p.osm_value === 'mall' ? 'shopping' : 'landmark') as SearchItem['category'],
+              coordinates: [f.geometry.coordinates[0], f.geometry.coordinates[1]] as [number, number],
+              regionId: 'online',
+              _osmClass: p.osm_key || '',
+              _osmType: p.osm_value || ''
+            };
+          });
+      } catch {
+        return [];
+      }
+    };
+
+    // Parallel multi-query synthesis: Search exact query + expanded colloquial query
+    const searchQueries = new Set<string>();
+    searchQueries.add(searchQueryParam);
+    if (cleanQuery !== searchQueryParam) {
+      searchQueries.add(cleanQuery);
+    }
+
+    // Generic prefix & suffix expansion for all Malaysian commercial POIs:
+    // If a user types "metro kajang" or "paradigm", also check "plaza metro kajang", "metro kajang mall", etc.
+    const genericPrefixes = ['plaza', 'mall', 'kompleks', 'pasar raya', 'hospital', 'klinik', 'masjid'];
+    const genericSuffixes = ['mall', 'plaza', 'centre', 'center', 'supermarket', 'hypermarket'];
+
+    // Suffix variants
+    for (const s of genericSuffixes) {
+      if (!cleanQuery.includes(s)) {
+        searchQueries.add(`${cleanQuery} ${s}`);
+        break; // Add top suffix variant
+      }
+    }
+
+    // Prefix variants (e.g. "metro kajang" -> "plaza metro kajang")
+    if (!genericPrefixes.some(p => cleanQuery.startsWith(p))) {
+      searchQueries.add(`plaza ${cleanQuery}`);
+    }
+
+    // Execute queries in parallel
+    const queryPromises: Promise<any[]>[] = [];
+    searchQueries.forEach(q => {
+      queryPromises.push(fetchNominatim(q));
+      queryPromises.push(fetchPhoton(q));
+    });
+
+    const settled = await Promise.allSettled(queryPromises);
+    const combinedOnlineRaw: any[] = [];
+    settled.forEach(res => {
+      if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+        combinedOnlineRaw.push(...res.value);
       }
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const onlineResults: SearchItem[] = data.map((item: any) => {
-        const parts = item.display_name.split(',').map((p: string) => p.trim());
-        const primaryTitle = parts[0] || item.display_name;
-        const secondarySubtitle = parts.slice(1, 4).join(', ') || item.display_name;
+    const onlineResults: SearchItem[] = [];
+    const seenOnlineIds = new Set<string>();
 
-        // Categorize based on OSM type
-        let category: SearchItem['category'] = 'landmark';
-        const type = (item.type || '').toLowerCase();
-        const osmClass = (item.class || '').toLowerCase();
-
-        if (osmClass === 'shop' || type.includes('mall')) {
-          category = 'shopping';
-        } else if (osmClass === 'amenity' && (type === 'hospital' || type === 'clinic')) {
-          category = 'hospital';
-        } else if (osmClass === 'amenity' && (type === 'university' || type === 'college')) {
-          category = 'university';
-        } else if (osmClass === 'highway' && type.includes('toll')) {
-          category = 'toll_plaza';
-        } else if (osmClass === 'aeroway' || osmClass === 'railway') {
-          category = 'transit';
+    for (const item of combinedOnlineRaw) {
+      // Determine if item is from Nominatim or Photon
+      const isPhoton = item.id && String(item.id).startsWith('photon-');
+      if (isPhoton) {
+        if (!seenOnlineIds.has(item.id)) {
+          seenOnlineIds.add(item.id);
+          onlineResults.push(item);
         }
+        continue;
+      }
 
-        return {
-          id: `osm-${item.place_id}`,
-          title: primaryTitle,
-          subtitle: secondarySubtitle,
-          category,
-          coordinates: [parseFloat(item.lon), parseFloat(item.lat)],
-          regionId: 'online'
-        };
-      });
+      // Nominatim item parsing
+      const id = `osm-${item.place_id}`;
+      if (seenOnlineIds.has(id)) continue;
+      seenOnlineIds.add(id);
 
-      // Merge and deduplicate by title
-      const seenTitles = new Set(offlineMatches.map(m => m.title.toLowerCase()));
-      const filteredOnline = onlineResults.filter(
-        o => !seenTitles.has(o.title.toLowerCase())
-      );
+      const parts = item.display_name ? item.display_name.split(',').map((p: string) => p.trim()) : [];
+      const primaryTitle = parts[0] || item.display_name || 'Location';
+      const secondarySubtitle = parts.slice(1, 4).join(', ') || item.display_name || 'Malaysia';
 
-      return [...offlineMatches, ...filteredOnline];
+      let category: SearchItem['category'] = 'landmark';
+      const type = (item.type || '').toLowerCase();
+      const osmClass = (item.class || '').toLowerCase();
+
+      if (osmClass === 'shop' || type.includes('mall') || type.includes('supermarket')) {
+        category = 'shopping';
+      } else if (osmClass === 'amenity' && (type === 'hospital' || type === 'clinic')) {
+        category = 'hospital';
+      } else if (osmClass === 'amenity' && (type === 'university' || type === 'college')) {
+        category = 'university';
+      } else if (osmClass === 'highway' && type.includes('toll')) {
+        category = 'toll_plaza';
+      } else if (osmClass === 'aeroway' || osmClass === 'railway') {
+        category = 'transit';
+      }
+
+      onlineResults.push({
+        id,
+        title: primaryTitle,
+        subtitle: secondarySubtitle,
+        category,
+        coordinates: [parseFloat(item.lon), parseFloat(item.lat)],
+        regionId: 'online',
+        _osmClass: osmClass,
+        _osmType: type
+      } as SearchItem & { _osmClass?: string; _osmType?: string });
     }
+
+    // Rank venues / destinations (shops, buildings, amenities, hospitals) ABOVE railway tracks or bus stops
+    onlineResults.sort((a: any, b: any) => {
+      const aIsInfrastructure = a._osmClass === 'railway' || a._osmType === 'bus_stop' || a._osmClass === 'highway';
+      const bIsInfrastructure = b._osmClass === 'railway' || b._osmType === 'bus_stop' || b._osmClass === 'highway';
+      if (!aIsInfrastructure && bIsInfrastructure) return -1;
+      if (aIsInfrastructure && !bIsInfrastructure) return 1;
+      return 0;
+    });
+
+    // Merge and deduplicate by title
+    const seenTitles = new Set(combinedOffline.map(m => m.title.toLowerCase()));
+    const filteredOnline = onlineResults.filter(
+      o => !seenTitles.has(o.title.toLowerCase())
+    );
+
+    // Helper to enrich and sort by distance
+    const rankResults = (items: SearchItem[]): SearchItem[] => {
+      if (!userLocation) return items;
+      return items
+        .map(item => ({
+          ...item,
+          distanceKm: item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
+        }))
+        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+    };
+
+    return rankResults([...combinedOffline, ...filteredOnline]);
   } catch {
     // If online search fails or timeouts, smoothly fall back to offline directory
   } finally {
     clearTimeout(timeoutId);
   }
 
-  return offlineMatches;
+  if (userLocation) {
+    return combinedOffline
+      .map(item => ({
+        ...item,
+        distanceKm: item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
+      }))
+      .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  }
+
+  return combinedOffline;
 }

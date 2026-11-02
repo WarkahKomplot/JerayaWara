@@ -96,4 +96,76 @@ describe('AES Camera Proximity Detection', () => {
     const alert = findNearbyAESCamera(userCoord, 1.2);
     expect(alert).toBeNull();
   });
+
+  it('ignores opposite carriageway cameras when route travels in the opposite direction', () => {
+    // PLUS E2 near Kajang: aes-e2-kajang-sb is SOUTHBOUND only (~155° bearing)
+    // Driver is navigating NORTHBOUND on PLUS E2: from [101.7512, 2.9612] towards [101.7445, 2.9870] (~335° bearing)
+    const userCoord: [number, number] = [101.7480, 2.9712];
+    const northboundRoute: [number, number][] = [
+      [101.7512, 2.9612],
+      [101.7451, 2.9812],
+      [101.7445, 2.9870]
+    ];
+
+    const alert = findNearbyAESCamera({
+      userCoord,
+      routePolyline: northboundRoute,
+      thresholdKm: 1.0
+    });
+
+    // The Southbound camera must NOT trigger for Northbound drivers
+    expect(alert).toBeNull();
+  });
+
+  it('clears alert once user has driven past the camera on the active route segment', () => {
+    // Camera is at [101.7451, 2.9812].
+    // Segment runs from [101.7445, 2.9870] (North) to [101.7512, 2.9612] (South).
+    // User has already passed the camera coordinate, currently at [101.7470, 2.9740].
+    const userCoordPastCamera: [number, number] = [101.7470, 2.9740];
+    const southboundRoute: [number, number][] = [
+      [101.7445, 2.9870],
+      [101.7512, 2.9612]
+    ];
+
+    const alert = findNearbyAESCamera({
+      userCoord: userCoordPastCamera,
+      routePolyline: southboundRoute,
+      thresholdKm: 1.0
+    });
+
+    // Driver is already past the camera along this segment -> Alert must be null
+    expect(alert).toBeNull();
+  });
+
+  it('correctly sets isOverSpeed flag when vehicle speed exceeds camera speed limit', () => {
+    // Kajang AES has 90 km/h speed limit
+    const userCoord: [number, number] = [101.7445, 2.9870];
+    const highwayRoute: [number, number][] = [
+      [101.7445, 2.9870],
+      [101.7451, 2.9812],
+      [101.7512, 2.9612]
+    ];
+
+    // Driving at 105 km/h in 90 km/h zone
+    const speedingAlert = findNearbyAESCamera({
+      userCoord,
+      routePolyline: highwayRoute,
+      speedKmH: 105,
+      thresholdKm: 1.0
+    });
+
+    expect(speedingAlert).not.toBeNull();
+    expect(speedingAlert?.isOverSpeed).toBe(true);
+
+    // Driving at 80 km/h in 90 km/h zone
+    const safeAlert = findNearbyAESCamera({
+      userCoord,
+      routePolyline: highwayRoute,
+      speedKmH: 80,
+      thresholdKm: 1.0
+    });
+
+    expect(safeAlert).not.toBeNull();
+    expect(safeAlert?.isOverSpeed).toBe(false);
+  });
 });

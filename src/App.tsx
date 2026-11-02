@@ -18,6 +18,9 @@ import { useDeviceTheme } from './hooks/useDeviceTheme';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useFoldableDetection } from './hooks/useFoldableDetection';
 import { useVoiceNavigation } from './hooks/useVoiceNavigation';
+import { useAutoReroute } from './hooks/useAutoReroute';
+import { usePwaInstall } from './hooks/usePwaInstall';
+import { PwaInstallBanner } from './components/common/PwaInstallBanner';
 
 import { calculateRoute } from './services/routing/routingEngine';
 import { calculateRouteTolls } from './services/toll/tollCalculator';
@@ -34,13 +37,14 @@ import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExpor
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
 import { t, getLocalizedStepInstruction } from './services/i18n/translations';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw } from 'lucide-react';
 
 export function App() {
   const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
   const { theme, themeMode, cycleThemeMode, solarInfo } = useDeviceTheme(coords);
   const { isLocked, isScreenAwakeEnabled, toggleWakeLock, requestLock, releaseLock } = useWakeLock(true);
-  const { isFoldableUnfolded } = useFoldableDetection();
+  const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
+  const { isInstallable, isInstalled, isIOS, isDismissed, promptInstall, dismissBanner } = usePwaInstall();
 
   const [vehicleMode, setVehicleMode] = useState<VehicleClass>('car');
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
@@ -64,6 +68,24 @@ export function App() {
     announceArrive,
     resetVoiceAnnouncements
   } = useVoiceNavigation();
+
+  // Automatic Off-Route Detection & GPS Rerouting Engine
+  const { isRerouting, isOffRoute } = useAutoReroute({
+    isNavigating,
+    activeRoute,
+    coords,
+    vehicleMode,
+    voiceLanguage,
+    isVoiceEnabled,
+    maxDriftMeters: 75,
+    consecutiveOffRouteThreshold: 3,
+    cooldownMs: 15000,
+    onRouteUpdated: (newRoute, newTolls) => {
+      setActiveRoute(newRoute);
+      setTollBreakdown(newTolls);
+      setCurrentStepIndex(0);
+    }
+  });
 
   // Live Weather & Rain condition (Supports manual offline override)
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
@@ -144,9 +166,13 @@ export function App() {
         const cameraName = voiceLanguage === 'ms'
           ? nearbyAESAlert.camera.name
           : (nearbyAESAlert.camera.nameEn || nearbyAESAlert.camera.name);
-        const msg = voiceLanguage === 'ms'
-          ? `Perhatian: Kamera AES di hadapan. ${cameraName}. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
-          : `Caution: Speed camera ahead. ${cameraName}. Speed limit ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`;
+        const msg = nearbyAESAlert.isOverSpeed
+          ? (voiceLanguage === 'ms'
+              ? `Perhatian: Kamera AES di hadapan. ${cameraName}. Sila kurangkan laju, had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
+              : `Caution: Speed camera ahead. ${cameraName}. Please reduce speed, speed limit is ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`)
+          : (voiceLanguage === 'ms'
+              ? `Kamera AES di hadapan. ${cameraName}. Had laju ${nearbyAESAlert.camera.speedLimitKmH} kilometer sejam.`
+              : `Speed camera ahead. ${cameraName}. Speed limit is ${nearbyAESAlert.camera.speedLimitKmH} kilometers per hour.`);
         speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
       }
     }
@@ -349,14 +375,14 @@ export function App() {
       <AppShell
         isNavigating={isNavigating}
         headerBar={
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1.5 flex-nowrap">
             {/* Logo & App Title */}
-            <div className="flex items-center gap-2">
-              <JerayaWaraLogo size={36} />
-              <div>
-                <h1 className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
-                  JerayaWara
-                  <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[9px] font-bold text-sky-400 border border-blue-500/30">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <JerayaWaraLogo size={32} />
+              <div className="min-w-0">
+                <h1 className="text-xs font-black tracking-tight text-white flex items-center gap-1 truncate">
+                  <span>JerayaWara</span>
+                  <span className="rounded-full bg-blue-500/20 px-1.5 py-0.2 text-[8px] font-bold text-sky-400 border border-blue-500/30">
                     MY
                   </span>
                   <button
@@ -364,34 +390,34 @@ export function App() {
                     onClick={toggleVoiceLanguage}
                     data-testid="header-language-toggle"
                     aria-label={`Tukar Bahasa / Switch Language (${voiceLanguage.toUpperCase()})`}
-                    className="ml-1 flex items-center gap-1 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 px-2 py-0.5 text-[9px] font-black text-amber-300 transition-all active:scale-95 shadow-sm"
+                    className="ml-0.5 flex items-center rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 px-1.5 py-0.5 text-[8px] font-black text-amber-300 transition-all active:scale-95 shadow-sm"
                     title={voiceLanguage === 'ms' ? 'Tukar ke English (EN)' : 'Tukar ke Bahasa Melayu (BM)'}
                   >
                     <span>{voiceLanguage === 'ms' ? 'BM' : 'EN'}</span>
                   </button>
                 </h1>
-                <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${isGpsLocked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>{isGpsLocked ? t('gpsActive', voiceLanguage) : t('gpsSearching', voiceLanguage)}</span>
+                <div className="flex items-center gap-1 text-[9px] text-slate-400 truncate">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full flex-shrink-0 ${isGpsLocked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span className="truncate">{isGpsLocked ? t('gpsActive', voiceLanguage) : t('gpsSearching', voiceLanguage)}</span>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions (Offline Region Manager & Theme Toggle) */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => setIsRegionModalOpen(true)}
-                className="flex items-center gap-1 rounded-xl bg-slate-800/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white"
+                className="flex items-center gap-1 rounded-lg bg-slate-800/90 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white"
                 title={t('offlineMap', voiceLanguage)}
               >
-                <HardDrive className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">{t('offlineMap', voiceLanguage)}</span>
+                <HardDrive className="h-3 w-3 text-emerald-400" />
+                <span className="hidden sm:inline text-[10px]">{t('offlineMap', voiceLanguage)}</span>
               </button>
 
               {/* Malaysia Sunrise/Sunset Day-Night Toggle */}
               <button
                 onClick={cycleThemeMode}
-                className="flex items-center gap-1.5 rounded-xl bg-slate-800/90 px-2.5 py-1.5 text-xs font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white transition-all active:scale-95"
+                className="flex items-center gap-1 rounded-lg bg-slate-800/90 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white transition-all active:scale-95"
                 title={
                   themeMode === 'auto'
                     ? `Theme: AUTO (Following Malaysia Solar: ${solarInfo.isDaytime ? `Sunset at ${solarInfo.sunsetFormatted}` : `Sunrise at ${solarInfo.sunriseFormatted}`})`
@@ -400,23 +426,23 @@ export function App() {
               >
                 {themeMode === 'auto' ? (
                   <>
-                    <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[10px] font-black tracking-wider text-sky-400">AUTO</span>
+                    <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[9px] font-black tracking-wider text-sky-400">AUTO</span>
                     {theme === 'night' ? (
-                      <Moon className="h-3.5 w-3.5 text-sky-300" />
+                      <Moon className="h-3 w-3 text-sky-300" />
                     ) : (
-                      <Sun className="h-3.5 w-3.5 text-amber-300" />
+                      <Sun className="h-3 w-3 text-amber-300" />
                     )}
                   </>
                 ) : themeMode === 'night' ? (
                   <>
-                    <Moon className="h-3.5 w-3.5 text-sky-400" />
-                    <span className="text-[10px] font-black tracking-wider text-slate-200">{t('nightMode', voiceLanguage)}</span>
+                    <Moon className="h-3 w-3 text-sky-400" />
+                    <span className="text-[9px] font-black tracking-wider text-slate-200">{t('nightMode', voiceLanguage)}</span>
                   </>
                 ) : (
                   <>
-                    <Sun className="h-3.5 w-3.5 text-amber-400" />
-                    <span className="text-[10px] font-black tracking-wider text-slate-200">{t('dayMode', voiceLanguage)}</span>
+                    <Sun className="h-3 w-3 text-amber-400" />
+                    <span className="text-[9px] font-black tracking-wider text-slate-200">{t('dayMode', voiceLanguage)}</span>
                   </>
                 )}
               </button>
@@ -424,7 +450,7 @@ export function App() {
               {/* Anti-Sleep Screen Lock Button */}
               <button
                 onClick={toggleWakeLock}
-                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold border shadow transition-all active:scale-95 ${
+                className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold border shadow transition-all active:scale-95 ${
                   isScreenAwakeEnabled
                     ? 'bg-slate-800/90 text-amber-300 border-amber-500/50 shadow-amber-500/10'
                     : 'bg-slate-800/60 text-slate-400 border-slate-700/50'
@@ -436,12 +462,12 @@ export function App() {
                 }
               >
                 <Zap
-                  className={`h-3.5 w-3.5 ${
+                  className={`h-3 w-3 ${
                     isScreenAwakeEnabled ? 'text-amber-400 fill-amber-400' : 'text-slate-500'
                   }`}
                 />
-                <span className="hidden md:inline text-[10px] font-black tracking-wider">
-                  {isScreenAwakeEnabled ? 'SCREEN ON' : 'TIMEOUT'}
+                <span className="hidden xl:inline text-[9px] font-black tracking-wider">
+                  {isScreenAwakeEnabled ? 'ON' : 'OFF'}
                 </span>
               </button>
             </div>
@@ -510,6 +536,18 @@ export function App() {
               </div>
             )}
 
+            {/* Auto Rerouting Banner */}
+            {(isRerouting || isOffRoute) && (
+              <div className="flex items-center gap-2 rounded-xl bg-blue-600/95 border border-blue-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
+                <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Laluan terpesong. Mengira semula laluan...'
+                    : 'Off route. Recalculating route...'}
+                </span>
+              </div>
+            )}
+
             {/* Active Turn Guidance Banner or Search Bar with Favorites */}
             {isNavigating && currentStep ? (
               <TurnBanner
@@ -524,9 +562,21 @@ export function App() {
                 onToggleVoice={toggleVoice}
                 voiceLanguage={voiceLanguage}
                 onToggleVoiceLanguage={toggleVoiceLanguage}
+                exitNumber={currentStep.exitNumber}
               />
             ) : (
               <div className="space-y-2">
+                {/* PWA Home Screen Installation Banner */}
+                <PwaInstallBanner
+                  isInstallable={isInstallable}
+                  isInstalled={isInstalled}
+                  isIOS={isIOS}
+                  isDismissed={isDismissed}
+                  onInstall={promptInstall}
+                  onDismiss={dismissBanner}
+                  lang={voiceLanguage}
+                />
+
                 <FavoritesQuickChips
                   refreshTrigger={favRefreshKey}
                   onAddFavorite={handleAddFavorite}
@@ -547,6 +597,7 @@ export function App() {
                   onSelectDestination={handleSelectDestination}
                   isOnline={navigator.onLine}
                   lang={voiceLanguage}
+                  userLocation={coords}
                 />
                 <div className="flex justify-center">
                   <ModeSelector
@@ -560,7 +611,7 @@ export function App() {
           </div>
         }
         sidePanelContent={
-          isFoldableUnfolded && isNavigating && activeRoute ? (
+          (isFoldableUnfolded || isDesktop) && isNavigating && activeRoute ? (
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -573,8 +624,8 @@ export function App() {
                 />
               </div>
 
-              {/* Steps List */}
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              {/* Steps List (Flex-grow so it fills available height on tall desktop monitors) */}
+              <div className="space-y-2 max-h-[320px] 2xl:max-h-[460px] overflow-y-auto pr-1">
                 {activeRoute.steps.map((s, idx) => (
                   <div
                     key={s.id}
@@ -603,7 +654,7 @@ export function App() {
               tollBreakdown={tollBreakdown}
               onOpenTolls={() => setIsTollModalOpen(true)}
               onEndNavigation={handleEndNavigation}
-              isFoldable={isFoldableUnfolded}
+              isFoldable={isFoldableUnfolded || isDesktop}
               onSelectStep={handleSelectStep}
               currentStepIndex={currentStepIndex}
               onExportGpx={handleExportGpx}

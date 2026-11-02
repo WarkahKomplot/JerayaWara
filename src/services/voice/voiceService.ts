@@ -64,10 +64,19 @@ export function generateVoiceInstruction(
         return `Ambil susur keluar ke kiri ke ${road}.`;
       case 'exit_right':
         return `Ambil susur keluar ke kanan ke ${road}.`;
+      case 'flyover':
+        return `Kekal di tengah atau kanan untuk naik jejambat ke ${road}.`;
+      case 'underpass':
+        return `Kekal di lorong kiri untuk ikut susur bawah ke ${road}.`;
       case 'u_turn':
         return 'Lakukan pusingan U di hadapan.';
-      case 'roundabout':
+      case 'roundabout': {
+        if (step.exitNumber && step.exitNumber > 0) {
+          const ordinalBm = step.exitNumber === 1 ? 'pertama' : `ke-${step.exitNumber}`;
+          return `Di bulatan, ambil susur keluar ${ordinalBm} menuju ke ${road}.`;
+        }
         return `Di bulatan, teruskan ke ${road}.`;
+      }
       case 'arrive':
         return 'Anda telah tiba di destinasi.';
       default:
@@ -88,10 +97,20 @@ export function generateVoiceInstruction(
         return `Take the exit on the left onto ${road}.`;
       case 'exit_right':
         return `Take the exit on the right onto ${road}.`;
+      case 'flyover':
+        return `Stay in center or right lanes to take the flyover onto ${road}.`;
+      case 'underpass':
+        return `Keep left for ground level to avoid the flyover onto ${road}.`;
       case 'u_turn':
         return 'Make a U-turn ahead.';
-      case 'roundabout':
+      case 'roundabout': {
+        if (step.exitNumber && step.exitNumber > 0) {
+          const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+          const ord = ordinals[step.exitNumber - 1] || `${step.exitNumber}th`;
+          return `At the roundabout, take the ${ord} exit onto ${road}.`;
+        }
         return `At the roundabout, take the exit onto ${road}.`;
+      }
       case 'arrive':
         return 'You have arrived at your destination.';
       default:

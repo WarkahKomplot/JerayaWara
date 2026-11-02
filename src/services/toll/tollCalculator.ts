@@ -1,5 +1,7 @@
 import { TollBreakdown, TollItem, VehicleClass } from './types';
 import { MALAYSIA_TOLL_REGISTRY } from './tollData';
+export { calculatePhysicalRouteTolls, detectGateCrossing, computeRouteOffsets, PHYSICAL_TOLL_GATES } from './tollCrossing';
+export type { PhysicalTollGate, GateCrossingHit } from './tollCrossing';
 
 export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {
   if (vehicleClass === 'walker') {

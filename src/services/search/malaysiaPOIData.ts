@@ -140,6 +140,14 @@ export const MALAYSIA_OFFLINE_POIS: SearchItem[] = [
     coordinates: [118.1174, 5.8394],
     regionId: 'sabah'
   },
+  {
+    id: 'poi-arjuna-jb',
+    title: 'Arjuna Johor Bahru (Dewan & Wedding Venue NikahSatu)',
+    subtitle: 'Lot 109036, Lebuhraya Skudai, Tampoi, 81200 Johor Bahru, Johor',
+    category: 'landmark',
+    coordinates: [103.6967, 1.5006],
+    regionId: 'southern'
+  },
 
   // Highway R&Rs (Rest & Service Areas)
   {
@@ -524,6 +532,154 @@ export const MALAYSIA_OFFLINE_POIS: SearchItem[] = [
     category: 'landmark',
     coordinates: [103.6297, 1.4272],
     regionId: 'southern'
+  },
+
+  // Key Commercial & Tech / Digital Hubs
+  {
+    id: 'mall-plaza-low-yat',
+    title: 'Plaza Low Yat (Lowyat Bukit Bintang IT Mall)',
+    subtitle: 'Jalan Bintang, Bukit Bintang, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.70999, 3.14402],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-digital-mall-pj',
+    title: 'Digital Mall Petaling Jaya (Seksyen 14)',
+    subtitle: 'Jalan 14/20, Seksyen 14, Petaling Jaya, Selangor',
+    category: 'shopping',
+    coordinates: [101.6318, 3.1092],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-trx',
+    title: 'The Exchange TRX (Tun Razak Exchange)',
+    subtitle: 'Persiaran TRX, Imbi, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.7188, 3.1432],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-lalaport-bbcc',
+    title: 'Mitsui Shopping Park LaLaport BBCC',
+    subtitle: 'Bukit Bintang City Centre, Jalan Hang Tuah, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.7071, 3.1408],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-sungei-wang',
+    title: 'Sungei Wang Plaza',
+    subtitle: 'Jalan Sultan Ismail, Bukit Bintang, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.7112, 3.1451],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-midvalley',
+    title: 'Mid Valley Megamall & The Gardens',
+    subtitle: 'Lingkaran Syed Putra, Mid Valley City, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.6773, 3.1176],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-pavilion-kl',
+    title: 'Pavilion Kuala Lumpur',
+    subtitle: 'Jalan Bukit Bintang, Bukit Bintang, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.7135, 3.1488],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-1-utama',
+    title: '1 Utama Shopping Centre (One Utama)',
+    subtitle: 'Bandar Utama, Petaling Jaya, Selangor',
+    category: 'shopping',
+    coordinates: [101.6155, 3.1502],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-sunway-pyramid',
+    title: 'Sunway Pyramid Shopping Mall',
+    subtitle: 'Bandar Sunway, Subang Jaya, Selangor',
+    category: 'shopping',
+    coordinates: [101.6068, 3.0732],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-ioi-city-mall',
+    title: 'IOI City Mall Putrajaya',
+    subtitle: 'Lebuh IRC, IOI Resort City, Sepang, Selangor',
+    category: 'shopping',
+    coordinates: [101.7145, 2.9702],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-ikea-damansara',
+    title: 'IKEA Damansara & IPC Shopping Centre',
+    subtitle: 'Mutiara Damansara, Petaling Jaya, Selangor',
+    category: 'shopping',
+    coordinates: [101.6128, 3.1575],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'mall-ikea-cheras',
+    title: 'IKEA Cheras & MyTOWN Shopping Centre',
+    subtitle: 'Jalan Cochrane, Maluri, Kuala Lumpur',
+    category: 'shopping',
+    coordinates: [101.7258, 3.1362],
+    regionId: 'klang-valley'
+  },
+
+  // Popular Drive-Thrus & Local Kajang Landmarks
+  {
+    id: 'poi-mcd-kajang-impian',
+    title: "McDonald's Kajang Impian DT (Drive-Thru)",
+    subtitle: 'Jalan Kajang Impian 1/2, Taman Kajang Impian, Kajang, Selangor',
+    category: 'restaurant',
+    coordinates: [101.77157, 2.97492],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'poi-vapor-hub-kajang',
+    title: 'Vapor Hub (3B Curve Business Park)',
+    subtitle: 'Jalan Medan Pusat Bandar 2D, Seksyen 9, Bandar Baru Bangi / Kajang, Selangor',
+    category: 'shopping',
+    coordinates: [101.75282, 2.96341],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'poi-plaza-metro-kajang',
+    title: 'Plaza Metro Kajang (Metro Kajang)',
+    subtitle: 'Jalan Tun Abdul Aziz, Bandar Kajang, Hulu Langat, Selangor',
+    category: 'shopping',
+    coordinates: [101.7888, 2.9911],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'poi-metro-point-kajang',
+    title: 'Metro Point Complex Kajang',
+    subtitle: 'Jalan Semenyih / Jalan Jelok 9, Pekan Kajang, Selangor',
+    category: 'shopping',
+    coordinates: [101.7939, 2.9917],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'poi-menara-1-sentrum',
+    title: 'Menara 1 Sentrum (One Sentrum KL Sentral)',
+    subtitle: '201, Jalan Tun Sambanthan, Brickfields / KL Sentral, Kuala Lumpur',
+    category: 'landmark',
+    coordinates: [101.68785, 3.13382],
+    regionId: 'klang-valley'
+  },
+  {
+    id: 'poi-1-sentral-kl',
+    title: '1 Sentral (One Sentral KL Sentral)',
+    subtitle: 'Jalan Stesen Sentral 5, KL Sentral, Kuala Lumpur',
+    category: 'landmark',
+    coordinates: [101.68376, 3.13178],
+    regionId: 'klang-valley'
   }
 ];
 

@@ -7,7 +7,9 @@ import {
   MapPin,
   ShieldAlert,
   Volume2,
-  VolumeX
+  VolumeX,
+  TrendingUp,
+  GitFork
 } from 'lucide-react';
 import { ManeuverType } from '../../services/routing/types';
 import { getLocalizedStepInstruction } from '../../services/i18n/translations';
@@ -24,6 +26,7 @@ export interface TurnBannerProps {
   onToggleVoice?: () => void;
   voiceLanguage?: 'ms' | 'en';
   onToggleVoiceLanguage?: () => void;
+  exitNumber?: number;
 }
 
 export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
@@ -37,7 +40,8 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
   isVoiceEnabled = true,
   onToggleVoice,
   voiceLanguage = 'en',
-  onToggleVoiceLanguage
+  onToggleVoiceLanguage,
+  exitNumber
 }) => {
   const renderManeuverIcon = () => {
     switch (maneuver) {
@@ -49,8 +53,31 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
       case 'turn_left':
       case 'slight_left':
         return <CornerUpLeft className="h-8 w-8 text-white" strokeWidth={2.5} />;
+      case 'flyover':
+        return (
+          <div className="flex flex-col items-center">
+            <TrendingUp className="h-7 w-7 text-white animate-pulse" strokeWidth={2.5} />
+            <span className="text-[8px] font-black uppercase tracking-wider text-sky-200">NAIK</span>
+          </div>
+        );
+      case 'underpass':
+        return (
+          <div className="flex flex-col items-center">
+            <GitFork className="h-7 w-7 text-amber-300" strokeWidth={2.5} />
+            <span className="text-[8px] font-black uppercase tracking-wider text-amber-200">BAWAH</span>
+          </div>
+        );
       case 'roundabout':
-        return <RotateCw className="h-8 w-8 text-white" strokeWidth={2.5} />;
+        return (
+          <div className="relative flex items-center justify-center">
+            <RotateCw className="h-8 w-8 text-white" strokeWidth={2.5} />
+            {exitNumber && exitNumber > 0 && (
+              <span className="absolute text-xs font-black text-amber-300 font-mono">
+                {exitNumber}
+              </span>
+            )}
+          </div>
+        );
       case 'arrive':
         return <MapPin className="h-8 w-8 text-emerald-400" strokeWidth={2.5} />;
       default:

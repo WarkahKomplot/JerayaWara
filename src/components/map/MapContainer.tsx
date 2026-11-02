@@ -5,7 +5,6 @@ import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
 import { Language } from '../../services/i18n/translations';
-import { MALAYSIA_AES_CAMERAS, NearbyAESAlert } from '../../services/traffic/aesCameraData';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
@@ -16,7 +15,7 @@ export interface MapContainerProps {
   isNavigating?: boolean;
   focusStepCoord?: [number, number] | null;
   lang?: Language;
-  aesAlert?: NearbyAESAlert | null;
+  aesAlert?: any;
 }
 
 export const MapContainer: React.FC<MapContainerProps> = ({
@@ -27,14 +26,12 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   onMapClick,
   isNavigating = false,
   focusStepCoord = null,
-  lang = 'ms',
-  aesAlert = null
+  lang = 'ms'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const destinationMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const aesMarkersMapRef = useRef<Map<string, { marker: maplibregl.Marker; el: HTMLElement; pingEl: HTMLElement | null }>>(new Map());
   const puckHeadingElRef = useRef<HTMLElement | null>(null);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
@@ -72,9 +69,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     // Custom Location Marker Element (Pulse puck with heading arrow)
     const el = document.createElement('div');
-    el.className = 'relative flex items-center justify-center';
+    el.className = 'flex items-center justify-center';
     el.innerHTML = `
-      <div class="absolute w-10 h-10 rounded-full bg-blue-500/25 animate-ping"></div>
+      <div class="absolute w-10 h-10 rounded-full bg-blue-500/25 animate-ping pointer-events-none"></div>
       <div class="relative w-7 h-7 rounded-full bg-blue-600 border-2 border-white shadow-md flex items-center justify-center">
         <div class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-white transform -translate-y-0.5" id="puck-heading"></div>
       </div>
@@ -82,7 +79,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     puckHeadingElRef.current = el.querySelector('#puck-heading');
 
-    const marker = new maplibregl.Marker({ element: el })
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
       .setLngLat(userLocation)
       .addTo(map);
 
@@ -116,12 +113,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         if (destinationMarkerRef.current) {
           destinationMarkerRef.current.remove();
           destinationMarkerRef.current = null;
-        }
-        if (aesMarkersMapRef.current) {
-          aesMarkersMapRef.current.forEach(({ marker }) => {
-            try { marker.remove(); } catch {}
-          });
-          aesMarkersMapRef.current.clear();
         }
         if (markerRef.current) {
           markerRef.current.remove();
@@ -178,100 +169,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       duration: 800
     });
   }, [focusStepCoord]);
-
-  const activeAlertCamId = aesAlert?.camera.id || null;
-
-  // Render AES Speed Camera Pinpoints on Map (instantiated once or updated when language switches)
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Remove existing markers if re-initializing
-    aesMarkersMapRef.current.forEach(({ marker }) => {
-      try { marker.remove(); } catch {}
-    });
-    aesMarkersMapRef.current.clear();
-
-    MALAYSIA_AES_CAMERAS.forEach(cam => {
-      try {
-        const camEl = document.createElement('div');
-        camEl.className = 'group relative flex flex-col items-center cursor-pointer select-none';
-        camEl.setAttribute('data-cam-id', cam.id);
-
-        const localizedName = lang === 'ms' ? cam.name : (cam.nameEn || cam.name);
-
-        camEl.innerHTML = `
-          <div class="relative flex items-center justify-center">
-            <div class="aes-ping-ring hidden absolute -inset-2.5 rounded-full bg-red-500/40 animate-ping"></div>
-            <div class="aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="aes-icon text-red-400">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-                <circle cx="12" cy="13" r="3"/>
-              </svg>
-            </div>
-          </div>
-          <div class="mt-0.5 rounded-full bg-slate-950/90 px-1.5 py-0.5 text-[9px] font-black font-mono text-amber-300 border border-amber-400/50 shadow">
-            ${cam.speedLimitKmH}
-          </div>
-        `;
-
-        const popup = new maplibregl.Popup({ offset: 20, closeButton: false })
-          .setHTML(`
-            <div style="font-family: system-ui, sans-serif; font-size: 11px; padding: 3px; min-width: 140px;">
-              <div style="font-weight: 800; color: #ef4444; text-transform: uppercase;">📷 ${localizedName}</div>
-              <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">${cam.highway} · ${cam.km}</div>
-              <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-top: 2px;">
-                ${lang === 'ms' ? 'Had Laju' : 'Speed Limit'}: ${cam.speedLimitKmH} km/h
-              </div>
-              <div style="font-size: 9px; color: #64748b; margin-top: 2px;">${cam.locationDescription}</div>
-            </div>
-          `);
-
-        const marker = new maplibregl.Marker({ element: camEl })
-          .setLngLat(cam.coordinates)
-          .setPopup(popup)
-          .addTo(map);
-
-        const pingEl = camEl.querySelector('.aes-ping-ring') as HTMLElement | null;
-        aesMarkersMapRef.current.set(cam.id, { marker, el: camEl, pingEl });
-      } catch (err) {
-        console.warn('Failed to add AES camera pin to map:', err);
-      }
-    });
-
-    return () => {
-      aesMarkersMapRef.current.forEach(({ marker }) => {
-        try { marker.remove(); } catch {}
-      });
-      aesMarkersMapRef.current.clear();
-    };
-  }, [lang]);
-
-  // Dynamically update active camera alert highlighting without destroying DOM markers
-  useEffect(() => {
-    aesMarkersMapRef.current.forEach(({ el, pingEl }, camId) => {
-      const isAlerted = camId === activeAlertCamId;
-      el.style.zIndex = isAlerted ? '40' : '20';
-
-      const badge = el.querySelector('.aes-badge');
-      const icon = el.querySelector('.aes-icon');
-
-      if (pingEl) {
-        if (isAlerted) pingEl.classList.remove('hidden');
-        else pingEl.classList.add('hidden');
-      }
-
-        if (badge && icon) {
-          if (isAlerted) {
-            badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-red-600 to-rose-600 scale-110 shadow-lg shadow-red-500/60 ring-2 ring-white animate-pulse text-white transition-all';
-            icon.setAttribute('class', 'aes-icon text-white');
-          } else {
-            badge.className = 'aes-badge flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/95 border border-red-500/80 shadow-md shadow-black/40 text-white transition-all transform hover:scale-110';
-            icon.setAttribute('class', 'aes-icon text-red-400');
-          }
-        }
-    });
-  }, [activeAlertCamId]);
 
   // Update User Location & Follow Camera
   useEffect(() => {

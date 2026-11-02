@@ -50,6 +50,28 @@ describe('Voice Navigation Service (BM & English)', () => {
 
       const arriveMsg = generateVoiceInstruction('arrive', undefined, 'Seremban City Centre', 'ms');
       expect(arriveMsg).toContain('tiba di destinasi');
+
+      // Test Flyover and Roundabout exit guidance in BM
+      const flyoverStep: TurnStep = {
+        id: 'step-flyover',
+        maneuver: 'flyover',
+        instruction: 'Take flyover onto Federal Highway',
+        distanceMeters: 300,
+        durationSeconds: 20,
+        coordinates: [101.65, 3.11]
+      };
+      expect(generateVoiceInstruction('turn', flyoverStep, undefined, 'ms')).toContain('naik jejambat');
+
+      const roundaboutStep: TurnStep = {
+        id: 'step-roundabout',
+        maneuver: 'roundabout',
+        instruction: 'At roundabout, take 2nd exit',
+        distanceMeters: 150,
+        durationSeconds: 15,
+        coordinates: [101.69, 3.15],
+        exitNumber: 2
+      };
+      expect(generateVoiceInstruction('turn', roundaboutStep, undefined, 'ms')).toContain('ambil susur keluar ke-2');
     });
   });
 

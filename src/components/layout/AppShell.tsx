@@ -18,10 +18,46 @@ export const AppShell: React.FC<AppShellProps> = ({
   headerBar,
   isNavigating = false
 }) => {
-  const { isFoldableUnfolded } = useFoldableDetection();
+  const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
 
+  // Desktop Cockpit Sidebar View (Google Maps Web style)
+  if (isDesktop) {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
+        {/* Left Google Maps Style Docked Cockpit Sidebar */}
+        <aside
+          aria-label="Desktop Cockpit"
+          className="relative flex w-[430px] xl:w-[460px] flex-shrink-0 flex-col h-full border-r border-slate-800 bg-slate-900 shadow-2xl z-20 overflow-hidden"
+        >
+          {/* Header Bar */}
+          <div className="flex-shrink-0 border-b border-slate-800/80 bg-slate-900 px-4 py-3">
+            {headerBar}
+          </div>
+
+          {/* Main Controls, Search & Turn Steps (Scrollable middle container) */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {topBanner}
+            {sidePanelContent}
+          </div>
+
+          {/* Bottom Route & Summary Panel (Anchored cleanly at bottom) */}
+          {bottomDrawer && (
+            <div className="flex-shrink-0 border-t border-slate-800/80 bg-slate-950 px-4 py-3">
+              {bottomDrawer}
+            </div>
+          )}
+        </aside>
+
+        {/* Right Full-Canvas 3D Map Area */}
+        <main className="relative flex-1 h-full w-full overflow-hidden">
+          {childrenMap}
+        </main>
+      </div>
+    );
+  }
+
+  // Foldable Unfolded Dual-Pane View
   if (isFoldableUnfolded) {
-    // Foldable Unfolded Dual-Pane View
     return (
       <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
         {/* Left Control & Information Cockpit Panel */}
@@ -82,3 +118,4 @@ export const AppShell: React.FC<AppShellProps> = ({
     </div>
   );
 };
+

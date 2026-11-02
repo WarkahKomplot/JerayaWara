@@ -7,14 +7,35 @@ import {
   findNearestRoadPath
 } from './malaysiaRoadNetwork';
 import { analyzeRouteTraffic } from '../traffic/malaysiaTrafficEngine';
+export { routeGapMeters, verifyRouteIntegrity } from './routeIntegrity';
+export type { RouteIntegrityOptions, RouteIntegrityResult } from './routeIntegrity';
 
 function mapOsrmManeuver(type: string, modifier?: string): ManeuverType {
   if (type === 'depart') return 'straight';
   if (type === 'arrive') return 'arrive';
-  if (type === 'roundabout' || type === 'rotary') return 'roundabout';
-  if (type === 'off ramp') {
-    return modifier?.includes('left') ? 'exit_left' : 'exit_right';
+  if (type === 'roundabout' || type === 'rotary' || type === 'exit roundabout' || type === 'exit rotary') {
+    return 'roundabout';
   }
+
+  // Malaysian Grade-Separated Ingress / Egress (Flyover vs Ground Level Ramp)
+  if (type === 'fork') {
+    if (modifier?.includes('right') || modifier === 'straight') {
+      return 'flyover';
+    }
+    if (modifier?.includes('left')) {
+      return 'underpass';
+    }
+  }
+
+  if (type === 'off ramp') {
+    // Taking an exit off a major expressway or elevated highway to ground level
+    return modifier?.includes('left') ? 'underpass' : 'exit_right';
+  }
+
+  if (type === 'on ramp') {
+    return 'flyover';
+  }
+
   if (modifier === 'sharp left' || modifier === 'left') return 'turn_left';
   if (modifier === 'slight left') return 'slight_left';
   if (modifier === 'sharp right' || modifier === 'right') return 'turn_right';
@@ -27,7 +48,8 @@ function formatStepInstruction(
   maneuver: ManeuverType,
   roadName: string,
   destTitle?: string,
-  profile?: VehicleClass
+  profile?: VehicleClass,
+  exitNumber?: number
 ): string {
   const road = roadName && roadName !== 'unnamed' && roadName.trim() !== '' ? roadName : 'primary road';
 
@@ -50,6 +72,18 @@ function formatStepInstruction(
   switch (maneuver) {
     case 'arrive':
       return `Arrive at ${destTitle || 'destination'}`;
+    case 'flyover':
+      return `Take flyover (Naik jejambat) onto ${road}`;
+    case 'underpass':
+      return `Keep left for ground level / avoid flyover (Ikut susur bawah) onto ${road}`;
+    case 'roundabout': {
+      if (exitNumber && exitNumber > 0) {
+        const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+        const ordinal = ordinals[exitNumber - 1] || `${exitNumber}th`;
+        return `At the roundabout, take the ${ordinal} exit onto ${road}`;
+      }
+      return `Take roundabout exit onto ${road}`;
+    }
     case 'exit_left':
       return `Take exit on left onto ${road}`;
     case 'exit_right':
@@ -62,8 +96,6 @@ function formatStepInstruction(
       return `Keep left onto ${road}`;
     case 'slight_right':
       return `Keep right onto ${road}`;
-    case 'roundabout':
-      return `Take roundabout exit onto ${road}`;
     default:
       return `Continue on ${road}`;
   }
@@ -353,7 +385,7 @@ export function calculateOfflineRoute(
 }
 
 /**
- * Calculates a route using real road network vectors (via OSRM open routing when online,
+ * Calculates a route using real road network vectors (via redundant OSRM open routing servers when online,
  * or the snapped Malaysia Highway/Arterial network when offline).
  */
 export async function calculateRoute(
@@ -365,100 +397,115 @@ export async function calculateRoute(
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
 
   if (isOnline) {
-    let timeoutId: any;
-    try {
-      const mode = profile === 'walker' ? 'foot' : 'driving';
-      const controller = new AbortController();
-      timeoutId = setTimeout(() => controller.abort(), 2800);
+    const mode = profile === 'walker' ? 'foot' : 'driving';
+    // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
+    const routerEndpoints = [
+      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`,
+      `https://routing.openstreetmap.de/routed-car/route/v1/${mode === 'foot' ? 'foot' : 'driving'}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`
+    ];
 
-      const url = `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`;
+    for (const url of routerEndpoints) {
+      let timeoutId: any;
+      try {
+        const controller = new AbortController();
+        // Allow up to 6000ms for long-distance inter-state route calculations (e.g. KL to Johor / Penang)
+        timeoutId = setTimeout(() => controller.abort(), 6000);
 
-      const res = await fetch(url, { signal: controller.signal });
+        const res = await fetch(url, { signal: controller.signal });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-          const routeData = data.routes[0];
-          const rawCoordinates: [number, number][] = routeData.geometry.coordinates;
-          const distanceKmVal = Math.round((routeData.distance / 1000) * 10) / 10;
-          const durationMinutesVal = Math.max(1, Math.round(routeData.duration / 60));
+        if (res.ok) {
+          const data = await res.json();
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const routeData = data.routes[0];
+            const rawCoordinates: [number, number][] = routeData.geometry.coordinates;
+            const distanceKmVal = Math.round((routeData.distance / 1000) * 10) / 10;
+            const durationMinutesVal = Math.max(1, Math.round(routeData.duration / 60));
 
-          const legSteps = routeData.legs?.[0]?.steps || [];
-          const roadNames: string[] = [];
-          const turnSteps: TurnStep[] = [];
+            const legSteps = routeData.legs?.[0]?.steps || [];
+            const roadNames: string[] = [];
+            const turnSteps: TurnStep[] = [];
 
-          legSteps.forEach((s: any, idx: number) => {
-            if (s.name) roadNames.push(s.name);
-            const maneuver = mapOsrmManeuver(s.maneuver?.type, s.maneuver?.modifier);
-            const isLast = idx === legSteps.length - 1;
+            legSteps.forEach((s: any, idx: number) => {
+              if (s.name) roadNames.push(s.name);
+              const maneuver = mapOsrmManeuver(s.maneuver?.type, s.maneuver?.modifier);
+              const isLast = idx === legSteps.length - 1;
+              const exitNum = typeof s.maneuver?.exit === 'number' ? s.maneuver.exit : undefined;
 
-            const isMoto = profile === 'motorcycle' && (
-              s.name?.toLowerCase().includes('plus') ||
-              s.name?.toLowerCase().includes('federal') ||
-              s.name?.toLowerCase().includes('kesas') ||
-              s.name?.toLowerCase().includes('lebuhraya') ||
-              s.name?.toLowerCase().includes('expressway') ||
-              s.name?.toLowerCase().includes('utara') ||
-              s.name?.toLowerCase().includes('selatan') ||
-              s.name?.toLowerCase().includes('e1') ||
-              s.name?.toLowerCase().includes('e2')
+              const isMoto = profile === 'motorcycle' && (
+                s.name?.toLowerCase().includes('plus') ||
+                s.name?.toLowerCase().includes('federal') ||
+                s.name?.toLowerCase().includes('kesas') ||
+                s.name?.toLowerCase().includes('lebuhraya') ||
+                s.name?.toLowerCase().includes('expressway') ||
+                s.name?.toLowerCase().includes('utara') ||
+                s.name?.toLowerCase().includes('selatan') ||
+                s.name?.toLowerCase().includes('e1') ||
+                s.name?.toLowerCase().includes('e2')
+              );
+
+              turnSteps.push({
+                id: `osrm-step-${idx}`,
+                maneuver: isLast ? 'arrive' : maneuver,
+                instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, profile, exitNum),
+                distanceMeters: Math.round(s.distance),
+                durationSeconds: Math.round(s.duration),
+                coordinates: s.maneuver?.location || rawCoordinates[0],
+                speedLimitKmH: s.name?.toLowerCase().includes('e') ? 110 : 80,
+                isMotorcycleLane: isMoto,
+                laneGuidance: isMoto
+                  ? 'Use dedicated motorcycle lane (Lorong Motosikal)'
+                  : maneuver === 'flyover'
+                  ? 'Use middle or right lanes for flyover'
+                  : maneuver === 'underpass'
+                  ? 'Keep left to avoid flyover'
+                  : undefined,
+                exitNumber: exitNum
+              });
+            });
+
+            // Ensure at least arrival step
+            if (turnSteps.length === 0) {
+              turnSteps.push({
+                id: 'osrm-step-0',
+                maneuver: 'arrive',
+                instruction: `Arrive at ${destinationTitle || 'destination'}`,
+                distanceMeters: 0,
+                durationSeconds: 0,
+                coordinates: destination
+              });
+            }
+
+            const tollPlazaKeys = determineRouteTollPlazas(
+              start,
+              destination,
+              destinationTitle || '',
+              roadNames,
+              distanceKmVal,
+              profile
             );
 
-            turnSteps.push({
-              id: `osrm-step-${idx}`,
-              maneuver: isLast ? 'arrive' : maneuver,
-              instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, profile),
-              distanceMeters: Math.round(s.distance),
-              durationSeconds: Math.round(s.duration),
-              coordinates: s.maneuver?.location || rawCoordinates[0],
-              speedLimitKmH: s.name?.toLowerCase().includes('e') ? 110 : 80,
-              isMotorcycleLane: isMoto,
-              laneGuidance: isMoto ? 'Use dedicated motorcycle lane (Lorong Motosikal)' : undefined
-            });
-          });
+            const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal, profile);
 
-          // Ensure at least arrival step
-          if (turnSteps.length === 0) {
-            turnSteps.push({
-              id: 'osrm-step-0',
-              maneuver: 'arrive',
-              instruction: `Arrive at ${destinationTitle || 'destination'}`,
-              distanceMeters: 0,
-              durationSeconds: 0,
-              coordinates: destination
-            });
+            // Connect user's current GPS location directly to route so navigation line starts right at user puck
+            const fullRouteCoordinates: [number, number][] = [start, ...rawCoordinates];
+
+            return {
+              coordinates: fullRouteCoordinates,
+              distanceKm: distanceKmVal,
+              durationMinutes: traffic.totalMinutes,
+              steps: turnSteps,
+              tollPlazaKeys,
+              profile,
+              destinationName: destinationTitle || 'Destination',
+              traffic
+            };
           }
-
-          const tollPlazaKeys = determineRouteTollPlazas(
-            start,
-            destination,
-            destinationTitle || '',
-            roadNames,
-            distanceKmVal,
-            profile
-          );
-
-          const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal, profile);
-
-          // Connect user's current GPS location directly to route so navigation line starts right at user puck
-          const fullRouteCoordinates: [number, number][] = [start, ...rawCoordinates];
-
-          return {
-            coordinates: fullRouteCoordinates,
-            distanceKm: distanceKmVal,
-            durationMinutes: traffic.totalMinutes,
-            steps: turnSteps,
-            tollPlazaKeys,
-            profile,
-            destinationName: destinationTitle || 'Destination',
-            traffic
-          };
         }
+      } catch {
+        // Continue to secondary router endpoint if primary fails or times out
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch {
-      // Network timeout or offline -> fallback to offline road snapper
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 

@@ -11,6 +11,8 @@ export type ManeuverType =
   | 'exit_right'
   | 'u_turn'
   | 'roundabout'
+  | 'flyover'
+  | 'underpass'
   | 'arrive';
 
 export interface TurnStep {
@@ -24,6 +26,7 @@ export interface TurnStep {
   isMotorcycleLane?: boolean;
   tollPlazaKey?: string;
   laneGuidance?: string;
+  exitNumber?: number; // Roundabout exit number (1, 2, 3, etc.)
 }
 
 export interface RouteResult {

@@ -54,29 +54,49 @@ export const MALAYSIA_ROAD_CORRIDORS: RoadCorridor[] = [
     speedLimit: 110,
     tollPlazaKeys: ['PLUS_SG_BESI', 'PLUS_E2_SG_BESI_SEREMBAN', 'PLUS_AYER_KEROH', 'PLUS_SKUDAI'],
     coordinates: [
-      [101.712, 3.052], // Sungai Besi
-      [101.715, 3.005], // Serdang / UPM
-      [101.750, 2.990], // Kajang
-      [101.770, 2.930], // Bangi
-      [101.800, 2.810], // Nilai
-      [101.938, 2.725], // Seremban
-      [101.980, 2.680], // Senawang
-      [102.090, 2.590], // Rembau
-      [102.180, 2.430], // Simpang Ampat / Alor Gajah
-      [102.280, 2.280], // Ayer Keroh / Melaka
-      [102.430, 2.310], // Jasin
-      [102.540, 2.270], // Tangkak
-      [102.660, 2.210], // Bukit Gambir
-      [102.770, 2.150], // Pagoh
-      [103.060, 2.010], // Yong Peng
-      [103.180, 1.918], // Ayer Hitam
-      [103.260, 1.880], // Machap
-      [103.310, 1.820], // Simpang Renggam
-      [103.530, 1.710], // Sedenak
-      [103.600, 1.660], // Kulai
-      [103.640, 1.600], // Senai
-      [103.660, 1.530], // Skudai
-      [103.710, 1.510], // Kempas
+      [101.712, 3.0521], // Sungai Besi
+      [101.7066, 3.0313], // Serdang / UPM
+      [101.7416, 2.9841], // Kajang Interchange
+      [101.7569, 2.9159], // Bangi Interchange
+      [101.7686, 2.8865], // Southville City
+      [101.7893, 2.871],
+      [101.7877, 2.8445],
+      [101.8108, 2.8069], // Nilai
+      [101.8155, 2.7761],
+      [101.8859, 2.7397], // Bandar Ainsdale
+      [101.9345, 2.6869], // Seremban
+      [101.9638, 2.6813], // Senawang
+      [101.9897, 2.6548],
+      [102.0104, 2.6102], // Pedas Linggi
+      [102.0333, 2.5942], // Rembau
+      [102.106, 2.4768],
+      [102.1539, 2.466],
+      [102.1752, 2.4462], // Simpang Ampat / Alor Gajah
+      [102.1988, 2.4409],
+      [102.2322, 2.3808],
+      [102.2844, 2.3236], // Ayer Keroh / Melaka
+      [102.3169, 2.3026],
+      [102.4155, 2.2832], // Jasin
+      [102.4781, 2.2536],
+      [102.5927, 2.2309], // Tangkak
+      [102.663, 2.156], // Bukit Gambir
+      [102.7375, 2.1312], // Pagoh
+      [102.7802, 2.1335],
+      [102.8042, 2.1102],
+      [102.8574, 2.1048],
+      [102.8873, 2.0732],
+      [102.904, 2.0756],
+      [102.9245, 2.0993],
+      [102.9475, 2.0983],
+      [103.0501, 1.996], // Yong Peng North
+      [103.095, 1.9906], // Yong Peng South
+      [103.2574, 1.8775], // Ayer Hitam / Machap
+      [103.3557, 1.7629], // Simpang Renggam
+      [103.3966, 1.7474],
+      [103.5023, 1.6603], // Sedenak
+      [103.5508, 1.6501], // Kulai
+      [103.6408, 1.5846], // Senai / Skudai
+      [103.765, 1.523], // Kempas
       [103.757, 1.465]  // Johor Bahru City
     ]
   },
@@ -132,7 +152,80 @@ export const MALAYSIA_ROAD_CORRIDORS: RoadCorridor[] = [
       [101.688, 3.080], // Kuchai Lama
       [101.695, 3.020], // Seri Kembangan
       [101.680, 2.930], // Putrajaya
-      [101.656, 2.921]  // Cyberjaya
+      [101.656, 2.921], // Cyberjaya
+      [101.700, 2.750]  // KLIA extension
+    ]
+  },
+  {
+    id: 'elite-e6',
+    name: 'North-South Expressway Central Link (ELITE E6)',
+    expresswayCode: 'E6',
+    speedLimit: 110,
+    tollPlazaKeys: ['ELITE_BATU_TIGA', 'ELITE_SEAFIELE', 'ELITE_KLIA'],
+    coordinates: [
+      [101.545, 3.082], // Shah Alam
+      [101.578, 3.045], // USJ / Ebor
+      [101.570, 2.998], // Putra Heights
+      [101.611, 2.971], // Bandar Saujana Putra
+      [101.632, 2.871], // Dengkil
+      [101.696, 2.760], // KLIA
+      [101.770, 2.810]  // Nilai North (Merge PLUS E2)
+    ]
+  },
+  {
+    id: 'skve-e26',
+    name: 'South Klang Valley Expressway (SKVE E26)',
+    expresswayCode: 'E26',
+    speedLimit: 90,
+    tollPlazaKeys: ['SKVE_AYER_HITAM', 'SKVE_SAUJANA_PUTRA', 'SKVE_PULAU_INDAH'],
+    coordinates: [
+      [101.745, 2.981], // Kajang / SILK
+      [101.680, 2.960], // Putrajaya / Hospital Serdang
+      [101.611, 2.971], // Bandar Saujana Putra
+      [101.512, 2.950], // Telok Panglima Garang
+      [101.370, 2.930]  // Pulau Indah / Port Klang
+    ]
+  },
+  {
+    id: 'silk-e18',
+    name: 'Kajang Dispersal Link Expressway (SILK E18)',
+    expresswayCode: 'E18',
+    speedLimit: 90,
+    tollPlazaKeys: ['SILK_SG_RAMAL', 'SILK_BUKIT_KAJANG'],
+    coordinates: [
+      [101.745, 3.025], // Balakong
+      [101.758, 2.991], // Sungai Ramal
+      [101.782, 2.991], // Kajang Town
+      [101.795, 2.975], // Kajang Perdana
+      [101.765, 2.960]  // UPM / Country Heights
+    ]
+  },
+  {
+    id: 'kesas-e5',
+    name: 'Shah Alam Expressway (KESAS E5)',
+    expresswayCode: 'E5',
+    speedLimit: 90,
+    tollPlazaKeys: ['KESAS_SUNWAY', 'KESAS_KEMUNING'],
+    coordinates: [
+      [101.705, 3.065], // Sri Petaling / Bukit Jalil
+      [101.670, 3.060], // Kinrara
+      [101.605, 3.062], // Sunway
+      [101.530, 3.005], // Kota Kemuning
+      [101.445, 2.998]  // Pandamaran / Port Klang
+    ]
+  },
+  {
+    id: 'ldp-e11',
+    name: 'Damansara-Puchong Expressway (LDP E11)',
+    expresswayCode: 'E11',
+    speedLimit: 90,
+    tollPlazaKeys: ['LDP_PENCHALA', 'LDP_PUCHONG_BARAT'],
+    coordinates: [
+      [101.625, 3.165], // Sri Damansara
+      [101.615, 3.145], // Bandar Utama / 1 Utama
+      [101.605, 3.100], // Kelana Jaya
+      [101.620, 3.045], // IOI Mall Puchong
+      [101.610, 2.980]  // Puchong South / Putrajaya boundary
     ]
   },
   {
@@ -236,8 +329,9 @@ export function findNearestRoadPath(
       }
     }
 
-    // Only match if the corridor actually helps travel closer to dest
-    if (minStartDist < 50 && minDestDist < 60) {
+    // Match within generous threshold (up to 95km to expressway corridor)
+    // so journeys between cities across states always snap to highways rather than straight lines
+    if (minStartDist < 95 && minDestDist < 95) {
       const corridorSubDist = Math.abs(bestStartIdx - bestDestIdx);
       if (corridorSubDist >= 1) {
         const totalDetour = minStartDist + minDestDist;

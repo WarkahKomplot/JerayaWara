@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepare:poi": "python3 scripts/prepare-poi-directory.py"
   },
   "dependencies": {
     "dexie": "^4.0.10",

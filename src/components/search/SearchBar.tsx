@@ -20,33 +20,44 @@ export interface SearchBarProps {
   onSelectDestination: (item: SearchItem) => void;
   isOnline: boolean;
   lang?: Language;
+  userLocation?: [number, number];
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSelectDestination,
   isOnline,
-  lang = 'en'
+  lang = 'en',
+  userLocation
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setIsLoading(false);
       return;
     }
 
     let isCurrent = true;
+    setIsLoading(true);
+
     const timer = setTimeout(() => {
-      searchDestinations(query, isOnline).then(res => {
+      // Fall back to navigator.onLine if isOnline is undefined or false but browser has active internet connection
+      const effectiveOnline = typeof isOnline === 'boolean' ? (isOnline || (typeof navigator !== 'undefined' && navigator.onLine)) : true;
+      searchDestinations(query, effectiveOnline, userLocation).then(res => {
         if (isCurrent) {
           setResults(res);
           setIsOpen(true);
+          setIsLoading(false);
         }
+      }).catch(() => {
+        if (isCurrent) setIsLoading(false);
       });
-    }, 150);
+    }, 200);
 
     return () => {
       isCurrent = false;
@@ -96,7 +107,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       {/* Input Box */}
       <div className="relative flex items-center overflow-hidden rounded-2xl bg-slate-900/90 shadow-2xl backdrop-blur-xl border border-slate-700/60 transition-all focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
         <div className="pl-4 text-slate-400">
-          <Search className="h-5 w-5" />
+          {isLoading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-500 border-t-blue-400" />
+          ) : (
+            <Search className="h-5 w-5" />
+          )}
         </div>
         <input
           type="text"
@@ -142,8 +157,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 {getCategoryIcon(item.category)}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-white truncate">
-                  {item.title}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-bold text-white truncate">
+                    {item.title}
+                  </div>
+                  {item.distanceKm !== undefined && (
+                    <span className="flex-shrink-0 text-[11px] font-semibold text-sky-400 bg-sky-950/80 border border-sky-800/60 px-1.5 py-0.5 rounded-md">
+                      {item.distanceKm < 1
+                        ? `${Math.round(item.distanceKm * 1000)} m`
+                        : `${item.distanceKm} km`}
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-400 truncate">
                   {item.subtitle}

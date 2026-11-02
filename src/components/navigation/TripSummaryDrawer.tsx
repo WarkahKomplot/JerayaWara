@@ -133,28 +133,26 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
 
   return (
     <div
-      className={`rounded-3xl bg-slate-900/95 p-5 text-white shadow-2xl backdrop-blur-xl border border-slate-700/60 transition-all ${
+      className={`rounded-2xl bg-slate-900/98 p-3.5 text-white shadow-2xl backdrop-blur-xl border border-slate-700/60 transition-all ${
         isFoldable ? 'w-full' : 'w-full max-w-lg mx-auto'
       }`}
     >
       {/* Top Collapse Button for Expanded Sheet */}
-      {!isFoldable && (
-        <div className="flex justify-between items-center pb-2.5 mb-2 border-b border-slate-800">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            {lang === 'ms' ? 'Butiran Pandu Arah' : 'Trip Summary'}
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsDrawerExpanded(false)}
-            data-testid="collapse-trip-drawer"
-            className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors"
-            title={lang === 'ms' ? 'Kecilkan butiran laluan' : 'Collapse route summary'}
-          >
-            <span>{lang === 'ms' ? 'Kecilkan' : 'Collapse'}</span>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          {lang === 'ms' ? 'Butiran Pandu Arah' : 'Trip Summary'}
+        </span>
+        <button
+          type="button"
+          onClick={() => setIsDrawerExpanded(false)}
+          data-testid="collapse-trip-drawer"
+          className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-white px-2 py-0.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors"
+          title={lang === 'ms' ? 'Kecilkan butiran laluan' : 'Collapse route summary'}
+        >
+          <span>{lang === 'ms' ? 'Kecilkan' : 'Collapse'}</span>
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -304,52 +302,54 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
         </div>
       )}
 
-      {/* Expandable Step-by-Step Road Itinerary */}
-      <div className="mt-3">
-        <button
-          onClick={() => setIsStepsExpanded(prev => !prev)}
-          className="flex w-full items-center justify-between rounded-xl bg-slate-800/60 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 border border-slate-700/40 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <ListOrdered className="h-4 w-4 text-sky-400" />
-            <span>
-              {lang === 'ms'
-                ? `Langkah Laluan & Jalan (${route.steps.length} simpang)`
-                : `Route Steps & Roads (${route.steps.length} turns)`}
-            </span>
-          </div>
-          {isStepsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
+      {/* Expandable Step-by-Step Road Itinerary (Only shown on mobile sheet; desktop displays steps in the upper sidebar) */}
+      {!isFoldable && (
+        <div className="mt-3">
+          <button
+            onClick={() => setIsStepsExpanded(prev => !prev)}
+            className="flex w-full items-center justify-between rounded-xl bg-slate-800/60 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 border border-slate-700/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ListOrdered className="h-4 w-4 text-sky-400" />
+              <span>
+                {lang === 'ms'
+                  ? `Langkah Laluan & Jalan (${route.steps.length} simpang)`
+                  : `Route Steps & Roads (${route.steps.length} turns)`}
+              </span>
+            </div>
+            {isStepsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
 
-        {isStepsExpanded && (
-          <div className="mt-2 max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-800/80">
-            {route.steps.map((step, idx) => (
-              <div
-                key={step.id || idx}
-                onClick={() => onSelectStep?.(idx)}
-                className={`cursor-pointer rounded-lg p-2 text-xs transition-colors ${
-                  idx === currentStepIndex
-                    ? 'bg-blue-600/20 text-white font-bold border border-blue-500/40'
-                    : 'text-slate-300 hover:bg-slate-800/50'
-                }`}
-              >
-                <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                  <span className="font-bold text-sky-400">
-                    {lang === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}
-                  </span>
-                  <span>{step.distanceMeters > 0 ? `${step.distanceMeters >= 1000 ? `${(step.distanceMeters/1000).toFixed(1)} km` : `${step.distanceMeters} m`}` : ''}</span>
-                </div>
-                <div>{getLocalizedStepInstruction(step, lang, route.destinationName)}</div>
-                {step.laneGuidance && (
-                  <div className="text-[10px] text-emerald-400 mt-0.5 font-medium">
-                    {step.laneGuidance}
+          {isStepsExpanded && (
+            <div className="mt-2 max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-800/80">
+              {route.steps.map((step, idx) => (
+                <div
+                  key={step.id || idx}
+                  onClick={() => onSelectStep?.(idx)}
+                  className={`cursor-pointer rounded-lg p-2 text-xs transition-colors ${
+                    idx === currentStepIndex
+                      ? 'bg-blue-600/20 text-white font-bold border border-blue-500/40'
+                      : 'text-slate-300 hover:bg-slate-800/50'
+                  }`}
+                >
+                  <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                    <span className="font-bold text-sky-400">
+                      {lang === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}
+                    </span>
+                    <span>{step.distanceMeters > 0 ? `${step.distanceMeters >= 1000 ? `${(step.distanceMeters/1000).toFixed(1)} km` : `${step.distanceMeters} m`}` : ''}</span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  <div>{getLocalizedStepInstruction(step, lang, route.destinationName)}</div>
+                  {step.laneGuidance && (
+                    <div className="text-[10px] text-emerald-400 mt-0.5 font-medium">
+                      {step.laneGuidance}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stop / Cancel & Export Actions */}
       <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center gap-2">

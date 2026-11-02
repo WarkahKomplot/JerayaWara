@@ -73,5 +73,48 @@ describe('Search & Geocoding Engine', () => {
     const results = await searchDestinations('hosp kajang', false);
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].title).toContain('Kajang');
+
+    // Searching colloquial 'lowyat' or 'low yat' finds Plaza Low Yat offline
+    const lowyatResults = await searchDestinations('lowyat', false);
+    expect(lowyatResults.length).toBeGreaterThan(0);
+    expect(lowyatResults[0].title).toContain('Low Yat');
+
+    // Searching 'trx' finds The Exchange TRX offline
+    const trxResults = await searchDestinations('trx', false);
+    expect(trxResults.length).toBeGreaterThan(0);
+    expect(trxResults[0].title).toContain('TRX');
+
+    // Searching 'mcd kajang impian dt' finds McDonald's Kajang Impian
+    const mcdResults = await searchDestinations('mcd kajang impian dt', false);
+    expect(mcdResults.length).toBeGreaterThan(0);
+    expect(mcdResults[0].title).toContain("McDonald's Kajang Impian");
+
+    // Searching colloquial 'metro kajang' finds Plaza Metro Kajang
+    const metroResults = await searchDestinations('metro kajang', false);
+    expect(metroResults.length).toBeGreaterThan(0);
+    expect(metroResults[0].title).toContain('Metro Kajang');
+
+    // Searching 'menara one sentrum' finds Menara 1 Sentrum
+    const sentrumResults = await searchDestinations('menara one sentrum', false);
+    expect(sentrumResults.length).toBeGreaterThan(0);
+    expect(sentrumResults[0].title).toContain('Sentrum');
+
+    // Searching 'ARJUNA Johor Bahru' finds Arjuna Johor Bahru wedding & event venue
+    const arjunaResults = await searchDestinations('ARJUNA Johor Bahru', false);
+    expect(arjunaResults.length).toBeGreaterThan(0);
+    expect(arjunaResults[0].title).toContain('Arjuna Johor Bahru');
+    expect(arjunaResults[0].coordinates).toEqual([103.6967, 1.5006]);
+  });
+
+  it('ranks results by proximity when userLocation is provided', async () => {
+    // User is located in Kajang [lng, lat] = [101.7925, 2.9904]
+    const userKajang: [number, number] = [101.7925, 2.9904];
+    const results = await searchDestinations('Hospital', false, userKajang);
+    expect(results.length).toBeGreaterThan(1);
+
+    // Hospital Kajang should be ranked before hospitals in other states/towns
+    expect(results[0].title).toContain('Kajang');
+    expect(results[0].distanceKm).toBeDefined();
+    expect(results[0].distanceKm).toBeLessThan(15);
   });
 });

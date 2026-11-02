@@ -6,6 +6,7 @@ export type POICategory =
   | 'junction'
   | 'transit'
   | 'shopping'
+  | 'restaurant'
   | 'hospital'
   | 'university'
   | 'pinned';
@@ -18,6 +19,7 @@ export interface SearchItem {
   coordinates: [number, number]; // [lng, lat]
   expressway?: string;
   regionId: string;
+  distanceKm?: number; // Distance in km from user's current GPS location
 }
 
 

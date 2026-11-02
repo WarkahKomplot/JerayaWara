@@ -80,13 +80,17 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
     >
       {/* 1. Proactive AES Speed Camera Proximity Warning */}
       {aesAlert && (
-        <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 px-3 py-1.5 text-xs font-black text-white shadow-2xl animate-pulse border-2 border-red-400">
-          <Camera className="h-4 w-4 flex-shrink-0 animate-bounce" />
+        <div className={`flex items-center gap-2 rounded-2xl px-3 py-1.5 text-xs font-black text-white shadow-2xl transition-all duration-300 ${
+          aesAlert.isOverSpeed
+            ? 'bg-gradient-to-r from-red-700 via-rose-600 to-red-700 animate-pulse border-2 border-red-300 ring-2 ring-red-500/50'
+            : 'bg-gradient-to-r from-amber-600 to-orange-600 border-2 border-amber-300'
+        }`}>
+          <Camera className={`h-4 w-4 flex-shrink-0 ${aesAlert.isOverSpeed ? 'animate-bounce text-yellow-200' : 'text-white'}`} />
           <div>
             <div className="uppercase tracking-wider text-[11px]">
-              ⚠️ {lang === 'ms' ? 'AWAS' : 'CAUTION'}: {getLocalizedCameraName(aesAlert.camera, lang)}
+              ⚠️ {lang === 'ms' ? (aesAlert.isOverSpeed ? 'KURANGKAN LAJU' : 'AWAS') : (aesAlert.isOverSpeed ? 'SLOW DOWN' : 'CAUTION')}: {getLocalizedCameraName(aesAlert.camera, lang)}
             </div>
-            <div className="text-[10px] font-medium text-red-100">
+            <div className={`text-[10px] font-medium ${aesAlert.isOverSpeed ? 'text-yellow-100 font-bold' : 'text-orange-100'}`}>
               {t('cameraDistance', lang)} {aesAlert.distanceMeters}m · {t('cameraLimit', lang)} {aesAlert.camera.speedLimitKmH} {t('speedUnit', lang)}
             </div>
           </div>

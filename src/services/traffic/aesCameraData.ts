@@ -9,6 +9,8 @@ export interface AESCamera {
   speedLimitKmH: number;
   direction: 'Northbound' | 'Southbound' | 'Eastbound' | 'Westbound' | 'Both' | string;
   coordinates: [number, number]; // [lng, lat]
+  bearing?: number; // Target capture azimuth in degrees (0-359).
+  toleranceDegrees?: number; // Angular tolerance cone (defaults to 55°)
   locationDescription: string;
   locationDescriptionEn?: string;
 }
@@ -16,6 +18,7 @@ export interface AESCamera {
 export interface NearbyAESAlert {
   camera: AESCamera;
   distanceMeters: number;
+  isOverSpeed?: boolean;
 }
 
 export interface FindAESCameraOptions {
@@ -33,28 +36,30 @@ export interface FindAESCameraOptions {
 export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
   // PLUS E1 (Northbound & Southbound)
   {
-    id: 'aes-e1-slimriver-sb',
-    name: 'AES Slim River (Arah Selatan)',
-    nameEn: 'AES Slim River (Southbound)',
+    id: 'aes-e1-kualamuda-sb',
+    name: 'AES Kuala Muda (Arah Selatan)',
+    nameEn: 'AES Kuala Muda (Southbound)',
     highway: 'PLUS E1',
-    km: 'KM 375.9',
+    km: 'KM 96.3',
     speedLimitKmH: 110,
     direction: 'Southbound',
-    coordinates: [101.4012, 3.8291],
-    locationDescription: 'Slim River - Behrang',
-    locationDescriptionEn: 'Slim River - Behrang'
+    bearing: 165,
+    coordinates: [100.4782, 5.5681],
+    locationDescription: 'Kuala Muda - Sungai Petani',
+    locationDescriptionEn: 'Kuala Muda - Sungai Petani'
   },
   {
-    id: 'aes-e1-slimriver-nb',
-    name: 'AES Slim River (Arah Utara)',
-    nameEn: 'AES Slim River (Northbound)',
+    id: 'aes-e1-sungaidua',
+    name: 'AES Sungai Dua',
+    nameEn: 'AES Sungai Dua',
     highway: 'PLUS E1',
-    km: 'KM 375.9',
+    km: 'KM 135.8',
     speedLimitKmH: 110,
-    direction: 'Northbound',
-    coordinates: [101.4014, 3.8295],
-    locationDescription: 'Behrang - Slim River',
-    locationDescriptionEn: 'Behrang - Slim River'
+    direction: 'Southbound',
+    bearing: 180,
+    coordinates: [100.4321, 5.4412],
+    locationDescription: 'Sungai Dua - Seberang Jaya',
+    locationDescriptionEn: 'Sungai Dua - Seberang Jaya'
   },
   {
     id: 'aes-e1-bktgantang-nb',
@@ -64,6 +69,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 204.6',
     speedLimitKmH: 110,
     direction: 'Northbound',
+    bearing: 345,
     coordinates: [100.7512, 4.7891],
     locationDescription: 'Changkat Jering - Taiping Utara',
     locationDescriptionEn: 'Changkat Jering - Taiping North'
@@ -76,21 +82,49 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 204.6',
     speedLimitKmH: 110,
     direction: 'Southbound',
+    bearing: 165,
     coordinates: [100.7515, 4.7888],
     locationDescription: 'Taiping Utara - Changkat Jering',
     locationDescriptionEn: 'Taiping North - Changkat Jering'
   },
   {
-    id: 'aes-e1-sungaidua',
-    name: 'AES Sungai Dua',
-    nameEn: 'AES Sungai Dua',
+    id: 'aes-e1-gopeng-sb',
+    name: 'AES Gopeng (Arah Selatan)',
+    nameEn: 'AES Gopeng (Southbound)',
     highway: 'PLUS E1',
-    km: 'KM 135.8',
+    km: 'KM 301.5',
     speedLimitKmH: 110,
     direction: 'Southbound',
-    coordinates: [100.4321, 5.4412],
-    locationDescription: 'Sungai Dua - Seberang Jaya',
-    locationDescriptionEn: 'Sungai Dua - Seberang Jaya'
+    bearing: 155,
+    coordinates: [101.1712, 4.4412],
+    locationDescription: 'Gopeng - Tapah',
+    locationDescriptionEn: 'Gopeng - Tapah'
+  },
+  {
+    id: 'aes-e1-slimriver-sb',
+    name: 'AES Slim River (Arah Selatan)',
+    nameEn: 'AES Slim River (Southbound)',
+    highway: 'PLUS E1',
+    km: 'KM 375.9',
+    speedLimitKmH: 110,
+    direction: 'Southbound',
+    bearing: 165,
+    coordinates: [101.4012, 3.8291],
+    locationDescription: 'Slim River - Behrang',
+    locationDescriptionEn: 'Slim River - Behrang'
+  },
+  {
+    id: 'aes-e1-slimriver-nb',
+    name: 'AES Slim River (Arah Utara)',
+    nameEn: 'AES Slim River (Northbound)',
+    highway: 'PLUS E1',
+    km: 'KM 375.9',
+    speedLimitKmH: 110,
+    direction: 'Northbound',
+    bearing: 345,
+    coordinates: [101.4014, 3.8295],
+    locationDescription: 'Behrang - Slim River',
+    locationDescriptionEn: 'Behrang - Slim River'
   },
 
   // PLUS E2 (Kajang to Johor Bahru)
@@ -102,6 +136,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 301.6',
     speedLimitKmH: 90,
     direction: 'Southbound',
+    bearing: 155,
     coordinates: [101.7451, 2.9812],
     locationDescription: 'Sungai Besi - Kajang',
     locationDescriptionEn: 'Sungai Besi - Kajang'
@@ -114,6 +149,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 299.9',
     speedLimitKmH: 90,
     direction: 'Northbound',
+    bearing: 335,
     coordinates: [101.7512, 2.9612],
     locationDescription: 'Bangi - Kajang',
     locationDescriptionEn: 'Bangi - Kajang'
@@ -126,6 +162,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 214.4',
     speedLimitKmH: 110,
     direction: 'Both',
+    bearing: 140,
     coordinates: [102.1951, 2.4215],
     locationDescription: 'Simpang Ampat - Ayer Keroh',
     locationDescriptionEn: 'Simpang Ampat - Ayer Keroh'
@@ -138,6 +175,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 184.2',
     speedLimitKmH: 110,
     direction: 'Both',
+    bearing: 125,
     coordinates: [102.4312, 2.3112],
     locationDescription: 'Ayer Keroh - Jasin',
     locationDescriptionEn: 'Ayer Keroh - Jasin'
@@ -150,9 +188,25 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 146.8',
     speedLimitKmH: 110,
     direction: 'Both',
+    bearing: 135,
     coordinates: [102.7654, 2.1489],
     locationDescription: 'Tangkak - Pagoh',
     locationDescriptionEn: 'Tangkak - Pagoh'
+  },
+
+  // ELITE E6
+  {
+    id: 'aes-e6-dengkil',
+    name: 'AES ELITE Dengkil (KM 28.4)',
+    nameEn: 'AES ELITE Dengkil (KM 28.4)',
+    highway: 'ELITE E6',
+    km: 'KM 28.4',
+    speedLimitKmH: 110,
+    direction: 'Both',
+    bearing: 160,
+    coordinates: [101.6321, 2.8712],
+    locationDescription: 'Putrajaya - Dengkil',
+    locationDescriptionEn: 'Putrajaya - Dengkil'
   },
 
   // Federal Highway (Route 2)
@@ -164,6 +218,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 13.8',
     speedLimitKmH: 80,
     direction: 'Both',
+    bearing: 85,
     coordinates: [101.5912, 3.0812],
     locationDescription: 'Persimpangan Batu Tiga - Subang Jaya',
     locationDescriptionEn: 'Batu Tiga Interchange - Subang Jaya'
@@ -176,6 +231,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 8.5',
     speedLimitKmH: 80,
     direction: 'Both',
+    bearing: 75,
     coordinates: [101.6451, 3.1091],
     locationDescription: 'Jalan Barat - Seri Setia',
     locationDescriptionEn: 'Jalan Barat - Seri Setia'
@@ -190,6 +246,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 6.8',
     speedLimitKmH: 90,
     direction: 'Both',
+    bearing: 90,
     coordinates: [101.6112, 2.9712],
     locationDescription: 'Bandar Saujana Putra - Telok Panglima Garang',
     locationDescriptionEn: 'Bandar Saujana Putra - Telok Panglima Garang'
@@ -202,6 +259,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 17.4',
     speedLimitKmH: 90,
     direction: 'Both',
+    bearing: 70,
     coordinates: [101.7821, 2.9912],
     locationDescription: 'Sungai Ramal - Balakong',
     locationDescriptionEn: 'Sungai Ramal - Balakong'
@@ -214,6 +272,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 28.5',
     speedLimitKmH: 90,
     direction: 'Eastbound',
+    bearing: 45,
     coordinates: [101.7512, 3.2812],
     locationDescription: 'Plaza Tol Gombak - Terowong Genting Sempah',
     locationDescriptionEn: 'Gombak Toll Plaza - Genting Sempah Tunnel'
@@ -226,6 +285,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     km: 'KM 85.5',
     speedLimitKmH: 110,
     direction: 'Both',
+    bearing: 80,
     coordinates: [102.1612, 3.4812],
     locationDescription: 'Karak - Lanchang',
     locationDescriptionEn: 'Karak - Lanchang'
@@ -294,12 +354,77 @@ export function getBearing(c1: [number, number], c2: [number, number]): number {
 }
 
 /**
+ * Checks if a vehicle/route heading is compatible with a camera's monitored direction.
+ */
+export function isHeadingCompatible(
+  travelHeading: number,
+  cam: AESCamera,
+  defaultTolerance: number = 55
+): boolean {
+  if (cam.bearing === undefined) {
+    return true; // No bearing defined -> bi-directional fallback
+  }
+
+  const tolerance = cam.toleranceDegrees ?? defaultTolerance;
+  const diff = Math.abs((travelHeading - cam.bearing + 540) % 360 - 180);
+
+  if (cam.direction === 'Both') {
+    const diffOpposite = Math.abs((travelHeading - ((cam.bearing + 180) % 360) + 540) % 360 - 180);
+    return diff <= tolerance || diffOpposite <= tolerance;
+  }
+
+  return diff <= tolerance;
+}
+
+/**
+ * Projects a point onto a line segment defined by segA -> segB.
+ * Returns:
+ * - t: scalar projection parameter (0 at segA, 1 at segB)
+ * - lateralDistanceMeters: perpendicular distance from point to the line
+ */
+export function projectPointOntoSegment(
+  point: [number, number],
+  segA: [number, number],
+  segB: [number, number]
+): { t: number; lateralDistanceMeters: number } {
+  const [pLng, pLat] = point;
+  const [aLng, aLat] = segA;
+  const [bLng, bLat] = segB;
+
+  const midLatRad = ((aLat + bLat) / 2) * (Math.PI / 180);
+  const mPerDegLng = 111320 * Math.cos(midLatRad);
+  const mPerDegLat = 110574;
+
+  const px = pLng * mPerDegLng;
+  const py = pLat * mPerDegLat;
+  const ax = aLng * mPerDegLng;
+  const ay = aLat * mPerDegLat;
+  const bx = bLng * mPerDegLng;
+  const by = bLat * mPerDegLat;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq < 0.0001) {
+    return { t: 0, lateralDistanceMeters: Math.hypot(px - ax, py - ay) };
+  }
+
+  const t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  const lateralDistanceMeters = Math.hypot(px - projX, py - projY);
+
+  return { t, lateralDistanceMeters };
+}
+
+/**
  * Finds if there is an AES speed camera within proximity.
  * - When routePolyline is provided (Navigation mode), verifies that the camera lies strictly
- *   within the route corridor (<= 75m) and is ahead of the driver along the path (eliminates
+ *   within the route corridor (<= 65m) and is ahead of the driver along the path (eliminates
  *   false alarms from parallel highways or perpendicular cross-town roads).
- * - When free cruising, checks forward heading cone (within 45 degrees) to avoid false alerts
- *   for cameras behind the driver or across parallel roads.
+ * - Verifies bearing & direction compatibility so cameras on opposite carriageways do not alert.
+ * - In free cruising, checks forward heading cone (within 45 degrees) and direction compatibility.
  */
 export function findNearbyAESCamera(
   optionsOrCoord: [number, number] | FindAESCameraOptions,
@@ -330,9 +455,9 @@ export function findNearbyAESCamera(
     let minRouteDist = Infinity;
 
     for (const cam of MALAYSIA_AES_CAMERAS) {
-      // Fast radial pre-filter (ignore cameras > 2km away)
+      // Fast radial pre-filter (ignore cameras > 2.5km away)
       const straightDistKm = distanceKm(userCoord, cam.coordinates);
-      if (straightDistKm > 2.0) continue;
+      if (straightDistKm > 2.5) continue;
 
       // Find closest segment from the camera to the upcoming route
       let camMinDistToRoute = Infinity;
@@ -350,10 +475,37 @@ export function findNearbyAESCamera(
         }
       }
 
-      // Camera MUST be within 75 meters of the active road corridor.
+      // Camera MUST be within 65 meters of the active road corridor.
       // If it is on a parallel highway or adjacent street, camMinDistToRoute will be 300-1000m, so it is rejected!
-      if (camMinDistToRoute > 75 || camClosestSegIdx < userClosestSegIdx) {
+      if (camMinDistToRoute > 65 || camClosestSegIdx < userClosestSegIdx) {
         continue;
+      }
+
+      // 2. DIRECTIONAL CHECK: Route segment heading must match camera monitored direction!
+      const segA = routePolyline[camClosestSegIdx];
+      const segB = routePolyline[camClosestSegIdx + 1];
+      const segmentBearing = getBearing(segA, segB);
+
+      if (!isHeadingCompatible(segmentBearing, cam)) {
+        // Vehicle is driving in opposite carriageway or unmonitored vector!
+        continue;
+      }
+
+      // 3. LONGITUDINAL CHECK: If on the very same segment, has the user already passed the camera?
+      if (camClosestSegIdx === userClosestSegIdx) {
+        const segLenMeters = Math.hypot(
+          (segB[0] - segA[0]) * 111320 * Math.cos(((segA[1] + segB[1]) / 2) * (Math.PI / 180)),
+          (segB[1] - segA[1]) * 110574
+        );
+        const { t: tUser } = projectPointOntoSegment(userCoord, segA, segB);
+        const { t: tCam } = projectPointOntoSegment(cam.coordinates, segA, segB);
+
+        // If user is already past the camera by more than 15 meters:
+        const bufferT = segLenMeters > 0 ? 15 / segLenMeters : 0;
+        if (tUser > tCam + bufferT) {
+          // Passed camera already!
+          continue;
+        }
       }
 
       // Calculate path distance along route polyline
@@ -372,7 +524,8 @@ export function findNearbyAESCamera(
         minRouteDist = distAlongRouteMeters;
         closestAlert = {
           camera: cam,
-          distanceMeters: Math.max(50, distAlongRouteMeters)
+          distanceMeters: Math.max(50, distAlongRouteMeters),
+          isOverSpeed: (speedKmH ?? 0) > cam.speedLimitKmH
         };
       }
     }
@@ -388,13 +541,20 @@ export function findNearbyAESCamera(
     const distMeters = Math.round(distanceKm(userCoord, cam.coordinates) * 1000);
 
     if (distMeters <= thresholdMeters && distMeters < minDistanceMeters) {
-      // If moving and heading is available, verify camera is in the forward cone (within 45 degrees)
+      // If moving and heading is available:
       if (heading !== undefined && heading >= 0 && (speedKmH ?? 0) >= 10) {
+        // 1. Camera must be in forward cone (within 45 degrees of vehicle heading)
         const bearingToCam = getBearing(userCoord, cam.coordinates);
         let angleDiff = Math.abs(heading - bearingToCam);
         if (angleDiff > 180) angleDiff = 360 - angleDiff;
         if (angleDiff > 45) {
           // Camera is to the side or behind the vehicle
+          continue;
+        }
+
+        // 2. Vehicle travel heading must match the camera's monitored direction!
+        if (!isHeadingCompatible(heading, cam)) {
+          // Traveling in opposite direction to what this camera monitors!
           continue;
         }
       }
@@ -407,7 +567,8 @@ export function findNearbyAESCamera(
   if (closestCamera && minDistanceMeters <= thresholdMeters) {
     return {
       camera: closestCamera,
-      distanceMeters: minDistanceMeters
+      distanceMeters: minDistanceMeters,
+      isOverSpeed: (speedKmH ?? 0) > closestCamera.speedLimitKmH
     };
   }
 
