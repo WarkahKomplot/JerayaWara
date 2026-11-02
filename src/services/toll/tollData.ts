@@ -457,3 +457,13 @@ export const MALAYSIA_TOLL_REGISTRY: Record<string, TollPlazaDefinition> = {
     system: 'open'
   }
 };
+
+/**
+ * Registers a dynamically-computed closed-system toll plaza (entry → exit pair from
+ * PLUS E1/E2/LPT chainage fares), overriding any static approximation of the same
+ * corridor. Callers should invoke this once per detected plaza at route calculation
+ * time — calculateRouteTolls then resolves names/rates through the registry alone.
+ */
+export function registerDynamicTollPlaza(plaza: TollPlazaDefinition): void {
+  MALAYSIA_TOLL_REGISTRY[plaza.id] = plaza;
+}

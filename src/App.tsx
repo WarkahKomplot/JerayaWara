@@ -7,6 +7,7 @@ import { ModeSelector } from './components/navigation/ModeSelector';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
 import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
+import { ApproximateRouteModal } from './components/offline/ApproximateRouteModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
@@ -23,7 +24,7 @@ import { usePwaInstall } from './hooks/usePwaInstall';
 import { PwaInstallBanner } from './components/common/PwaInstallBanner';
 
 import { calculateRoute } from './services/routing/routingEngine';
-import { calculateRouteTolls } from './services/toll/tollCalculator';
+import { estimateRouteTolls } from './services/toll/tollCalculator';
 import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
 import { SearchItem } from './services/search/types';
@@ -52,6 +53,10 @@ export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
+
+  // Pending approximate route awaiting user confirmation before navigation starts
+  const [pendingApproxRoute, setPendingApproxRoute] = useState<RouteResult | null>(null);
+  const [pendingApproxTolls, setPendingApproxTolls] = useState<TollBreakdown | null>(null);
 
   // Windshield HUD Mode state
   const [isHudOpen, setIsHudOpen] = useState(false);
@@ -271,12 +276,40 @@ export function App() {
     requestLock();
 
     const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
+
+    // Synthetic geometry (offline + uncovered area): require explicit user consent
+    // before navigating on a route that does not follow real roads.
+    if (route.isApproximate) {
+      setIsNavigating(false);
+      releaseLock();
+      const approxTolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
+      setPendingApproxRoute(route);
+      setPendingApproxTolls(approxTolls);
+      return;
+    }
+
     setActiveRoute(route);
 
-    const tolls = calculateRouteTolls(route.tollPlazaKeys, vehicleMode);
+    const tolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
     setTollBreakdown(tolls);
 
     announceStart(item.title);
+  };
+
+  const handleConfirmApproxRoute = () => {
+    if (!pendingApproxRoute) return;
+    setActiveRoute(pendingApproxRoute);
+    setTollBreakdown(pendingApproxTolls);
+    setIsNavigating(true);
+    requestLock();
+    announceStart(pendingApproxRoute.destinationName);
+    setPendingApproxRoute(null);
+    setPendingApproxTolls(null);
+  };
+
+  const handleCancelApproxRoute = () => {
+    setPendingApproxRoute(null);
+    setPendingApproxTolls(null);
   };
 
   // Direct map click to start navigation to any point in Malaysia
@@ -301,7 +334,7 @@ export function App() {
       if (dest) {
         const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
         setActiveRoute(reRoute);
-        setTollBreakdown(calculateRouteTolls(reRoute.tollPlazaKeys, mode));
+        setTollBreakdown(estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates, reRoute.isApproximate));
       }
     }
   };
@@ -536,6 +569,18 @@ export function App() {
               </div>
             )}
 
+            {/* Approximate Route Warning — synthetic geometry, no real road data */}
+            {isNavigating && activeRoute?.isApproximate && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-600/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-amber-400/50">
+                <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Laluan anggaran sahaja — geometri jalan sebenar tidak tersedia offline. Jangan guna sebagai panduan utama.'
+                    : 'Approximate route only — real road geometry unavailable offline. Do not rely on it as primary guidance.'}
+                </span>
+              </div>
+            )}
+
             {/* Auto Rerouting Banner */}
             {(isRerouting || isOffRoute) && (
               <div className="flex items-center gap-2 rounded-xl bg-blue-600/95 border border-blue-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
@@ -738,6 +783,15 @@ export function App() {
         isOpen={isRegionModalOpen}
         onClose={() => setIsRegionModalOpen(false)}
         lang={voiceLanguage}
+      />
+
+      {/* Approximate Route Confirmation Modal */}
+      <ApproximateRouteModal
+        isOpen={pendingApproxRoute !== null}
+        destinationName={pendingApproxRoute?.destinationName}
+        lang={voiceLanguage}
+        onCancel={handleCancelApproxRoute}
+        onContinue={handleConfirmApproxRoute}
       />
     </>
   );

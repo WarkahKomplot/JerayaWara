@@ -1,5 +1,5 @@
 import { VehicleClass, TollItem, TollBreakdown } from './types';
-import { PLUS_E2_INTERCHANGES } from './closedTollNetwork';
+import { PLUS_E1_INTERCHANGES, PLUS_E2_INTERCHANGES } from './closedTollNetwork';
 
 export interface PhysicalTollGate {
   id: string;
@@ -96,10 +96,14 @@ export function detectGateCrossing(
     // 1. Gate Proximity Check
     if (lateralDist > maxGateDistanceMeters) continue;
 
-    // 2. Minimum Continuation Check: Must have driven at least 80m before and after gate
-    if (crossingOffset < minContinuationMeters || totalRouteLen - crossingOffset < minContinuationMeters) {
-      continue;
-    }
+    // A route starting at a closed-system gate canopy is a genuine entry (ticket
+    // collected there), and one ending at a closed-system gate is a genuine exit
+    // (fare settled there). Open barrier gates stay strict: ending at the canopy
+    // without passing through is an incomplete transit. Mid-route gates always
+    // need 80m of driven road on both sides.
+    const startsAtGate = crossingOffset < minContinuationMeters;
+    const endsAtGate = totalRouteLen - crossingOffset < minContinuationMeters;
+    const endpointRelaxationAllowed = gate.system === 'closed';
 
     // Verify trajectory does not stop or take an immediate ramp turn right at the gate
     let beforeIdx = i;
@@ -116,8 +120,17 @@ export function detectGateCrossing(
     const projBefore = (v[0] * dx + v[1] * dy) / segLen;
     const projAfter = (w[0] * dx + w[1] * dy) / segLen;
 
-    // Longitudinal continuation verify
-    if (projBefore > -50 || projAfter < 50) {
+    // Longitudinal continuation verify — relaxed only for the endpoint-at-gate side
+    if (!endpointRelaxationAllowed && startsAtGate) {
+      continue;
+    }
+    if (!endpointRelaxationAllowed && endsAtGate) {
+      continue;
+    }
+    if (!startsAtGate && projBefore > -50) {
+      continue;
+    }
+    if (!endsAtGate && projAfter < 50) {
       continue;
     }
 
@@ -414,13 +427,19 @@ export function calculatePhysicalRouteTolls(
     const exitHit = plusHits[plusHits.length - 1];
 
     if (entryHit.gate.id !== exitHit.gate.id && exitHit.routeOffsetMeters - entryHit.routeOffsetMeters > 500) {
-      // Find chainage in interchange tables
-      const e2Entry = PLUS_E2_INTERCHANGES.find(ic => entryHit.gate.name.includes(ic.name) || ic.id.includes('SG_BESI'));
-      const e2Exit = PLUS_E2_INTERCHANGES.find(ic => exitHit.gate.name.includes(ic.name) || ic.id.includes('SEREMBAN'));
+      // Gate ids follow PLUS_E{1,2}_GATE_{INTERCHANGE} — resolve chainage from the
+      // matching expressway's interchange table by that suffix, not by display name.
+      const table = entryHit.gate.expressway.includes('E1') ? PLUS_E1_INTERCHANGES : PLUS_E2_INTERCHANGES;
+      const resolveInterchange = (gateId: string) => {
+        const suffix = gateId.split('_GATE_')[1];
+        return table.find(ic => ic.id === suffix);
+      };
+      const icEntry = resolveInterchange(entryHit.gate.id);
+      const icExit = resolveInterchange(exitHit.gate.id);
 
       let closedCost = 0;
-      if (e2Entry && e2Exit && vehicleClass === 'car') {
-        closedCost = Math.abs(e2Exit.chainageFare - e2Entry.chainageFare);
+      if (icEntry && icExit && vehicleClass === 'car') {
+        closedCost = Math.abs(icExit.chainageFare - icEntry.chainageFare);
       } else if (vehicleClass === 'car') {
         closedCost = 4.10; // Default verified transit segment
       }

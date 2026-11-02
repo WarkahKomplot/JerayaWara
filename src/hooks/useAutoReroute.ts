@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { routeGapMeters } from '../services/routing/routeIntegrity';
 import { calculateRoute } from '../services/routing/routingEngine';
-import { calculateRouteTolls } from '../services/toll/tollCalculator';
+import { estimateRouteTolls } from '../services/toll/tollCalculator';
 import { RouteResult } from '../services/routing/types';
 import { VehicleClass, TollBreakdown } from '../services/toll/types';
 import { speakNavigationVoice, VoiceLanguage } from '../services/voice/voiceService';
@@ -113,7 +113,7 @@ export function useAutoReroute({
         route.destinationName
       );
 
-      const newTolls = calculateRouteTolls(newRoute.tollPlazaKeys, mode);
+      const newTolls = estimateRouteTolls(newRoute.tollPlazaKeys, mode, newRoute.coordinates, newRoute.isApproximate);
       updateCallback(newRoute, newTolls);
       offRouteCountRef.current = 0;
       setIsOffRoute(false);

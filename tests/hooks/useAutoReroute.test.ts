@@ -16,10 +16,11 @@ vi.mock('../../src/services/routing/routingEngine', () => ({
 }));
 
 vi.mock('../../src/services/toll/tollCalculator', () => ({
-  calculateRouteTolls: vi.fn().mockReturnValue({
-    totalTollCost: 2.5,
-    formattedTotalCost: 'RM 2.50',
-    plazaBreakdown: []
+  estimateRouteTolls: vi.fn().mockReturnValue({
+    totalCost: 2.5,
+    currency: 'MYR',
+    items: [],
+    vehicleClass: 'car'
   })
 }));
 

@@ -1,7 +1,7 @@
 import { RouteResult, TurnStep, ManeuverType } from './types';
 import { VehicleClass } from '../toll/types';
 import { findClosedSystemTollPlazas } from '../toll/closedTollNetwork';
-import { MALAYSIA_TOLL_REGISTRY } from '../toll/tollData';
+import { registerDynamicTollPlaza } from '../toll/tollData';
 import {
   distanceKm,
   findNearestRoadPath
@@ -44,6 +44,14 @@ function mapOsrmManeuver(type: string, modifier?: string): ManeuverType {
   return 'straight';
 }
 
+const MALAYSIAN_EXPRESSWAY_PATTERN =
+  /\b(plus|kesas|federal|lebuhraya|expressway|utara|selatan|e1|e2)\b/i;
+
+/** True when the road name refers to a Malaysian expressway with a dedicated motorcycle lane. */
+function isMalaysianExpressway(roadName: string | undefined): boolean {
+  return !!roadName && MALAYSIAN_EXPRESSWAY_PATTERN.test(roadName);
+}
+
 function formatStepInstruction(
   maneuver: ManeuverType,
   roadName: string,
@@ -53,17 +61,7 @@ function formatStepInstruction(
 ): string {
   const road = roadName && roadName !== 'unnamed' && roadName.trim() !== '' ? roadName : 'primary road';
 
-  if (profile === 'motorcycle' && (
-    road.toLowerCase().includes('plus') ||
-    road.toLowerCase().includes('kesas') ||
-    road.toLowerCase().includes('federal') ||
-    road.toLowerCase().includes('lebuhraya') ||
-    road.toLowerCase().includes('expressway') ||
-    road.toLowerCase().includes('utara') ||
-    road.toLowerCase().includes('selatan') ||
-    road.toLowerCase().includes('e1') ||
-    road.toLowerCase().includes('e2')
-  )) {
+  if (profile === 'motorcycle' && isMalaysianExpressway(road)) {
     if (maneuver === 'straight') {
       return `Follow dedicated motorcycle lane (Lorong Motosikal) on ${road}`;
     }
@@ -122,27 +120,30 @@ export function determineRouteTollPlazas(
   // 1. Closed Expressway Systems (Bidirectional PLUS E1, PLUS E2, and LPT E8)
   const closedPlazas = findClosedSystemTollPlazas(start, dest, roadNames, destTitle);
   for (const plaza of closedPlazas) {
-    MALAYSIA_TOLL_REGISTRY[plaza.id] = plaza;
+    registerDynamicTollPlaza(plaza);
     keys.push(plaza.id);
   }
 
-  // 2. Open / Barrier Plazas
-  const fullText = [...roadNames, destTitle].join(' ').toLowerCase();
+  // 2. Open / Barrier Plazas — matched against road names actually travelled, not the
+  //    destination title (a destination in "Shah Alam" does not imply KESAS was used).
+  const roadText = roadNames.join(' ').toLowerCase();
 
   // Penang Bridge (Westbound onto Penang Island)
   const isEnteringPenangIsland =
     (dest[0] < 100.35 && dest[1] > 5.25 && dest[1] < 5.55 && start[0] >= 100.35) ||
-    fullText.includes('penang bridge') ||
-    fullText.includes('jambatan pulau pinang');
+    roadText.includes('penang bridge') ||
+    roadText.includes('jambatan pulau pinang');
   if (isEnteringPenangIsland) {
     keys.push('PENANG_BRIDGE_1');
   }
 
-  // MEX E20
-  if (fullText.includes('e20') || fullText.includes('mex') || fullText.includes('maju expressway')) {
-    if (fullText.includes('putrajaya') || fullText.includes('cyberjaya') || dest[1] < 2.95) {
+  // MEX E20 — explicit route-name hits only; bare "e20"/"mex" substrings in
+  // arbitrary road names (e.g. "Jalan Mex..." is rare, but "e20" inside longer
+  // names is not) are too risky without word boundaries.
+  if (/\b(e20|mex|maju expressway)\b/i.test(roadText)) {
+    if (/\b(putrajaya|cyberjaya)\b/i.test(roadText) || dest[1] < 2.95) {
       keys.push('MEX_PUTRAJAYA');
-    } else if (fullText.includes('kembangan')) {
+    } else if (roadText.includes('kembangan')) {
       keys.push('MEX_SERI_KEMBANGAN');
     } else {
       keys.push('MEX_SALAK_SELATAN');
@@ -150,17 +151,17 @@ export function determineRouteTollPlazas(
   }
 
   // KESAS E5
-  if (fullText.includes('e5') || fullText.includes('kesas') || fullText.includes('shah alam')) {
+  if (/\b(e5|kesas|shah alam expressway|lebuhraya shah alam|kem-shah|klang valley expressway)\b/i.test(roadText)) {
     keys.push('KESAS_SUNWAY');
   }
 
   // LDP E11
-  if (fullText.includes('e11') || fullText.includes('ldp') || fullText.includes('damansara-puchong')) {
+  if (/\b(e11|ldp|damansara-puchong|damansara puchong|lebuhraya damansara)\b/i.test(roadText)) {
     keys.push('LDP_PENCHALA');
   }
 
   // SMART E38
-  if (fullText.includes('e38') || fullText.includes('smart tunnel') || fullText.includes('terowong smart')) {
+  if (/\b(e38|smart tunnel|terowong smart)\b/i.test(roadText)) {
     keys.push('SMART_TUNNEL');
   }
 
@@ -233,7 +234,8 @@ export function calculateOfflineRoute(
       steps,
       tollPlazaKeys: [],
       profile,
-      destinationName: destinationTitle || 'Destination'
+      destinationName: destinationTitle || 'Destination',
+      isApproximate: true
     };
   }
 
@@ -306,14 +308,17 @@ export function calculateOfflineRoute(
       profile
     );
 
+    const traffic = analyzeRouteTraffic(fullCoordinates, durationMinutes, profile);
+
     return {
       coordinates: fullCoordinates,
       distanceKm: totalDistKm,
-      durationMinutes,
+      durationMinutes: traffic.totalMinutes,
       steps,
       tollPlazaKeys,
       profile,
-      destinationName: destinationTitle || roadMatch.corridor.name
+      destinationName: destinationTitle || roadMatch.corridor.name,
+      traffic
     };
   }
 
@@ -380,7 +385,8 @@ export function calculateOfflineRoute(
     tollPlazaKeys: fallbackTolls,
     profile,
     destinationName: destinationTitle || 'Destination',
-    traffic
+    traffic,
+    isApproximate: true
   };
 }
 
@@ -404,9 +410,15 @@ export async function calculateRoute(
       `https://routing.openstreetmap.de/routed-car/route/v1/${mode === 'foot' ? 'foot' : 'driving'}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`
     ];
 
-    for (const url of routerEndpoints) {
+    for (let i = 0; i < routerEndpoints.length; i++) {
+      const url = routerEndpoints[i];
       let timeoutId: any;
       try {
+        // Brief backoff before trying the mirror endpoint so a rate-limited
+        // primary doesn't immediately burn the fallback on the same burst
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 750));
+        }
         const controller = new AbortController();
         // Allow up to 6000ms for long-distance inter-state route calculations (e.g. KL to Johor / Penang)
         timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -431,17 +443,7 @@ export async function calculateRoute(
               const isLast = idx === legSteps.length - 1;
               const exitNum = typeof s.maneuver?.exit === 'number' ? s.maneuver.exit : undefined;
 
-              const isMoto = profile === 'motorcycle' && (
-                s.name?.toLowerCase().includes('plus') ||
-                s.name?.toLowerCase().includes('federal') ||
-                s.name?.toLowerCase().includes('kesas') ||
-                s.name?.toLowerCase().includes('lebuhraya') ||
-                s.name?.toLowerCase().includes('expressway') ||
-                s.name?.toLowerCase().includes('utara') ||
-                s.name?.toLowerCase().includes('selatan') ||
-                s.name?.toLowerCase().includes('e1') ||
-                s.name?.toLowerCase().includes('e2')
-              );
+              const isMoto = profile === 'motorcycle' && isMalaysianExpressway(s.name);
 
               turnSteps.push({
                 id: `osrm-step-${idx}`,
@@ -450,7 +452,7 @@ export async function calculateRoute(
                 distanceMeters: Math.round(s.distance),
                 durationSeconds: Math.round(s.duration),
                 coordinates: s.maneuver?.location || rawCoordinates[0],
-                speedLimitKmH: s.name?.toLowerCase().includes('e') ? 110 : 80,
+                speedLimitKmH: /\be\d+\b/i.test(s.name || '') ? 110 : 80,
                 isMotorcycleLane: isMoto,
                 laneGuidance: isMoto
                   ? 'Use dedicated motorcycle lane (Lorong Motosikal)'
