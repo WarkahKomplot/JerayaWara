@@ -302,7 +302,8 @@ export function calculateOfflineRoute(
         distanceMeters: Math.round(distanceKm(start, roadMatch.entryPoint) * 1000),
         durationSeconds: 180,
         coordinates: start,
-        speedLimitKmH: 60
+        speedLimitKmH: 60,
+        speedLimitSource: 'estimated'
       },
       {
         id: 'step-highway-merge',
@@ -314,6 +315,7 @@ export function calculateOfflineRoute(
         durationSeconds: Math.round((totalHighwayDist / 100) * 3600),
         coordinates: roadMatch.entryPoint,
         speedLimitKmH: roadMatch.corridor.speedLimit,
+        speedLimitSource: 'verified',
         isMotorcycleLane: profile === 'motorcycle',
         laneGuidance: profile === 'motorcycle' ? 'Use dedicated motorcycle lane (Lorong Motosikal)' : undefined
       },
@@ -324,7 +326,8 @@ export function calculateOfflineRoute(
         distanceMeters: Math.round(distanceKm(roadMatch.exitPoint, destination) * 1000),
         durationSeconds: 120,
         coordinates: roadMatch.exitPoint,
-        speedLimitKmH: 60
+        speedLimitKmH: 60,
+        speedLimitSource: 'estimated'
       },
       {
         id: 'step-arrive',
@@ -399,6 +402,7 @@ export function calculateOfflineRoute(
         durationSeconds: 180,
         coordinates: start,
         speedLimitKmH: 60,
+        speedLimitSource: 'estimated',
         isMotorcycleLane: profile === 'motorcycle'
       },
       {
@@ -408,7 +412,8 @@ export function calculateOfflineRoute(
         distanceMeters: Math.round(actualDistanceKm * 700),
         durationSeconds: 300,
         coordinates: coordinates[Math.floor(coordinates.length / 2)],
-        speedLimitKmH: 80
+        speedLimitKmH: 80,
+        speedLimitSource: 'estimated'
       },
       {
         id: 'step-gen-3',
@@ -471,12 +476,16 @@ export async function isActuallyOnline(): Promise<boolean> {
 /**
  * Calculates a route using real road network vectors (via redundant OSRM open routing servers when online,
  * or the snapped Malaysia Highway/Arterial network when offline).
+ *
+ * geometryDetail: 'simplified' (route preview — small polyline, same distance/ETA
+ * metrics) or 'full' (active navigation — complete geometry for turn-by-turn).
  */
 export async function calculateRoute(
   start: [number, number],
   destination: [number, number],
   profile: VehicleClass,
-  destinationTitle?: string
+  destinationTitle?: string,
+  geometryDetail: 'full' | 'simplified' = 'full'
 ): Promise<RouteResult> {
   const isOnline = await isActuallyOnline();
 
@@ -484,8 +493,8 @@ export async function calculateRoute(
     const mode = profile === 'walker' ? 'foot' : 'driving';
     // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
     const routerEndpoints = [
-      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`,
-      `https://routing.openstreetmap.de/routed-car/route/v1/${mode === 'foot' ? 'foot' : 'driving'}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=full&geometries=geojson&steps=true`
+      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`,
+      `https://routing.openstreetmap.de/routed-car/route/v1/${mode === 'foot' ? 'foot' : 'driving'}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`
     ];
 
     for (let i = 0; i < routerEndpoints.length; i++) {
@@ -536,6 +545,7 @@ export async function calculateRoute(
                 durationSeconds: Math.round(s.duration),
                 coordinates: s.maneuver?.location || rawCoordinates[0],
                 speedLimitKmH: /\be\d+\b/i.test(s.name || '') ? 110 : 80,
+                speedLimitSource: 'estimated',
                 isMotorcycleLane: isMoto,
                 laneGuidance: isMoto
                   ? 'Use dedicated motorcycle lane (Lorong Motosikal)'

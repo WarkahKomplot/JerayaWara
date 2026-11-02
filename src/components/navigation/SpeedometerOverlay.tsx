@@ -17,6 +17,12 @@ import { t } from '../../services/i18n/translations';
 export interface SpeedometerOverlayProps {
   currentSpeedKmH: number;
   speedLimitKmH?: number;
+  /**
+   * Provenance of speedLimitKmH. Speeding color alerts fire only on 'verified'
+   * limits — an estimated limit still displays its badge but never warns,
+   * because a false alarm destroys trust faster than no alarm.
+   */
+  speedLimitSource?: 'verified' | 'estimated';
   weather: WeatherInfo | null;
   aesAlert: NearbyAESAlert | null;
   lang?: 'ms' | 'en';
@@ -28,6 +34,7 @@ export interface SpeedometerOverlayProps {
 export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(({
   currentSpeedKmH,
   speedLimitKmH,
+  speedLimitSource,
   weather,
   aesAlert,
   lang = 'ms',
@@ -56,7 +63,10 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
     return () => clearInterval(interval);
   }, [lang]);
 
-  const isSpeeding = speedLimitKmH ? currentSpeedKmH > speedLimitKmH : false;
+  const isSpeeding =
+    speedLimitKmH && speedLimitSource !== 'estimated'
+      ? currentSpeedKmH > speedLimitKmH
+      : false;
 
   const renderWeatherIcon = () => {
     if (!weather) return <Sun className="h-3.5 w-3.5 text-amber-400" />;

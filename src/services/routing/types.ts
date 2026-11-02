@@ -27,6 +27,12 @@ export interface TurnStep {
   tollPlazaKey?: string;
   laneGuidance?: string;
   exitNumber?: number; // Roundabout exit number (1, 2, 3, etc.)
+  /**
+   * Provenance of speedLimitKmH: 'verified' comes from real corridor data,
+   * 'estimated' from name-based heuristics. Speeding alerts only fire on
+   * verified limits — a wrong silence beats a wrong alarm.
+   */
+  speedLimitSource?: 'verified' | 'estimated';
   /** OSRM arrive modifier — which side of the road the destination sits on. */
   destinationSide?: 'left' | 'right';
 }

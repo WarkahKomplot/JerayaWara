@@ -10,7 +10,22 @@ export interface LocationState {
   error: string | null;
 }
 
-export function useGeolocation(enableHighAccuracy: boolean = true) {
+/**
+ * GPS watch with battery-aware accuracy modes:
+ * - Navigating: high accuracy (GNSS chip active, ~1s updates) — needed for
+ *   40m junction detection and lane-level timing.
+ * - Idle (browsing/searching): network-assisted low power — sub-meter accuracy
+ *   is wasted on a map view, and the GNSS chip is the single biggest battery
+ *   consumer in a PWA.
+ *
+ * The watch is restarted when the mode flips; the deadband filter prevents
+ * redundant state churn within either mode.
+ */
+export function useGeolocation(options?: {
+  /** High-accuracy GNSS while true; battery-saver watch while false. Default false. */
+  highAccuracy?: boolean;
+}) {
+  const highAccuracy = options?.highAccuracy ?? false;
   const [location, setLocation] = useState<LocationState>({
     coords: [101.693, 3.141], // Default KL City Centre
     heading: 0,
@@ -28,6 +43,42 @@ export function useGeolocation(enableHighAccuracy: boolean = true) {
     speedKmH: number;
     accuracy: number;
   } | null>(null);
+
+  // Background resume: iOS/Android pause geolocation watches while hidden, and
+  // the deadband filter would swallow the first stale-vs-fresh comparison on
+  // return. Clear the filter and force one immediate getCurrentPosition so the
+  // step engine re-syncs the moment the app is visible again.
+  useEffect(() => {
+    const handleResume = () => {
+      if (document.visibilityState !== 'visible' || !navigator.geolocation) return;
+      lastEmittedRef.current = null;
+      lastPositionRef.current = null;
+      navigator.geolocation.getCurrentPosition(pos => {
+        lastEmittedRef.current = {
+          coord: [pos.coords.longitude, pos.coords.latitude],
+          heading: Math.round(pos.coords.heading ?? 0),
+          speedKmH: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+          accuracy: Math.round(pos.coords.accuracy)
+        };
+        setLocation(prev => ({
+          ...prev,
+          coords: [pos.coords.longitude, pos.coords.latitude],
+          heading: Math.round(pos.coords.heading ?? 0),
+          speedKmH: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+          accuracy: Math.round(pos.coords.accuracy),
+          isGpsLocked: true,
+          isAccuracyDegraded: pos.coords.accuracy > 50,
+          error: null
+        }));
+      }, undefined, {
+        enableHighAccuracy: highAccuracy,
+        maximumAge: 0,
+        timeout: 8000
+      });
+    };
+    document.addEventListener('visibilitychange', handleResume);
+    return () => document.removeEventListener('visibilitychange', handleResume);
+  }, [highAccuracy]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -105,15 +156,14 @@ export function useGeolocation(enableHighAccuracy: boolean = true) {
         }));
       },
       {
-        enableHighAccuracy,
-        maximumAge: 1000,
-        timeout: 10000
+        enableHighAccuracy: highAccuracy,
+        maximumAge: highAccuracy ? 1000 : 15000,
+        timeout: highAccuracy ? 10000 : 30000
       }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [enableHighAccuracy]);
+  }, [highAccuracy]);
 
   return location;
 }
-

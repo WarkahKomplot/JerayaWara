@@ -5,6 +5,7 @@ import { TurnBanner } from './components/navigation/TurnBanner';
 import { SpeedometerOverlay } from './components/navigation/SpeedometerOverlay';
 import { ModeSelector } from './components/navigation/ModeSelector';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
+import { RoutePreviewSheet } from './components/navigation/RoutePreviewSheet';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
 import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
 import { ApproximateRouteModal } from './components/offline/ApproximateRouteModal';
@@ -42,7 +43,10 @@ import { t, getLocalizedStepInstruction } from './services/i18n/translations';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
-  const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // GNSS high accuracy only while actively navigating; battery-saver watch otherwise
+  const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation({ highAccuracy: isNavigating });
   const { theme, themeMode, cycleThemeMode, solarInfo } = useDeviceTheme(coords);
   const { isLocked, isScreenAwakeEnabled, toggleWakeLock, requestLock, releaseLock } = useWakeLock(true);
   const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
@@ -51,7 +55,6 @@ export function App() {
   const [vehicleMode, setVehicleMode] = useState<VehicleClass>('car');
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const [tollBreakdown, setTollBreakdown] = useState<TollBreakdown | null>(null);
-  const [isNavigating, setIsNavigating] = useState(false);
   // GPS-driven turn-by-turn progress: advances steps and computes approach distances
   const {
     currentStepIndex: gpsStepIndex,
@@ -71,7 +74,12 @@ export function App() {
     : gpsStepIndex;
   const [focusStepCoord, setFocusStepCoord] = useState<[number, number] | null>(null);
 
-  // Pending approximate route awaiting user confirmation before navigation starts
+  // Route preview: computed route awaiting "Start Navigation" confirmation
+  const [previewRoute, setPreviewRoute] = useState<RouteResult | null>(null);
+  const [previewTolls, setPreviewTolls] = useState<TollBreakdown | null>(null);
+  const [isCalculatingPreview, setIsCalculatingPreview] = useState(false);
+
+  // Pending approximate route awaiting user consent before it can be previewed
   const [pendingApproxRoute, setPendingApproxRoute] = useState<RouteResult | null>(null);
   const [pendingApproxTolls, setPendingApproxTolls] = useState<TollBreakdown | null>(null);
 
@@ -291,44 +299,68 @@ export function App() {
     };
   }, [coords]);
 
-  // Handle destination selection from search, favorites, or map click
+  // Handle destination selection: compute the route and show the preview sheet.
+  // Navigation only starts when the user taps "Start Navigation".
   const handleSelectDestination = async (item: SearchItem) => {
     setTollBreakdown(null);
     setManualStepOverride(null);
-    setIsNavigating(true);
-    requestLock();
-
-    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title);
-
-    // Synthetic geometry (offline + uncovered area): require explicit user consent
-    // before navigating on a route that does not follow real roads.
+    setIsCalculatingPreview(true);
     setActiveDestinationTitle(item.title);
 
+    // Preview only draws a line — simplified geometry keeps the request small on
+    // mobile data. Distance/ETA/toll metrics are identical either way.
+    const route = await calculateRoute(coords, item.coordinates, vehicleMode, item.title, 'simplified');
+    const tolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
+    setIsCalculatingPreview(false);
+
+    // Synthetic geometry (offline + uncovered area): require explicit consent
+    // before even previewing a route that does not follow real roads.
     if (route.isApproximate) {
-      setIsNavigating(false);
-      releaseLock();
-      const approxTolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
       setPendingApproxRoute(route);
-      setPendingApproxTolls(approxTolls);
+      setPendingApproxTolls(tolls);
       return;
     }
 
+    setPreviewRoute(route);
+    setPreviewTolls(tolls);
+  };
+
+  // Begin active navigation from a confirmed preview. If the preview came back
+  // simplified (online), re-request full geometry for accurate turn-by-turn;
+  // offline routes already carry their full corridor polyline.
+  const handleStartNavigation = async () => {
+    if (!previewRoute) return;
+
+    let route = previewRoute;
+    let tolls = previewTolls;
+    if (route.coordinates.length > 0 && !route.isApproximate && route.steps.length > 0 && route.steps[0].id?.startsWith('osrm-')) {
+      const startCoord = route.coordinates[0];
+      const destCoord = route.coordinates[route.coordinates.length - 1];
+      const fullRoute = await calculateRoute(startCoord, destCoord, route.profile, route.destinationName, 'full');
+      if (!fullRoute.isApproximate) {
+        route = fullRoute;
+        tolls = estimateRouteTolls(route.tollPlazaKeys, route.profile, route.coordinates, route.isApproximate);
+      }
+    }
+
     setActiveRoute(route);
-
-    const tolls = estimateRouteTolls(route.tollPlazaKeys, vehicleMode, route.coordinates, route.isApproximate);
     setTollBreakdown(tolls);
+    setIsNavigating(true);
+    requestLock();
+    announceStart(route.destinationName);
+    setPreviewRoute(null);
+    setPreviewTolls(null);
+  };
 
-    announceStart(item.title);
+  const handleCancelPreview = () => {
+    setPreviewRoute(null);
+    setPreviewTolls(null);
   };
 
   const handleConfirmApproxRoute = () => {
     if (!pendingApproxRoute) return;
-    setActiveDestinationTitle(pendingApproxRoute.destinationName);
-    setActiveRoute(pendingApproxRoute);
-    setTollBreakdown(pendingApproxTolls);
-    setIsNavigating(true);
-    requestLock();
-    announceStart(pendingApproxRoute.destinationName);
+    setPreviewRoute(pendingApproxRoute);
+    setPreviewTolls(pendingApproxTolls);
     setPendingApproxRoute(null);
     setPendingApproxTolls(null);
   };
@@ -358,7 +390,7 @@ export function App() {
       setTollBreakdown(null);
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
       if (dest) {
-        const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName);
+        const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName, 'full');
         setActiveRoute(reRoute);
         setTollBreakdown(estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates, reRoute.isApproximate));
       }
@@ -811,6 +843,7 @@ export function App() {
             <SpeedometerOverlay
               currentSpeedKmH={speedKmH}
               speedLimitKmH={currentStep?.speedLimitKmH}
+              speedLimitSource={currentStep?.speedLimitSource}
               weather={effectiveWeather}
               aesAlert={nearbyAESAlert}
               lang={voiceLanguage}
@@ -862,6 +895,16 @@ export function App() {
         isOpen={isRegionModalOpen}
         onClose={() => setIsRegionModalOpen(false)}
         lang={voiceLanguage}
+      />
+
+      {/* Pre-departure Route Preview Sheet */}
+      <RoutePreviewSheet
+        route={previewRoute}
+        tolls={previewTolls}
+        isCalculating={isCalculatingPreview}
+        lang={voiceLanguage}
+        onStart={handleStartNavigation}
+        onCancel={handleCancelPreview}
       />
 
       {/* Approximate Route Confirmation Modal */}
