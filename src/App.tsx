@@ -50,8 +50,15 @@ import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap,
 export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
 
+  // Live demo simulation for testing routes without moving physically
+  const [demoPos, setDemoPos] = useState<{ coords: [number, number]; heading: number; speedKmH: number } | null>(null);
+  const isDemoRef = useRef(false);
+
   // GNSS high accuracy only while actively navigating; battery-saver watch otherwise
-  const { coords, heading, speedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation({ highAccuracy: isNavigating });
+  const { coords: rawCoords, heading: rawHeading, speedKmH: rawSpeedKmH, isGpsLocked, isAccuracyDegraded } = useGeolocation({ highAccuracy: isNavigating });
+  const coords = demoPos ? demoPos.coords : rawCoords;
+  const heading = demoPos ? demoPos.heading : rawHeading;
+  const speedKmH = demoPos ? demoPos.speedKmH : rawSpeedKmH;
   const { theme, themeMode, cycleThemeMode, solarInfo } = useDeviceTheme(coords);
   const { isLocked, isScreenAwakeEnabled, toggleWakeLock, requestLock, releaseLock } = useWakeLock(true);
   const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
@@ -358,8 +365,31 @@ export function App() {
     }
   };
 
-  // Session Recovery: Seamlessly resume active trip after accidental refresh / tab eviction
+  // Support ?demo=kajang (or ?demo=true) for live testing Plaza Metro Kajang -> AEON Cheras Selatan
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo')) {
+      isDemoRef.current = true;
+      const startCoord: [number, number] = [101.7888, 2.9911]; // Plaza Metro Kajang
+      const destCoord: [number, number] = [101.764479, 3.0332544]; // AEON Mall Cheras Selatan
+
+      calculateRoute(startCoord, destCoord, 'car', 'AEON Mall Cheras Selatan', 'full')
+        .then(route => {
+          const tolls = estimateRouteTolls(route.tollPlazaKeys, 'car', route.coordinates);
+          setActiveRoute(route);
+          setTollBreakdown(tolls);
+          setActiveDestinationTitle('AEON Mall Cheras Selatan');
+          setIsNavigating(true);
+          setDemoPos({ coords: startCoord, heading: 320, speedKmH: 45 });
+          if (route.coordinates?.length) {
+            preloadCorridorTiles(route.coordinates).catch(() => {});
+          }
+        })
+        .catch(console.error);
+      return;
+    }
+
     const session = loadActiveNavSession();
     if (session && session.route && session.route.coordinates?.length > 1) {
       setActiveRoute(session.route);
@@ -373,6 +403,37 @@ export function App() {
       }
     }
   }, []);
+
+  // Animate demo vehicle along the route when ?demo is active
+  useEffect(() => {
+    if (!isDemoRef.current || !isNavigating || !activeRoute?.coordinates || activeRoute.coordinates.length < 2) {
+      return;
+    }
+
+    let currentIndex = 0;
+    const polyline = activeRoute.coordinates;
+    const interval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % polyline.length;
+      const current = polyline[currentIndex];
+      const next = polyline[Math.min(currentIndex + 1, polyline.length - 1)];
+
+      const y = Math.sin((next[0] - current[0]) * (Math.PI / 180)) * Math.cos(next[1] * (Math.PI / 180));
+      const x =
+        Math.cos(current[1] * (Math.PI / 180)) * Math.sin(next[1] * (Math.PI / 180)) -
+        Math.sin(current[1] * (Math.PI / 180)) * Math.cos(next[1] * (Math.PI / 180)) * Math.cos((next[0] - current[0]) * (Math.PI / 180));
+      const bearing = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+
+      const simulatedSpeed = currentIndex > 15 && currentIndex < polyline.length - 15 ? 78 : 45;
+
+      setDemoPos({
+        coords: current,
+        heading: Math.round(bearing),
+        speedKmH: simulatedSpeed
+      });
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [isNavigating, activeRoute]);
 
   // Begin active navigation from a confirmed preview. If the preview came back
   // simplified (online), re-request full geometry for accurate turn-by-turn;
