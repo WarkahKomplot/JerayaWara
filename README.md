@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a 100% zero-API-cost, offline-first Progressive Web App (PWA) navigation system tailored for Malaysian road networks across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-147%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-196%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -18,7 +18,12 @@
 
 ## 🌟 Core Highlights
 
-* **🗺️ Malaysian Arterial Snapping & Turn-by-Turn**: Continuous cyan polyline snapped to PLUS (E1/E2), Federal Highway, Karak/LPT (E8), KESAS, MEX, and Penang Bridges. Features numbered roundabout exits, flyover vs. underpass ramp cues, and stationary camera jitter damping.
+* **🗺️ Malaysian Arterial Snapping & Multi-Mirror Routing**: High-fidelity online route generation with automatic failover across OSRM and OpenStreetMap.de mirrors, ensuring zero route calculation dropouts.
+* **🛡️ High-Reliability Offline Caching & Tunnel Dead-Reckoning**:
+  * **Corridor Tile Pre-caching**: Automatically downloads and stores map tiles along your active route corridor (zoom 13–16) into Service Worker CacheStorage (`jerayawara-tiles-v1`), eliminating grey tiles in cellular dead-zones (e.g. Karak, Genting Sempah, trunk roads).
+  * **Tunnel Dead-Reckoning**: Smoothly extrapolates vehicle position along the route line during satellite dropouts in the SMART Tunnel (E38), Genting Sempah, and multi-level underpasses.
+  * **Crash & Tab-Reload Session Recovery**: Persists active trip state (route, step, tolls, destination) so unexpected browser reloads or mobile memory pressure instantly restore active navigation.
+  * **Graceful Dead-Zone Reroute**: Retains existing path during cellular loss with offline detour guidance, auto-recalculating the moment signal returns.
 * **🔍 Tiered Hybrid Search (<1ms)**: 
   * **Tier 1 (Instant RAM)**: Highway exits, toll plazas, R&Rs, hospitals, and national landmarks (*Arjuna JB*, *Menara 1 Sentrum*, *KLCC*).
   * **Tier 2 (IndexedDB Disk)**: Bulk open-data venues (Overture Maps / OSM) queried in 2–10ms with zero UI stutter.
@@ -63,7 +68,7 @@ npm install
 # Run Vite dev server
 npm run dev
 
-# Run automated test suite (147 tests across 30 suites)
+# Run automated test suite (196 tests across 39 suites)
 npm test
 
 # Build production bundle

@@ -24,6 +24,7 @@ export interface UseAutoRerouteOptions {
 export interface UseAutoRerouteResult {
   isRerouting: boolean;
   isOffRoute: boolean;
+  isOfflineDetour: boolean;
   currentDriftMeters: number;
 }
 
@@ -42,6 +43,7 @@ export function useAutoReroute({
 }: UseAutoRerouteOptions): UseAutoRerouteResult {
   const [isRerouting, setIsRerouting] = useState(false);
   const [isOffRoute, setIsOffRoute] = useState(false);
+  const [isOfflineDetour, setIsOfflineDetour] = useState(false);
   const [currentDriftMeters, setCurrentDriftMeters] = useState(0);
 
   const offRouteCountRef = useRef(0);
@@ -125,18 +127,37 @@ export function useAutoReroute({
       updateCallback(newRoute, newTolls);
       offRouteCountRef.current = 0;
       setIsOffRoute(false);
+      setIsOfflineDetour(false);
     } catch (err) {
-      console.warn('[AutoReroute] Failed to recalculate route:', err);
+      console.warn('[AutoReroute] Failed to recalculate route (likely offline in dead-zone):', err);
+      setIsOfflineDetour(true);
+      const offlineMsg =
+        lang === 'ms'
+          ? 'Tiada sambungan talian. Teruskan ikut papan tanda.'
+          : 'No internet connection. Follow road signs.';
+      speakNavigationVoice(offlineMsg, voice, lang);
     } finally {
       setIsRerouting(false);
       isCalculatingRef.current = false;
     }
   }, []);
 
+  // Auto-retry rerouting as soon as phone regains cell connectivity
+  useEffect(() => {
+    const handleOnline = () => {
+      if (offRouteCountRef.current >= consecutiveOffRouteThreshold && optionsRef.current.isNavigating) {
+        triggerReroute();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [consecutiveOffRouteThreshold, triggerReroute]);
+
   useEffect(() => {
     if (!isNavigating || !activeRoute || !activeRoute.coordinates || activeRoute.coordinates.length < 2) {
       offRouteCountRef.current = 0;
       setIsOffRoute(false);
+      setIsOfflineDetour(false);
       setCurrentDriftMeters(0);
       return;
     }
@@ -154,6 +175,7 @@ export function useAutoReroute({
     } else {
       offRouteCountRef.current = 0;
       setIsOffRoute(false);
+      setIsOfflineDetour(false);
     }
   }, [
     coords[0],
@@ -168,6 +190,7 @@ export function useAutoReroute({
   return {
     isRerouting,
     isOffRoute,
+    isOfflineDetour,
     currentDriftMeters
   };
 }

@@ -273,24 +273,30 @@ export async function isActuallyOnline(): Promise<boolean> {
     return lastLivenessCheck.alive;
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000);
-  try {
-    // Minimal OSRM route query: tiny overview, verified reachable (the bare root
-    // and /monitor paths return 400). Coordinates must be valid non-zero lng,lat
-    // — OSRM rejects 0,0 outright, which made this probe report offline forever.
-    const res = await fetch(
-      'https://router.project-osrm.org/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false',
-      { signal: controller.signal, cache: 'no-store' }
-    );
-    lastLivenessCheck = { at: now, alive: res.ok };
-    return res.ok;
-  } catch {
-    lastLivenessCheck = { at: now, alive: false };
-    return false;
-  } finally {
-    clearTimeout(timeoutId);
+  // Probe primary OSRM, fallback to secondary OpenStreetMap.de mirror
+  const probeUrls = [
+    'https://router.project-osrm.org/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false',
+    'https://routing.openstreetmap.de/routed-car/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false'
+  ];
+
+  for (const probeUrl of probeUrls) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    try {
+      const res = await fetch(probeUrl, { signal: controller.signal, cache: 'no-store' });
+      if (res.ok) {
+        lastLivenessCheck = { at: now, alive: true };
+        return true;
+      }
+    } catch {
+      // Continue to secondary probe
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+
+  lastLivenessCheck = { at: now, alive: false };
+  return false;
 }
 
 /**
@@ -319,10 +325,11 @@ export async function calculateRoute(
 
   {
     const mode = profile === 'walker' ? 'foot' : 'driving';
+    const osmDePrefix = mode === 'foot' ? 'routed-foot' : 'routed-car';
     // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
     const routerEndpoints = [
       `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`,
-      `https://routing.openstreetmap.de/routed-car/route/v1/${mode === 'foot' ? 'foot' : 'driving'}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`
+      `https://routing.openstreetmap.de/${osmDePrefix}/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`
     ];
 
     for (let i = 0; i < routerEndpoints.length; i++) {

@@ -39,6 +39,13 @@ import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExpor
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
 import { t, getLocalizedStepInstruction } from './services/i18n/translations';
+import { preloadCorridorTiles } from './services/offline/corridorTilePreloader';
+import {
+  saveActiveNavSession,
+  loadActiveNavSession,
+  clearActiveNavSession
+} from './services/navigation/navigationSession';
+import { DeadReckoningEngine } from './services/navigation/deadReckoning';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
@@ -54,13 +61,36 @@ export function App() {
   const [vehicleMode, setVehicleMode] = useState<VehicleClass>('car');
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const [tollBreakdown, setTollBreakdown] = useState<TollBreakdown | null>(null);
+
+  // Tunnel Dead-Reckoning Engine for satellite dropouts in SMART Tunnel, Genting Sempah, etc.
+  const deadReckoningEngineRef = useRef(new DeadReckoningEngine());
+  const resolvedNavPos = useMemo(() => {
+    if (!isNavigating || !activeRoute?.coordinates || activeRoute.coordinates.length < 2) {
+      return { coords, heading, speedKmH, isExtrapolated: false };
+    }
+    const rawPos = {
+      coord: coords,
+      heading,
+      speedKmH,
+      accuracy: isAccuracyDegraded ? 100 : 10,
+      timestamp: Date.now()
+    };
+    const res = deadReckoningEngineRef.current.getResolvedPosition(rawPos, activeRoute.coordinates);
+    return {
+      coords: res.position.coord,
+      heading: res.position.heading,
+      speedKmH: res.position.speedKmH,
+      isExtrapolated: res.isExtrapolated
+    };
+  }, [coords, heading, speedKmH, isAccuracyDegraded, isNavigating, activeRoute]);
+
   // GPS-driven turn-by-turn progress: advances steps and computes approach distances
   const {
     currentStepIndex: gpsStepIndex,
     metersToNextTurn,
     approachingStep,
     isNearDestination
-  } = useStepProgress(isNavigating, activeRoute, coords, {
+  } = useStepProgress(isNavigating, activeRoute, isNavigating ? resolvedNavPos.coords : coords, {
     advanceWarningMeters: 400,
     stepSwitchRadiusMeters: 40,
     arrivalRadiusMeters: 60
@@ -103,10 +133,10 @@ export function App() {
   } = useVoiceNavigation();
 
   // Automatic Off-Route Detection & GPS Rerouting Engine
-  const { isRerouting, isOffRoute } = useAutoReroute({
+  const { isRerouting, isOffRoute, isOfflineDetour } = useAutoReroute({
     isNavigating,
     activeRoute,
-    coords,
+    coords: isNavigating ? resolvedNavPos.coords : coords,
     vehicleMode,
     voiceLanguage,
     isVoiceEnabled,
@@ -118,6 +148,10 @@ export function App() {
       setActiveRoute(newRoute);
       setTollBreakdown(newTolls);
       setManualStepOverride(null);
+      saveActiveNavSession(newRoute, newTolls, vehicleMode, activeDestinationTitle);
+      if (newRoute.coordinates?.length) {
+        preloadCorridorTiles(newRoute.coordinates).catch(() => {});
+      }
     }
   });
 
@@ -328,6 +362,22 @@ export function App() {
     }
   };
 
+  // Session Recovery: Seamlessly resume active trip after accidental refresh / tab eviction
+  useEffect(() => {
+    const session = loadActiveNavSession();
+    if (session && session.route && session.route.coordinates?.length > 1) {
+      setActiveRoute(session.route);
+      setTollBreakdown(session.tollBreakdown);
+      setVehicleMode(session.vehicleMode);
+      setActiveDestinationTitle(session.destinationTitle);
+      setIsNavigating(true);
+      requestLock();
+      if (session.route.coordinates) {
+        preloadCorridorTiles(session.route.coordinates).catch(() => {});
+      }
+    }
+  }, []);
+
   // Begin active navigation from a confirmed preview. If the preview came back
   // simplified (online), re-request full geometry for accurate turn-by-turn;
   // offline routes already carry their full corridor polyline.
@@ -351,6 +401,12 @@ export function App() {
     announceStart(route.destinationName);
     setPreviewRoute(null);
     setPreviewTolls(null);
+
+    // Persist session & pre-cache corridor tiles
+    saveActiveNavSession(route, tolls, route.profile, route.destinationName);
+    if (route.coordinates?.length) {
+      preloadCorridorTiles(route.coordinates).catch(() => {});
+    }
   };
 
   const handleCancelPreview = () => {
@@ -380,8 +436,13 @@ export function App() {
       const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
       if (dest) {
         const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName, 'full');
+        const reTolls = estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates);
         setActiveRoute(reRoute);
-        setTollBreakdown(estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates));
+        setTollBreakdown(reTolls);
+        saveActiveNavSession(reRoute, reTolls, mode, activeRoute.destinationName);
+        if (reRoute.coordinates?.length) {
+          preloadCorridorTiles(reRoute.coordinates).catch(() => {});
+        }
       }
     }
   };
@@ -407,6 +468,8 @@ export function App() {
     setFocusStepCoord(null);
     releaseLock();
     resetVoiceAnnouncements();
+    clearActiveNavSession();
+    deadReckoningEngineRef.current.reset();
   };
 
   const handleSelectStep = (idx: number) => {
@@ -622,13 +685,25 @@ export function App() {
             )}
 
             {/* Complete GPS Signal Loss Alert */}
-            {isNavigating && !isGpsLocked && (
+            {isNavigating && !isGpsLocked && !resolvedNavPos.isExtrapolated && (
               <div className="flex items-center gap-2 rounded-xl bg-rose-700/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-rose-500/40">
                 <Satellite className="h-4 w-4 animate-spin flex-shrink-0" />
                 <span>
                   {voiceLanguage === 'ms'
                     ? 'Isyarat GPS Terputus. Mencari satelit (Terowong atau kanopi tebal).'
                     : 'GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).'}
+                </span>
+              </div>
+            )}
+
+            {/* Tunnel Dead-Reckoning Active Banner */}
+            {isNavigating && resolvedNavPos.isExtrapolated && (
+              <div className="flex items-center gap-2 rounded-xl bg-indigo-900/95 border border-indigo-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
+                <Radio className="h-4 w-4 text-indigo-300 animate-spin flex-shrink-0" />
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Mod Terowong: Simulasi pergerakan kenderaan aktif.'
+                    : 'Tunnel Mode: Dead-reckoning corridor simulation active.'}
                 </span>
               </div>
             )}
@@ -641,8 +716,8 @@ export function App() {
               </div>
             )}
 
-            {/* Degraded Accuracy Alert */}
-            {isAccuracyDegraded && (
+            {/* Degraded Accuracy Alert (only when not in dead-reckoning simulation) */}
+            {isAccuracyDegraded && !resolvedNavPos.isExtrapolated && (
               <div className="flex items-center gap-2 rounded-xl bg-amber-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow-lg backdrop-blur">
                 <ShieldAlert className="h-4 w-4 flex-shrink-0" />
                 <span>
@@ -674,7 +749,11 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-blue-600/95 border border-blue-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
                 <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
+                  {isOfflineDetour
+                    ? voiceLanguage === 'ms'
+                      ? 'Tiada sambungan internet. Teruskan mengikut papan tanda.'
+                      : 'No internet connection. Follow road signs to destination.'
+                    : voiceLanguage === 'ms'
                     ? 'Laluan terpesong. Mengira semula laluan...'
                     : 'Off route. Recalculating route...'}
                 </span>
@@ -689,7 +768,7 @@ export function App() {
                 maneuver={currentStep.maneuver}
                 laneGuidance={currentStep.laneGuidance}
                 speedLimit={currentStep.speedLimitKmH}
-                currentSpeed={speedKmH}
+                currentSpeed={isNavigating ? resolvedNavPos.speedKmH : speedKmH}
                 isMotorcycleLane={currentStep.isMotorcycleLane}
                 isVoiceEnabled={isVoiceEnabled}
                 onToggleVoice={toggleVoice}
@@ -804,8 +883,8 @@ export function App() {
           <div className="relative h-full w-full">
             <MapErrorBoundary>
               <MapContainer
-                userLocation={coords}
-                heading={heading}
+                userLocation={isNavigating ? resolvedNavPos.coords : coords}
+                heading={isNavigating ? resolvedNavPos.heading : heading}
                 theme={theme}
                 routePolyline={activeRoute?.coordinates}
                 onMapClick={handleMapClick}
@@ -818,7 +897,7 @@ export function App() {
 
             {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}
             <SpeedometerOverlay
-              currentSpeedKmH={speedKmH}
+              currentSpeedKmH={isNavigating ? resolvedNavPos.speedKmH : speedKmH}
               speedLimitKmH={currentStep?.speedLimitKmH}
               speedLimitSource={currentStep?.speedLimitSource}
               weather={effectiveWeather}
