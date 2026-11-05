@@ -25,12 +25,6 @@ describe('Malaysia Toll Calculator', () => {
     expect(result.totalCost).toBe(4.10);
   });
 
-  it('returns zero and highway blocked notice for walker mode', () => {
-    const result = calculateRouteTolls(['MEX_SALAK_SELATAN'], 'walker');
-    expect(result.totalCost).toBe(0);
-    expect(result.note).toContain('Pedestrian');
-  });
-
   it('flags motorcycle prohibition on SMART Tunnel E38 with clear warning', () => {
     const result = calculateRouteTolls(['SMART_TUNNEL'], 'motorcycle');
     expect(result.hasMotorcycleRestriction).toBe(true);

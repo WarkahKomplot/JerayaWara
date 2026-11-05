@@ -307,8 +307,6 @@ export function analyzeRouteTraffic(
   // Motorcycles have lane filtering and dedicated motorcycle paths in Malaysia (75% discount)
   if (vehicleMode === 'motorcycle') {
     delayMinutes = Math.round(delayMinutes * 0.25);
-  } else if (vehicleMode === 'walker') {
-    delayMinutes = 0;
   }
 
   const totalMinutes = freeFlowMinutes + delayMinutes;

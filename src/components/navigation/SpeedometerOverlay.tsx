@@ -7,8 +7,7 @@ import {
   Zap,
   Camera,
   Eye,
-  EyeOff,
-  MonitorUp
+  EyeOff
 } from 'lucide-react';
 import { WeatherInfo } from '../../services/weather/weatherService';
 import { NearbyAESAlert, getLocalizedCameraName } from '../../services/traffic/aesCameraData';
@@ -27,7 +26,6 @@ export interface SpeedometerOverlayProps {
   aesAlert: NearbyAESAlert | null;
   lang?: 'ms' | 'en';
   isNavigating?: boolean;
-  onOpenHud?: () => void;
   onToggleRain?: () => void;
 }
 
@@ -39,7 +37,6 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
   aesAlert,
   lang = 'ms',
   isNavigating = false,
-  onOpenHud,
   onToggleRain
 }) => {
   const [showInfoPill, setShowInfoPill] = useState(true);
@@ -158,7 +155,7 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
         </div>
       )}
 
-      {/* 4. Circular Round Speedometer Icon + Companion Malaysian Speed Limit Badge + HUD button */}
+      {/* 4. Circular Round Speedometer Icon + Companion Malaysian Speed Limit Badge */}
       <div className="flex items-center gap-2">
         {/* Round Speedometer Gauge */}
         <div
@@ -192,18 +189,6 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
               {speedLimitKmH}
             </span>
           </div>
-        )}
-
-        {/* Windshield HUD Trigger Button */}
-        {onOpenHud && (
-          <button
-            type="button"
-            onClick={onOpenHud}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/90 text-cyan-400 hover:text-white border border-cyan-500/50 shadow-xl active:scale-95 transition-all"
-            title="Mod HUD Cermin Depan"
-          >
-            <MonitorUp className="h-4 w-4" />
-          </button>
         )}
 
         {/* Re-expand Weather Pill if hidden */}

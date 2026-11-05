@@ -28,12 +28,11 @@
   * **Tier 1 (Instant RAM)**: Highway exits, toll plazas, R&Rs, hospitals, and national landmarks (*Arjuna JB*, *Menara 1 Sentrum*, *KLCC*).
   * **Tier 2 (IndexedDB Disk)**: Bulk open-data venues (Overture Maps / OSM) queried in 2–10ms with zero UI stutter.
   * **Tier 3 (Online)**: Nominatim & Photon fallback with coordinate parsing and Google Maps URL extraction.
-* **🪞 Windshield HUD Mode**: Horizontal mirror mode (`scaleX(-1)`) designed for night driving reflection onto your windshield with OLED `#000000` power saving.
 * **🌊 Banjir Kilat (Flash Flood) Radar**: Early caution warnings for historical flood blackspots across Klang Valley, Johor, and Pahang, correlated with rain detection.
 * **⛽ Highway Corridor Planner**: Real-time en-route distance countdowns to verified **Petronas / Shell / Caltex / BHP** stations and **EV Fast Chargers** (Gentari, TNB Electron, DC Handal, Tesla Supercharger) with 1-tap PlugShare deep links.
 * **📸 AES / AwAS Speed Camera Radar**: Corridor-aware perpendicular proximity tracking with directional cones, speed limit badges, and zero false alarms from parallel municipal roads.
 * **🛣️ Offline Toll Estimation**: Distance-based matrices and barrier plaza rates (PLUS, MEX, KESAS, LDP, SMART, Penang Bridges) with Class 1–5 breakdown.
-* **🚗 🏍️ 🚶 Travel Profiles**: Dedicated motorcycle lane awareness (*Lorong Motosikal*), Class 0 toll exemptions, SMART Tunnel prohibitions, and peak-hour motorcycle lane-filtering ETA adjustments.
+* **🚗 🏍️ Travel Profiles**: Dedicated motorcycle lane awareness (*Lorong Motosikal*), Class 0 toll exemptions, SMART Tunnel prohibitions, and peak-hour motorcycle lane-filtering ETA adjustments.
 * **🗣️ 100% Bilingual (BM & EN)**: Full reactive language toggle across voice guidance, banners, badges, and drawers without page reloads.
 * **📱 Foldable & PWA Ready**: Adaptive dual-pane cockpit on unfolded foldables (Galaxy Z Fold, Pixel Fold) and full offline home-screen installation.
 

@@ -36,7 +36,6 @@ export const UI_TRANSLATIONS = {
     // Mode Selector
     modeCar: 'Kereta',
     modeMotorcycle: 'Motosikal',
-    modeWalker: 'Pejalan Kaki',
 
     // Turn Banner
     inDistance: 'Dalam',
@@ -62,7 +61,6 @@ export const UI_TRANSLATIONS = {
     cameraDistance: 'Jarak',
     cameraLimit: 'Had',
     rainWarning: 'Hujan · Jarakkan Kenderaan',
-    hudMirrorTip: 'Buka HUD Cermin Depan',
     showDateWeatherTip: 'Papar Tarikh & Cuaca',
     hideDateWeatherTip: 'Sorok Tarikh & Cuaca',
 
@@ -108,7 +106,6 @@ export const UI_TRANSLATIONS = {
     totalTollEstimate: 'Jumlah Anggaran Tol',
     tollClassCar: 'Kelas 1 (Kereta / Van)',
     tollClassMotorcycle: 'Motosikal (Percuma)',
-    tollClassWalker: 'Pejalan Kaki (Bebas Tol)',
     paymentMethods: 'Kaedah Pembayaran',
     paymentMethodsDesc: 'Touch \'n Go, SmartTAG, RFID & MyDebit / Kad Kredit (PayDirect)',
     close: 'Tutup',
@@ -120,13 +117,6 @@ export const UI_TRANSLATIONS = {
     downloading: 'Memuat turun...',
     download: 'Muat Turun',
     delete: 'Padam',
-
-    // Windshield HUD Overlay
-    hudModeTitle: 'Mod HUD Cermin Depan',
-    hudInstructions: 'Letakkan telefon di atas papan pemuka (dashboard). Paparan terbalik akan memantulkan info navigasi pada cermin depan.',
-    mirrorActive: 'PANTULAN CERMIN AKTIF',
-    closeHud: 'TUTUP HUD',
-    driveSafely: 'PANDU DENGAN CERMAT',
 
     // Map Controls
     mapRouteOverview: 'Lihat Semua Laluan',
@@ -169,7 +159,6 @@ export const UI_TRANSLATIONS = {
     // Mode Selector
     modeCar: 'Car',
     modeMotorcycle: 'Motorcycle',
-    modeWalker: 'Walker',
 
     // Turn Banner
     inDistance: 'In',
@@ -195,7 +184,6 @@ export const UI_TRANSLATIONS = {
     cameraDistance: 'Distance',
     cameraLimit: 'Limit',
     rainWarning: 'Raining · Keep Safe Distance',
-    hudMirrorTip: 'Open Windshield HUD',
     showDateWeatherTip: 'Show Date & Weather',
     hideDateWeatherTip: 'Hide Date & Weather',
 
@@ -241,7 +229,6 @@ export const UI_TRANSLATIONS = {
     totalTollEstimate: 'Total Estimated Toll',
     tollClassCar: 'Class 1 (Car / Van)',
     tollClassMotorcycle: 'Motorcycle (Toll Free)',
-    tollClassWalker: 'Pedestrian (Free)',
     paymentMethods: 'Payment Methods',
     paymentMethodsDesc: 'Touch \'n Go, SmartTAG, RFID & MyDebit / Credit Card (PayDirect)',
     close: 'Close',
@@ -253,13 +240,6 @@ export const UI_TRANSLATIONS = {
     downloading: 'Downloading...',
     download: 'Download',
     delete: 'Delete',
-
-    // Windshield HUD Overlay
-    hudModeTitle: 'Windshield HUD Mode',
-    hudInstructions: 'Place your phone on the dashboard. The mirrored display will reflect navigation info onto your windshield.',
-    mirrorActive: 'MIRROR REFLECTION ACTIVE',
-    closeHud: 'CLOSE HUD',
-    driveSafely: 'DRIVE SAFELY',
 
     // Map Controls
     mapRouteOverview: 'Route Overview: View full road path',

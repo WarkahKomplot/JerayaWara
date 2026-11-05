@@ -70,16 +70,7 @@ function minDistanceToRouteMeters(route: [number, number][], point: [number, num
   return best;
 }
 
-export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {  if (vehicleClass === 'walker') {
-    return {
-      totalCost: 0,
-      currency: 'MYR',
-      items: [],
-      vehicleClass: 'walker',
-      note: 'Pedestrian route avoids all expressways and toll plazas.'
-    };
-  }
-
+export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleClass): TollBreakdown {
   const items: TollItem[] = [];
   let totalCost = 0;
   let hasMotorcycleRestriction = false;

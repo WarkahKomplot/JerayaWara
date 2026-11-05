@@ -24,13 +24,12 @@ describe('Navigation UI Components', () => {
     expect(screen.getByText('110')).toBeDefined();
   });
 
-  it('renders mode switchers for Car, Motorcycle, and Walker', () => {
+  it('renders mode switchers for Car and Motorcycle', () => {
     const handleSelect = vi.fn();
     render(<ModeSelector selectedMode="car" onSelectMode={handleSelect} />);
 
     expect(screen.getByText(/Car/i)).toBeDefined();
     expect(screen.getByText(/Motorcycle/i)).toBeDefined();
-    expect(screen.getByText(/Walker/i)).toBeDefined();
   });
 
   it('invokes onSelectDestination when user clicks a search item', async () => {
@@ -186,7 +185,7 @@ describe('Navigation UI Components', () => {
     expect(handleToggleVoice).toHaveBeenCalledTimes(1);
   });
 
-  it('renders SpeedometerOverlay with round speed circle, weather, date, HUD button, and manual rain toggle', () => {
+  it('renders SpeedometerOverlay with round speed circle, weather, date, and manual rain toggle', () => {
     const mockWeather = {
       tempC: 32,
       condition: 'Sunny',
@@ -210,7 +209,6 @@ describe('Navigation UI Components', () => {
       distanceMeters: 650
     };
 
-    const handleOpenHud = vi.fn();
     const handleToggleRain = vi.fn();
 
     render(
@@ -221,7 +219,6 @@ describe('Navigation UI Components', () => {
         aesAlert={mockAes}
         lang="ms"
         isNavigating={true}
-        onOpenHud={handleOpenHud}
         onToggleRain={handleToggleRain}
       />
     );
@@ -239,12 +236,6 @@ describe('Navigation UI Components', () => {
     // Verify AES alert banner
     expect(screen.getByText(/AWAS: AES Slim River/i)).toBeDefined();
     expect(screen.getByText(/Jarak 650m/i)).toBeDefined();
-
-    // Verify HUD button and click
-    const hudBtn = screen.getByTitle(/Mod HUD Cermin Depan/i);
-    expect(hudBtn).toBeDefined();
-    fireEvent.click(hudBtn);
-    expect(handleOpenHud).toHaveBeenCalledTimes(1);
 
     // Verify manual rain toggle click
     const rainToggleBtn = screen.getByTitle(/Tukar status hujan/i);

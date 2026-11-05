@@ -152,9 +152,8 @@ export function determineRouteTollPlazas(
   destTitle: string,
   roadNames: string[],
   _distanceKmVal: number,
-  profile: VehicleClass
+  _profile: VehicleClass
 ): string[] {
-  if (profile === 'walker') return [];
   const keys: string[] = [];
 
   // 1. Closed Expressway Systems (Bidirectional PLUS E1, PLUS E2, and LPT E8)
@@ -324,8 +323,8 @@ export async function calculateRoute(
   }
 
   {
-    const mode = profile === 'walker' ? 'foot' : 'driving';
-    const osmDePrefix = mode === 'foot' ? 'routed-foot' : 'routed-car';
+    const mode = 'driving';
+    const osmDePrefix = 'routed-car';
     // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
     const routerEndpoints = [
       `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`,

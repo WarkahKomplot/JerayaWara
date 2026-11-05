@@ -308,8 +308,6 @@ export function calculateClosedSystemToll(
   vehicleClass: VehicleClass,
   destTitle?: string
 ): TollItem | null {
-  if (vehicleClass === 'walker') return null;
-
   const plazas = findClosedSystemTollPlazas(start, destination, roadNames, destTitle);
   if (plazas.length === 0) return null;
 

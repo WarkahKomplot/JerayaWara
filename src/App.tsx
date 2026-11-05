@@ -11,7 +11,6 @@ import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
 import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
-import { WindshieldHudOverlay } from './components/hud/WindshieldHudOverlay';
 import { FavoritesQuickChips } from './components/favorites/FavoritesQuickChips';
 
 import { useGeolocation } from './hooks/useGeolocation';
@@ -113,9 +112,6 @@ export function App() {
 
   // Original destination title from the selected SearchItem, preserved across reroutes
   const [activeDestinationTitle, setActiveDestinationTitle] = useState<string | undefined>(undefined);
-
-  // Windshield HUD Mode state
-  const [isHudOpen, setIsHudOpen] = useState(false);
   const [favRefreshKey, setFavRefreshKey] = useState(0);
 
   // Turn-by-Turn Voice Navigation Engine
@@ -895,7 +891,7 @@ export function App() {
               />
             </MapErrorBoundary>
 
-            {/* Circular Speedometer Gauge, Weather, Date, AES Camera & HUD Button in Lower-Left Corner */}
+            {/* Circular Speedometer Gauge, Weather, Date & AES Camera in Lower-Left Corner */}
             <SpeedometerOverlay
               currentSpeedKmH={isNavigating ? resolvedNavPos.speedKmH : speedKmH}
               speedLimitKmH={currentStep?.speedLimitKmH}
@@ -904,10 +900,6 @@ export function App() {
               aesAlert={nearbyAESAlert}
               lang={voiceLanguage}
               isNavigating={isNavigating}
-              onOpenHud={() => {
-                requestLock();
-                setIsHudOpen(true);
-              }}
               onToggleRain={() =>
                 setManualRainMode(prev => (prev === null ? !(weather?.isRaining ?? false) : !prev))
               }
@@ -915,28 +907,6 @@ export function App() {
           </div>
         }
       />
-
-      {/* Windshield HUD Full-Screen Mirror Overlay */}
-      {isHudOpen && (
-        <WindshieldHudOverlay
-          speed={speedKmH}
-          speedLimit={currentStep?.speedLimitKmH || 0}
-          isNavigating={isNavigating}
-          currentInstruction={
-            currentStep
-              ? {
-                  maneuver: currentStep.maneuver,
-                  distanceMeters: currentStep.distanceMeters,
-                  instruction: currentStep.instruction
-                }
-              : undefined
-          }
-          roadName={activeRoute?.destinationName}
-          heading={heading}
-          onClose={() => setIsHudOpen(false)}
-          lang={voiceLanguage}
-        />
-      )}
 
       {/* Toll Breakdown Modal */}
       <TollBreakdownModal

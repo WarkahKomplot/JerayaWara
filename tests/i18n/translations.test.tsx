@@ -53,12 +53,10 @@ describe('Bilingual Localization System (BM / EN)', () => {
     const { rerender } = render(<ModeSelector selectedMode="car" onSelectMode={() => {}} lang="ms" />);
     expect(screen.getByText('Kereta')).toBeDefined();
     expect(screen.getByText('Motosikal')).toBeDefined();
-    expect(screen.getByText('Pejalan Kaki')).toBeDefined();
 
     rerender(<ModeSelector selectedMode="car" onSelectMode={() => {}} lang="en" />);
     expect(screen.getByText('Car')).toBeDefined();
     expect(screen.getByText('Motorcycle')).toBeDefined();
-    expect(screen.getByText('Walker')).toBeDefined();
   });
 
   it('renders FavoritesQuickChips labels in Bahasa Melayu and English', () => {

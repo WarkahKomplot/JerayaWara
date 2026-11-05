@@ -72,3 +72,4 @@ describe('Active Navigation Session Persistence', () => {
     expect(localStorage.getItem(NAV_SESSION_STORAGE_KEY)).toBeNull();
   });
 });
+

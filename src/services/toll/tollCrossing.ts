@@ -594,13 +594,13 @@ export function calculatePhysicalRouteTolls(
   points: [number, number][],
   vehicleClass: VehicleClass
 ): TollBreakdown {
-  if (vehicleClass === 'walker' || points.length < 2) {
+  if (points.length < 2) {
     return {
       totalCost: 0,
       currency: 'MYR',
       items: [],
-      vehicleClass: 'walker',
-      note: 'Pedestrian route avoids all expressways and toll plazas.'
+      vehicleClass,
+      note: 'No toll points detected.'
     };
   }
 

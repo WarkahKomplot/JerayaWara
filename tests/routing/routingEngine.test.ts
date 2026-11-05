@@ -68,12 +68,6 @@ describe('Routing Engine', () => {
     expect(route.steps.some(s => s.instruction.toLowerCase().includes('motosikal') || s.isMotorcycleLane)).toBe(true);
   });
 
-  it('walker route avoids expressways and generates pedestrian instructions', async () => {
-    const route = await calculateRoute([101.693, 3.141], [101.710, 3.150], 'walker');
-    expect(route.profile).toBe('walker');
-    expect(route.tollPlazaKeys.length).toBe(0);
-  });
-
   describe('Route Drift & Geometry Integrity (routeGap Algorithm)', () => {
     const referenceCorridor: [number, number][] = [
       [101.693, 3.141],

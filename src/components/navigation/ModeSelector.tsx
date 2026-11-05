@@ -1,5 +1,5 @@
 import React from 'react';
-import { Car, Bike, Footprints } from 'lucide-react';
+import { Car, Bike } from 'lucide-react';
 import { VehicleClass } from '../../services/toll/types';
 import { Language, t } from '../../services/i18n/translations';
 
@@ -40,19 +40,6 @@ export const ModeSelector: React.FC<ModeSelectorProps> = React.memo(({
       >
         <Bike className="h-4 w-4" />
         <span>{t('modeMotorcycle', lang)}</span>
-      </button>
-
-      {/* Walker Option */}
-      <button
-        onClick={() => onSelectMode('walker')}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-          selectedMode === 'walker'
-            ? 'bg-amber-600 text-white shadow-md'
-            : 'text-slate-400 hover:text-white'
-        }`}
-      >
-        <Footprints className="h-4 w-4" />
-        <span>{t('modeWalker', lang)}</span>
       </button>
     </div>
   );

@@ -33,8 +33,6 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
                 {lang === 'ms' ? 'Kenderaan: ' : 'Vehicle: '}
                 {tollBreakdown.vehicleClass === 'motorcycle'
                   ? t('tollClassMotorcycle', lang)
-                  : tollBreakdown.vehicleClass === 'walker'
-                  ? t('tollClassWalker', lang)
                   : t('tollClassCar', lang)}
               </p>
             </div>

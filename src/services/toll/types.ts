@@ -1,4 +1,4 @@
-export type VehicleClass = 'car' | 'motorcycle' | 'walker';
+export type VehicleClass = 'car' | 'motorcycle';
 
 export type PaymentMethod = 'TnG' | 'RFID' | 'SmartTAG';
 
