@@ -44,7 +44,7 @@ import {
   loadActiveNavSession,
   clearActiveNavSession
 } from './services/navigation/navigationSession';
-import { DeadReckoningEngine } from './services/navigation/deadReckoning';
+import { DeadReckoningEngine, distanceMeters, bearingDegrees } from './services/navigation/deadReckoning';
 import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
@@ -404,35 +404,73 @@ export function App() {
     }
   }, []);
 
-  // Animate demo vehicle along the route when ?demo is active
+  // Animate demo vehicle continuously and smoothly along the route at 30-60 FPS
   useEffect(() => {
     if (!isDemoRef.current || !isNavigating || !activeRoute?.coordinates || activeRoute.coordinates.length < 2) {
       return;
     }
 
-    let currentIndex = 0;
     const polyline = activeRoute.coordinates;
-    const interval = setInterval(() => {
-      currentIndex = (currentIndex + 1) % polyline.length;
-      const current = polyline[currentIndex];
-      const next = polyline[Math.min(currentIndex + 1, polyline.length - 1)];
+    const cumDists: number[] = [0];
+    for (let i = 0; i < polyline.length - 1; i++) {
+      cumDists.push(cumDists[i] + distanceMeters(polyline[i], polyline[i + 1]));
+    }
+    const totalDist = cumDists[cumDists.length - 1];
 
-      const y = Math.sin((next[0] - current[0]) * (Math.PI / 180)) * Math.cos(next[1] * (Math.PI / 180));
-      const x =
-        Math.cos(current[1] * (Math.PI / 180)) * Math.sin(next[1] * (Math.PI / 180)) -
-        Math.sin(current[1] * (Math.PI / 180)) * Math.cos(next[1] * (Math.PI / 180)) * Math.cos((next[0] - current[0]) * (Math.PI / 180));
-      const bearing = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+    let currentS = 0;
+    let lastTime = performance.now();
+    let animId: number;
 
-      const simulatedSpeed = currentIndex > 15 && currentIndex < polyline.length - 15 ? 78 : 45;
+    const tick = (now: number) => {
+      const dt = Math.min(0.08, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // Realistic speed profile:
+      // Town roads (Jalan Sulaiman, Jalan Semenyih): ~45 km/h
+      // Grand Saga Highway (middle section): ~85 km/h
+      // Approaches & turns: ~35 km/h
+      let displaySpeedKmH = 45;
+      if (currentS > 1500 && currentS < totalDist - 1500) {
+        displaySpeedKmH = 85;
+      } else if (currentS > totalDist - 800) {
+        displaySpeedKmH = 35;
+      }
+
+      // Continuous advance rate (moves smoothly along polyline)
+      const advanceSpeedMps = (displaySpeedKmH * 1000) / 3600;
+      currentS += advanceSpeedMps * dt * 1.5; // Smooth visual pace
+      if (currentS >= totalDist) {
+        currentS = 0; // Restart loop
+      }
+
+      // Binary search for segment containing currentS
+      let low = 0, high = cumDists.length - 1;
+      while (low < high - 1) {
+        const mid = (low + high) >> 1;
+        if (cumDists[mid] <= currentS) low = mid;
+        else high = mid;
+      }
+
+      const segStart = cumDists[low];
+      const segEnd = cumDists[low + 1];
+      const ratio = segEnd > segStart ? (currentS - segStart) / (segEnd - segStart) : 0;
+      const p1 = polyline[low];
+      const p2 = polyline[low + 1];
+      const lng = p1[0] + (p2[0] - p1[0]) * ratio;
+      const lat = p1[1] + (p2[1] - p1[1]) * ratio;
+      const bearing = bearingDegrees(p1, p2);
 
       setDemoPos({
-        coords: current,
+        coords: [lng, lat],
         heading: Math.round(bearing),
-        speedKmH: simulatedSpeed
+        speedKmH: Math.round(displaySpeedKmH)
       });
-    }, 1200);
 
-    return () => clearInterval(interval);
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
   }, [isNavigating, activeRoute]);
 
   // Begin active navigation from a confirmed preview. If the preview came back

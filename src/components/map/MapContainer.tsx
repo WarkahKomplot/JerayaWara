@@ -44,6 +44,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const rotateRafRef = useRef<number | null>(null);
   const lastCameraCenterRef = useRef<[number, number]>([0, 0]);
   const lastCameraBearingRef = useRef<number>(-1);
+  const lastLocationUpdateRef = useRef<number>(performance.now());
+  const smoothedHeadingRef = useRef<number>(heading);
   const isNavigatingRef = useRef(isNavigating);
   isNavigatingRef.current = isNavigating;
 
@@ -196,33 +198,47 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
   }, [focusStepCoord]);
 
-  // Update User Location & Follow Camera
+  // Update User Location & Follow Camera with high-refresh smoothness
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) return;
+
+    const now = performance.now();
+    const dt = now - lastLocationUpdateRef.current;
+    lastLocationUpdateRef.current = now;
+
+    // Smooth shortest-arc heading unwrapping so it never spins 350 deg the wrong way
+    const currentHeading = smoothedHeadingRef.current;
+    const diff = ((heading - (currentHeading % 360) + 540) % 360) - 180;
+    const targetHeading = currentHeading + diff;
+    smoothedHeadingRef.current = targetHeading;
 
     markerRef.current.setLngLat(userLocation);
 
     if (puckHeadingElRef.current) {
-      puckHeadingElRef.current.style.transform = `rotate(${heading}deg)`;
+      puckHeadingElRef.current.style.transform = `rotate(${targetHeading}deg)`;
     }
 
     // Follow camera while navigating when follow mode is active
     if (isNavigating && isFollowMode) {
-      const [prevLng, prevLat] = lastCameraCenterRef.current;
-      const dLng = Math.abs(userLocation[0] - prevLng);
-      const dLat = Math.abs(userLocation[1] - prevLat);
-      const dBearing = Math.abs(heading - lastCameraBearingRef.current);
-
-      // Only re-ease camera if moved > ~2.5m or heading changed >= 3 degrees to prevent idle battery drain & jitter
-      if (dLng > 0.000025 || dLat > 0.000025 || dBearing >= 3) {
-        lastCameraCenterRef.current = userLocation;
-        lastCameraBearingRef.current = heading;
+      const isHighFrequency = dt < 180; // Animation frame or high-frequency updates
+      if (isHighFrequency) {
+        // Direct synchronization: marker and camera update in the exact same frame with zero lag or stutter
+        mapRef.current.jumpTo({
+          center: userLocation,
+          bearing: targetHeading,
+          pitch: is3D ? 58 : 0,
+          zoom: 16.8
+        });
+      } else {
+        // Real-world 1Hz GPS ticks (~1000ms): linear ease matching the update interval
+        const easeDuration = Math.min(1200, Math.max(300, dt));
         mapRef.current.easeTo({
           center: userLocation,
-          bearing: heading,
+          bearing: targetHeading,
           pitch: is3D ? 58 : 0,
-          zoom: 16.5,
-          duration: 700
+          zoom: 16.8,
+          duration: easeDuration,
+          easing: (t) => t // Linear constant velocity so it glides smoothly between GPS fixes
         });
       }
     }

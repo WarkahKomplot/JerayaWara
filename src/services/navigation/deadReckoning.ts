@@ -58,48 +58,67 @@ export function advanceAlongPolyline(
     return { coord: currentCoord, heading: 0 };
   }
 
-  // 1. Find closest vertex/segment index on polyline
-  let closestIdx = 0;
-  let minDistance = Infinity;
+  // 1. Build cumulative distance array
+  const cumDists: number[] = [0];
+  for (let i = 0; i < polyline.length - 1; i++) {
+    cumDists.push(cumDists[i] + distanceMeters(polyline[i], polyline[i + 1]));
+  }
+  const totalDist = cumDists[cumDists.length - 1];
+
+  // 2. Project currentCoord onto closest segment to find current progress along line
+  let bestDist = Infinity;
+  let currentS = 0;
 
   for (let i = 0; i < polyline.length - 1; i++) {
-    const d = distanceMeters(currentCoord, polyline[i]);
-    if (d < minDistance) {
-      minDistance = d;
-      closestIdx = i;
-    }
-  }
-
-  // 2. Trace forward from closestIdx by advanceMeters
-  let remainingMeters = advanceMeters;
-  let currPoint: [number, number] = polyline[closestIdx];
-  let currHeading = bearingDegrees(polyline[closestIdx], polyline[Math.min(polyline.length - 1, closestIdx + 1)]);
-
-  for (let i = closestIdx; i < polyline.length - 1; i++) {
-    const nextPoint = polyline[i + 1];
-    const segLen = distanceMeters(currPoint, nextPoint);
-
+    const a = polyline[i];
+    const b = polyline[i + 1];
+    const segLen = cumDists[i + 1] - cumDists[i];
     if (segLen === 0) continue;
 
-    currHeading = Math.round(bearingDegrees(currPoint, nextPoint));
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const lenSq = dx * dx + dy * dy;
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((currentCoord[0] - a[0]) * dx + (currentCoord[1] - a[1]) * dy) / lenSq));
+    const proj: [number, number] = [a[0] + t * dx, a[1] + t * dy];
+    const d = distanceMeters(currentCoord, proj);
 
-    if (remainingMeters <= segLen) {
-      const ratio = remainingMeters / segLen;
-      const interpLng = currPoint[0] + (nextPoint[0] - currPoint[0]) * ratio;
-      const interpLat = currPoint[1] + (nextPoint[1] - currPoint[1]) * ratio;
-      return {
-        coord: [Number(interpLng.toFixed(6)), Number(interpLat.toFixed(6))],
-        heading: currHeading
-      };
+    if (d < bestDist) {
+      bestDist = d;
+      currentS = cumDists[i] + t * segLen;
     }
-
-    remainingMeters -= segLen;
-    currPoint = nextPoint;
   }
 
-  // Reached end of polyline
-  const lastPoint = polyline[polyline.length - 1];
-  return { coord: lastPoint, heading: currHeading };
+  // 3. Target distance forward along route
+  const targetS = Math.min(totalDist, currentS + advanceMeters);
+  if (targetS >= totalDist) {
+    const lastP = polyline[polyline.length - 1];
+    const prevP = polyline[polyline.length - 2];
+    return {
+      coord: [Number(lastP[0].toFixed(6)), Number(lastP[1].toFixed(6))],
+      heading: Math.round(bearingDegrees(prevP, lastP))
+    };
+  }
+
+  // 4. Find segment containing targetS via binary search
+  let low = 0, high = cumDists.length - 1;
+  while (low < high - 1) {
+    const mid = (low + high) >> 1;
+    if (cumDists[mid] <= targetS) low = mid;
+    else high = mid;
+  }
+  const segStart = cumDists[low];
+  const segEnd = cumDists[low + 1];
+  const segRatio = segEnd > segStart ? (targetS - segStart) / (segEnd - segStart) : 0;
+  const p1 = polyline[low];
+  const p2 = polyline[low + 1];
+  const lng = p1[0] + (p2[0] - p1[0]) * segRatio;
+  const lat = p1[1] + (p2[1] - p1[1]) * segRatio;
+  const heading = bearingDegrees(p1, p2);
+
+  return {
+    coord: [Number(lng.toFixed(6)), Number(lat.toFixed(6))],
+    heading: Math.round(heading)
+  };
 }
 
 export class DeadReckoningEngine {
