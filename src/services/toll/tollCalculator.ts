@@ -26,21 +26,31 @@ export function estimateRouteTolls(
   if (routeCoordinates && routeCoordinates.length >= 2) {
     const geometric = calculatePhysicalRouteTolls(routeCoordinates, vehicleClass);
     if (geometric.items.length === 0 && keyword.items.length > 0) {
-      // Simplified preview geometry can pass km away from canopies and detect
-      // nothing. Closed-system chainage keys (PLUS pairs) depend on trip
-      // endpoints, not canopy passes, so keyword evidence stays valid there.
-      const onlyClosedSystem = keyword.items.every(i => i.id.startsWith('PLUS_'));
-      if (onlyClosedSystem) return keyword;
-
-      // Open barrier plazas: decimated preview polylines can miss a canopy by
-      // 100–300 m even when the road truly passes through it. Accept keyword
-      // open plazas as a "near miss" when every claimed gate sits within 400 m
-      // of the route; a route genuinely elsewhere (km away) stays toll-free.
-      const allNearMiss = keyword.items.every(i => {
-        const gate = PHYSICAL_TOLL_GATES.find(g => g.id === i.id);
-        return gate && gate.system === 'open' && minDistanceToRouteMeters(routeCoordinates, gate.coordinates) <= 400;
+      // The geometry found no toll canopy at all. That can happen because the
+      // gate coordinate is approximate, the route enters via a different ramp,
+      // or a preview polyline was heavily simplified. Fall back to keyword
+      // evidence, but only keep evidence that is safe:
+      //   - closed-system trip keys (PLUS_/LPT_E8_) depend on the entry/exit
+      //     pair, not on hitting a canopy coordinate;
+      //   - open-plaza keys are kept only when their canopy is near the route.
+      // Without the closed-system trust, KL→Ipoh silently returned RM 0.00.
+      const trustedItems = keyword.items.filter(item => {
+        if (item.id.startsWith('PLUS_') || item.id.startsWith('LPT_E8_')) return true;
+        const gate = PHYSICAL_TOLL_GATES.find(g => g.id === item.id);
+        return !!gate && minDistanceToRouteMeters(routeCoordinates, gate.coordinates) <= 800;
       });
-      if (allNearMiss) return keyword;
+
+      if (trustedItems.length > 0) {
+        const totalCost =
+          Math.round(trustedItems.reduce((sum, item) => sum + item.cost, 0) * 100) / 100;
+        return {
+          ...keyword,
+          totalCost,
+          items: trustedItems,
+          note:
+            "Estimated from the route's expressway names because no toll canopy was detected on the geometry."
+        };
+      }
     }
     const gatedIds = new Set(PHYSICAL_TOLL_GATES.map(g => g.id));
     for (const item of keyword.items) {

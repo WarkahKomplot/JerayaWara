@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-214%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-216%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -73,6 +73,7 @@
 
 * **Routing is online-only and best-effort.** A route is calculated through three free public providers (OSRM, the `routing.openstreetmap.de` mirror, Valhalla). There is no on-device routing graph and no SLA: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
 * **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
+* **Toll estimates are best-effort, not billing-grade.** Gate coordinates, fare tables and concessionaire rates are approximate and undated; some plazas can be missed or mispriced. Verify against official rates before relying on the total.
 * **Car-only.** The vehicle mode selector and motorcycle-specific features (lane callouts, rain-shelter radar, SMART Tunnel restriction banner, bike ETA discount) have been removed. The toll engine still carries Class 0 fare tables for future use.
 * **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
 * **Offline map coverage is corridor-only.** Only the pre-cached route corridor is available offline; panning away from it or zooming outside the budgeted window shows grey tiles. Route planning itself still requires connectivity.
@@ -93,7 +94,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (214 tests across 48 suites)
+# Run automated tests (216 tests across 48 suites)
 npm test
 
 # Production build

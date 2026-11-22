@@ -118,3 +118,24 @@ describe('estimateRouteTolls (geometry-first toll estimation)', () => {
     expect(result.items.some(i => i.id === 'GRAND_SAGA_BATU_9')).toBe(false);
   });
 });
+
+describe('Geometry-miss fallback', () => {
+  const farAwayRoute: [number, number][] = [
+    [101.5, 5.5],
+    [101.51, 5.51]
+  ];
+
+  it('keeps closed-system toll evidence when no canopy is detected (KL to Ipoh case)', () => {
+    const result = estimateRouteTolls(['PLUS_E2_SG_BESI_SEREMBAN'], 'car', farAwayRoute);
+
+    expect(result.totalCost).toBeGreaterThan(0);
+    expect(result.items.some(item => item.id.startsWith('PLUS_'))).toBe(true);
+  });
+
+  it('drops open-plaza keywords whose canopy is kilometres away', () => {
+    const result = estimateRouteTolls(['NPE_PANTAI_DALAM'], 'car', farAwayRoute);
+
+    expect(result.totalCost).toBe(0);
+    expect(result.items).toHaveLength(0);
+  });
+});
