@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-194%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-198%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -20,7 +20,7 @@
 ## 🌟 Key Features
 
 ### 🌐 1. Online Navigation (Main Function)
-* **Redundant Multi-Mirror Routing**: Turn-by-turn routing that falls back automatically from OSRM's public server to the `routing.openstreetmap.de` mirror when the primary is slow, rate-limited, or unreachable.
+* **Triple-Provider Routing Failover**: Turn-by-turn routing tries OSRM's public server, then the `routing.openstreetmap.de` mirror, then the Valhalla demo server. Providers that fail repeatedly are skipped for 10 minutes so a dead endpoint does not slow every calculation.
 * **Turn-by-Turn Audio & Lane Guidance**: Bilingual (Bahasa Melayu & English) voice directions, highway exit numbers, and OSRM-derived lane hints.
 * **Peak-Hour Traffic Modelling**: ETA adjustment from a local Malaysian time-of-day model (weekday rush, Friday *balik kampung*, Sunday return). This is a deterministic model, not a live traffic feed.
 
@@ -51,15 +51,23 @@
 ## 🛠️ Tech Stack
 
 * **Frontend**: React 18, TypeScript (Strict), Vite, Tailwind CSS, Lucide React.
-* **Mapping**: MapLibre GL JS (WebGL vector/raster with day/night solar calculations).
+* **Mapping**: MapLibre GL JS (WebGL raster basemap with day/night solar calculations and compact OSM attribution).
 * **Storage & Offline**: Dexie.js (IndexedDB), Service Worker CacheStorage (`Cache-Control: public`).
 * **Audio**: Native Web Speech API with bilingual Malay/English synthesizers.
 
 ---
 
+## 🩺 Reliability & Monitoring
+
+* **Automatic failover** across three keyless routing providers, with a per-provider circuit breaker.
+* **No paid uptime service or server:** a scheduled GitHub Action runs `scripts/healthcheck.mjs` daily (07:00 MYT), checks routing, tiles and geocoding, and opens a GitHub issue when a critical dependency is down.
+* **Graceful degradation:** search falls back to the bundled POI directory, tiles come from the service-worker cache once viewed, and an active trip resumes from `localStorage` after a reload.
+
+---
+
 ## ⚠️ Known Limitations
 
-* **Routing is online-only.** A route must be calculated through OSRM (with an `routing.openstreetmap.de` mirror). There is no on-device routing graph: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
+* **Routing is online-only and best-effort.** A route is calculated through three free public providers (OSRM, the `routing.openstreetmap.de` mirror, Valhalla). There is no on-device routing graph and no SLA: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
 * **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
 * **Car-only.** The vehicle mode selector and motorcycle-specific features (lane callouts, rain-shelter radar, SMART Tunnel restriction banner, bike ETA discount) have been removed. The toll engine still carries Class 0 fare tables for future use.
 * **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
@@ -81,7 +89,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (194 tests across 39 suites)
+# Run automated tests (198 tests across 40 suites)
 npm test
 
 # Production build

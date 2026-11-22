@@ -63,7 +63,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         zoom: 15.5,
         pitch: is3D ? 55 : 0,
         bearing: heading,
-        attributionControl: false
+        attributionControl: { compact: true }
       });
     } catch (err) {
       console.error('Failed to initialize MapLibre GL map in browser:', err);

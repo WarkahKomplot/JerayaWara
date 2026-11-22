@@ -1,15 +1,15 @@
-# Handoff — three pending commits (car-only, offline tiles, fake pack UI removal)
+# Handoff — four pending commits (car-only, offline tiles, fake pack UI, routing failover)
 
 **Prepared:** 2026-11-22
 **Branch:** `main`
 **Remote `origin/main`:** `aa5fe1a`
-**Local HEAD:** removal of the simulated region-pack UI — **3 commits ahead, not pushed**
+**Local HEAD:** routing failover + health checks — **4 commits ahead, not pushed**
 **Session baseline:** `a2b0ad7`
 
-Push all three pending commits:
+Push all four pending commits:
 
 ```bash
-git log --oneline -5   # expect: pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
+git log --oneline -6   # expect: routing failover, pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
 git push origin main
 ```
 
@@ -85,16 +85,47 @@ real offline coverage now comes from corridor tile pre-caching.
 
 ---
 
+## Pending commit 4 — routing failover, monitoring & attribution (HEAD)
+
+`feat(routing): add Valhalla fallback, circuit breaker and free health checks`
+
+- `src/services/routing/routingEngine.ts`:
+  - Adds **Valhalla** (`valhalla1.openstreetmap.de`) as a third keyless provider
+    behind OSRM primary and the openstreetmap.de mirror. Valhalla responses are
+    normalised into `RouteResult` (polyline6 decoding, maneuver mapping,
+    destination side, exit numbers, toll keys, traffic ETA).
+  - Per-provider circuit breaker: 3 failures → skipped for 10 minutes; if every
+    provider is blocked, one attempt each is still made.
+  - Liveness probes now run **in parallel against all three providers** instead of
+    sequentially against OSRM only, cached for 15 s.
+  - Valhalla gets a **12 s timeout** (the demo server is intermittently slow);
+    OSRM stays at 6 s.
+- `MapContainer`: re-enables MapLibre's attribution control (`compact`). OSM's
+  policy and OpenFreeMap's terms require attribution; it was previously disabled.
+- `index.html`: removed the duplicate unpkg MapLibre CSS link (the CSS is already
+  bundled via `MapContainer`).
+- `scripts/healthcheck.mjs` + `.github/workflows/healthcheck.yml`: free daily
+  health check (07:00 MYT) of all three routing providers, OSM tiles and
+  Nominatim. It fails and opens/updates a GitHub issue only when **every routing
+  provider** or the tile server is down; Valhalla slowness alone is reported but
+  not fatal. No server or paid monitoring service.
+- Tests: `tests/routing/providerFailover.test.ts` (Valhalla fallback, liveness via
+  Valhalla only, all-providers-down, polyline6 decoding); the existing liveness
+  test now expects three parallel probes.
+
+---
+
 ## Verification (fresh, after the final edit)
 
 ```
 npx tsc --noEmit → exit 0
-npm test         → 39 test files, 194 tests passed
+npm test         → 40 test files, 198 tests passed
 npm run build    → tsc + vite build OK; pre-existing >500 kB MapLibre chunk warning
 ```
 
-Bundle: `dist/assets/index-giTvLEnj.js` ≈ 224.7 kB (gzip 63.7 kB), down from 236.6 kB
-after dropping the modal/service. `dist/` is rebuilt in the commit and still ships
+Bundle: `dist/assets/index-DrfloBYa.js` ≈ 228.0 kB (gzip 65.0 kB).
+Local `node scripts/healthcheck.mjs` passes: OSRM primary + mirror up, Valhalla
+intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `dist/` is rebuilt in the commit and still ships
 `jerayawara-v12`. `node_modules/` is gitignored.
 
 ---
@@ -103,7 +134,7 @@ after dropping the modal/service. `dist/` is rebuilt in the commit and still shi
 
 ```bash
 git status                 # clean
-git push origin main       # pushes all three commits
+git push origin main       # pushes all four commits
 ```
 
 CI runs `npm ci` → `npm test` → `npm run build` → Pages.
@@ -112,8 +143,8 @@ CI runs `npm ci` → `npm test` → `npm run build` → Pages.
 > address, set `user.email` and `git commit --amend --reset-author` on each commit
 > before pushing.
 
-**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all three. After
-pushing, revert the three SHAs.
+**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all four. After
+pushing, revert the four SHAs.
 
 ---
 
@@ -126,6 +157,10 @@ pushing, revert the three SHAs.
   pack-UI removal; drop them with a `version(3)` migration when convenient.
 - **Speed limits are always `'estimated'`**, so the red speeding state never fires.
 - **Bulk POI index is tiny** (17 records) and syncs lazily on first search.
-- **MapLibre CSS is loaded twice** (bundled import plus the unpkg `<link>`).
 - **`dist/` is tracked** even though CI rebuilds it.
 - **`malaysiaRoadNetwork.ts`** is mostly a `distanceKm` helper plus unused corridor data.
+- **Valhalla's demo server is slow and has no SLA**; it is a fallback only, with a
+  12 s timeout. Watch the daily health-check issue if it degrades.
+- **Basemap is still OSM raster.** Switching to OpenFreeMap vector tiles remains an
+  option, but needs new styles, glyph/sprite caching, a revised corridor preloader
+  (z14 max) and offline tests.

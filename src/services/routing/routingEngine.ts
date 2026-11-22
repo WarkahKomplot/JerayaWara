@@ -246,6 +246,45 @@ let lastLivenessCheck = { at: 0, alive: false };
 export function resetLivenessCacheForTest(): void {
   lastLivenessCheck = { at: 0, alive: false };
 }
+
+const OSRM_PRIMARY_BASE = 'https://router.project-osrm.org';
+const OSRM_MIRROR_BASE = 'https://routing.openstreetmap.de/routed-car';
+const VALHALLA_ROUTE_URL = 'https://valhalla1.openstreetmap.de/route';
+const VALHALLA_STATUS_URL = 'https://valhalla1.openstreetmap.de/status';
+
+const ROUTE_TIMEOUT_MS = 6000;
+const VALHALLA_TIMEOUT_MS = 12000;
+const PROBE_TIMEOUT_MS = 2000;
+const FAILURE_THRESHOLD = 3;
+const PROVIDER_COOLDOWN_MS = 10 * 60 * 1000;
+
+type ProviderName = 'osrm' | 'osmde' | 'valhalla';
+const providerHealth = new Map<ProviderName, { failures: number; blockedUntil: number }>();
+
+/** Test-only: clears the failover circuit-breaker state. */
+export function resetProviderHealthForTest(): void {
+  providerHealth.clear();
+}
+
+function isProviderBlocked(name: ProviderName, now = Date.now()): boolean {
+  const health = providerHealth.get(name);
+  return !!health && health.blockedUntil > now;
+}
+
+function recordProviderFailure(name: ProviderName): void {
+  const health = providerHealth.get(name) ?? { failures: 0, blockedUntil: 0 };
+  health.failures += 1;
+  if (health.failures >= FAILURE_THRESHOLD) {
+    health.blockedUntil = Date.now() + PROVIDER_COOLDOWN_MS;
+    health.failures = 0;
+  }
+  providerHealth.set(name, health);
+}
+
+function recordProviderSuccess(name: ProviderName): void {
+  providerHealth.set(name, { failures: 0, blockedUntil: 0 });
+}
+
 export async function isActuallyOnline(): Promise<boolean> {
   if (typeof navigator === 'undefined') return false;
   if (!navigator.onLine) return false;
@@ -255,40 +294,312 @@ export async function isActuallyOnline(): Promise<boolean> {
     return lastLivenessCheck.alive;
   }
 
-  // Probe primary OSRM, fallback to secondary OpenStreetMap.de mirror
-  const probeUrls = [
-    'https://router.project-osrm.org/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false',
-    'https://routing.openstreetmap.de/routed-car/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false'
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+
+  // Probe every routing provider in parallel. Checking sequentially meant a
+  // dead primary burned 2s before the mirror was even tried, and a live
+  // Valhalla instance could not rescue the app at all.
+  const probes = [
+    fetch(`${OSRM_PRIMARY_BASE}/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false`, { signal: controller.signal, cache: 'no-store' }),
+    fetch(`${OSRM_MIRROR_BASE}/route/v1/driving/101.6869,3.1390;101.7471,3.0732?overview=false&steps=false&alternatives=false`, { signal: controller.signal, cache: 'no-store' }),
+    fetch(VALHALLA_STATUS_URL, { signal: controller.signal, cache: 'no-store' })
   ];
 
-  for (const probeUrl of probeUrls) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    try {
-      const res = await fetch(probeUrl, { signal: controller.signal, cache: 'no-store' });
-      if (res.ok) {
-        lastLivenessCheck = { at: now, alive: true };
-        return true;
-      }
-    } catch {
-      // Continue to secondary probe
-    } finally {
-      clearTimeout(timeoutId);
-    }
+  try {
+    const results = await Promise.all(probes.map(probe => probe.then(res => res.ok).catch(() => false)));
+    lastLivenessCheck = { at: now, alive: results.some(Boolean) };
+    return lastLivenessCheck.alive;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/** Decodes Valhalla's encoded polyline (precision 6) into [lng, lat] pairs. */
+export function decodePolyline(encoded: string, precision: number = 6): [number, number][] {
+  const factor = Math.pow(10, precision);
+  const coordinates: [number, number][] = [];
+  let index = 0;
+  let latitude = 0;
+  let longitude = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    latitude += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    longitude += result & 1 ? ~(result >> 1) : result >> 1;
+
+    coordinates.push([longitude / factor, latitude / factor]);
   }
 
-  lastLivenessCheck = { at: now, alive: false };
-  return false;
+  return coordinates;
+}
+
+/** Valhalla maneuver type numbers → the app's maneuver vocabulary. */
+function mapValhallaManeuver(type: number, isLast: boolean): ManeuverType {
+  if (isLast || type === 4 || type === 5 || type === 6) return 'arrive';
+  if (type === 9 || type === 10 || type === 11) return type === 9 ? 'slight_right' : 'turn_right';
+  if (type === 14 || type === 15 || type === 16) return type === 16 ? 'slight_left' : 'turn_left';
+  if (type === 12 || type === 13) return 'u_turn';
+  if (type === 18 || type === 20) return 'exit_right';
+  if (type === 19 || type === 21) return 'exit_left';
+  if (type === 26 || type === 27) return 'roundabout';
+  if (type === 23) return 'flyover';
+  if (type === 24) return 'underpass';
+  return 'straight';
+}
+
+function buildOsrmRoute(
+  routeData: any,
+  start: [number, number],
+  destination: [number, number],
+  profile: VehicleClass,
+  destinationTitle?: string
+): RouteResult {
+  const rawCoordinates: [number, number][] = routeData.geometry.coordinates;
+  const distanceKmVal = Math.round((routeData.distance / 1000) * 10) / 10;
+  const durationMinutesVal = Math.max(1, Math.round(routeData.duration / 60));
+
+  const legSteps = routeData.legs?.[0]?.steps || [];
+  const roadNames: string[] = [];
+  const turnSteps: TurnStep[] = [];
+
+  legSteps.forEach((s: any, idx: number) => {
+    if (s.name) roadNames.push(s.name);
+    const maneuver = mapOsrmManeuver(s.maneuver?.type, s.maneuver?.modifier);
+    const isLast = idx === legSteps.length - 1;
+    const exitNum = typeof s.maneuver?.exit === 'number' ? s.maneuver.exit : undefined;
+
+    const osrmLaneHint = extractOsrmLaneGuidance(s, maneuver);
+
+    turnSteps.push({
+      id: `osrm-step-${idx}`,
+      maneuver: isLast ? 'arrive' : maneuver,
+      destinationSide: isLast && (s.maneuver?.modifier === 'left' || s.maneuver?.modifier === 'right')
+        ? s.maneuver.modifier
+        : undefined,
+      instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, exitNum),
+      distanceMeters: Math.round(s.distance),
+      durationSeconds: Math.round(s.duration),
+      coordinates: s.maneuver?.location || rawCoordinates[0],
+      speedLimitKmH: /\be\d+\b/i.test(s.name || '') ? 110 : 80,
+      speedLimitSource: 'estimated',
+      laneGuidance: osrmLaneHint
+        ? osrmLaneHint
+        : maneuver === 'flyover'
+        ? 'Use middle or right lanes for flyover'
+        : maneuver === 'underpass'
+        ? 'Keep left to avoid flyover'
+        : undefined,
+      exitNumber: exitNum
+    });
+  });
+
+  // Ensure at least arrival step
+  if (turnSteps.length === 0) {
+    turnSteps.push({
+      id: 'osrm-step-0',
+      maneuver: 'arrive',
+      instruction: `Arrive at ${destinationTitle || 'destination'}`,
+      distanceMeters: 0,
+      durationSeconds: 0,
+      coordinates: destination
+    });
+  }
+
+  const tollPlazaKeys = determineRouteTollPlazas(
+    start,
+    destination,
+    destinationTitle || '',
+    roadNames,
+    distanceKmVal
+  );
+
+  const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal);
+
+  // Connect user's current GPS location directly to route so navigation line starts right at user puck
+  const fullRouteCoordinates: [number, number][] = [start, ...rawCoordinates];
+
+  return {
+    coordinates: fullRouteCoordinates,
+    distanceKm: distanceKmVal,
+    durationMinutes: traffic.totalMinutes,
+    steps: turnSteps,
+    tollPlazaKeys,
+    profile,
+    destinationName: destinationTitle || 'Destination',
+    traffic
+  };
+}
+
+async function fetchOsrmRoute(
+  baseUrl: string,
+  start: [number, number],
+  destination: [number, number],
+  profile: VehicleClass,
+  destinationTitle: string | undefined,
+  geometryDetail: 'full' | 'simplified'
+): Promise<RouteResult | null> {
+  const url = `${baseUrl}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ROUTE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return null;
+    return buildOsrmRoute(data.routes[0], start, destination, profile, destinationTitle);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function fetchValhallaRoute(
+  start: [number, number],
+  destination: [number, number],
+  profile: VehicleClass,
+  destinationTitle?: string
+): Promise<RouteResult | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), VALHALLA_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(VALHALLA_ROUTE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        locations: [
+          { lat: start[1], lon: start[0] },
+          { lat: destination[1], lon: destination[0] }
+        ],
+        costing: 'auto',
+        shape_format: 'polyline6',
+        directions_options: { units: 'kilometers' }
+      }),
+      signal: controller.signal
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const leg = data?.trip?.legs?.[0];
+    if (!leg?.shape) return null;
+
+    const shape = decodePolyline(leg.shape, 6);
+    if (shape.length < 2) return null;
+
+    const summary = data.trip.summary ?? {};
+    const distanceKmVal = Math.round((summary.length ?? 0) * 10) / 10;
+    const durationMinutesVal = Math.max(1, Math.round((summary.time ?? 0) / 60));
+
+    const roadNames: string[] = [];
+    const maneuvers: any[] = leg.maneuvers ?? [];
+
+    const turnSteps: TurnStep[] = maneuvers.map((m: any, idx: number) => {
+      const streetName = Array.isArray(m.street_names) ? m.street_names[0] : undefined;
+      if (streetName) roadNames.push(streetName);
+
+      const isLast = idx === maneuvers.length - 1;
+      const maneuver = mapValhallaManeuver(m.type, isLast);
+      const clampedIndex = Math.max(0, Math.min(shape.length - 1, m.begin_shape_index ?? 0));
+      const instruction = String(m.instruction || '');
+      const signExit = m.sign?.exit_number_elements?.[0]?.text;
+      const parsedSignExit = typeof signExit === 'string' ? parseInt(signExit, 10) : NaN;
+      const exitNumber = Number.isFinite(parsedSignExit)
+        ? parsedSignExit
+        : typeof m.roundabout_exit_count === 'number'
+        ? m.roundabout_exit_count
+        : undefined;
+      const destinationSide = isLast && /on the right/i.test(instruction)
+        ? 'right'
+        : isLast && /on the left/i.test(instruction)
+        ? 'left'
+        : undefined;
+
+      return {
+        id: `valhalla-step-${idx}`,
+        maneuver: isLast ? 'arrive' : maneuver,
+        destinationSide,
+        instruction: isLast
+          ? `Arrive at ${destinationTitle || 'destination'}`
+          : instruction || formatStepInstruction(maneuver, streetName || '', destinationTitle, exitNumber),
+        distanceMeters: Math.round((m.length ?? 0) * 1000),
+        durationSeconds: Math.round(m.time ?? 0),
+        coordinates: shape[clampedIndex],
+        speedLimitKmH: /\be\d+\b/i.test(streetName || '') ? 110 : 80,
+        speedLimitSource: 'estimated',
+        laneGuidance:
+          maneuver === 'flyover'
+            ? 'Use middle or right lanes for flyover'
+            : maneuver === 'underpass'
+            ? 'Keep left to avoid flyover'
+            : undefined,
+        exitNumber
+      };
+    });
+
+    if (turnSteps.length === 0) {
+      turnSteps.push({
+        id: 'valhalla-step-0',
+        maneuver: 'arrive',
+        instruction: `Arrive at ${destinationTitle || 'destination'}`,
+        distanceMeters: 0,
+        durationSeconds: 0,
+        coordinates: destination
+      });
+    }
+
+    const fullRouteCoordinates: [number, number][] = [start, ...shape];
+    const tollPlazaKeys = determineRouteTollPlazas(
+      start,
+      destination,
+      destinationTitle || '',
+      roadNames,
+      distanceKmVal
+    );
+    const traffic = analyzeRouteTraffic(fullRouteCoordinates, durationMinutesVal);
+
+    return {
+      coordinates: fullRouteCoordinates,
+      distanceKm: distanceKmVal,
+      durationMinutes: traffic.totalMinutes,
+      steps: turnSteps,
+      tollPlazaKeys,
+      profile,
+      destinationName: destinationTitle || 'Destination',
+      traffic
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
- * Calculates a route using real road network vectors via redundant OSRM open
- * routing servers. Routing is online-only by design: when no OSRM endpoint is
- * reachable this throws RouteUnavailableError rather than drawing a synthetic
- * line that does not follow real roads.
+ * Calculates a route using real road network vectors via redundant free routing
+ * servers (OSRM primary, openstreetmap.de OSRM mirror, then Valhalla).
+ * Routing is online-only by design: when no provider is reachable this throws
+ * RouteUnavailableError rather than drawing a synthetic line that does not
+ * follow real roads.
  *
- * geometryDetail: 'simplified' (route preview — small polyline, same distance/ETA
- * metrics) or 'full' (active navigation — complete geometry for turn-by-turn).
+ * Providers that fail repeatedly are skipped for 10 minutes (circuit breaker)
+ * so a dead endpoint does not add a 6s timeout to every route calculation.
+ *
+ * geometryDetail: 'simplified' (route preview — small polyline) or 'full'
+ * (active navigation — complete geometry for turn-by-turn).
  */
 export async function calculateRoute(
   start: [number, number],
@@ -297,124 +608,51 @@ export async function calculateRoute(
   destinationTitle?: string,
   geometryDetail: 'full' | 'simplified' = 'full'
 ): Promise<RouteResult> {
-  const isOnline = await isActuallyOnline();
-
-  if (!isOnline) {
+  if (!(await isActuallyOnline())) {
     throw new RouteUnavailableError(
       'No connection to routing service. Navigation requires internet.'
     );
   }
 
-  {
-    const mode = 'driving';
-    const osmDePrefix = 'routed-car';
-    // Redundant endpoints: Primary project-osrm.org, secondary openstreetmap.de mirror
-    const routerEndpoints = [
-      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`,
-      `https://routing.openstreetmap.de/${osmDePrefix}/route/v1/${mode}/${start[0]},${start[1]};${destination[0]},${destination[1]}?overview=${geometryDetail}&geometries=geojson&steps=true`
-    ];
-
-    for (let i = 0; i < routerEndpoints.length; i++) {
-      const url = routerEndpoints[i];
-      let timeoutId: any;
-      try {
-        // Brief backoff before trying the mirror endpoint so a rate-limited
-        // primary doesn't immediately burn the fallback on the same burst
-        if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 750));
-        }
-        const controller = new AbortController();
-        // Allow up to 6000ms for long-distance inter-state route calculations (e.g. KL to Johor / Penang)
-        timeoutId = setTimeout(() => controller.abort(), 6000);
-
-        const res = await fetch(url, { signal: controller.signal });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-            const routeData = data.routes[0];
-            const rawCoordinates: [number, number][] = routeData.geometry.coordinates;
-            const distanceKmVal = Math.round((routeData.distance / 1000) * 10) / 10;
-            const durationMinutesVal = Math.max(1, Math.round(routeData.duration / 60));
-
-            const legSteps = routeData.legs?.[0]?.steps || [];
-            const roadNames: string[] = [];
-            const turnSteps: TurnStep[] = [];
-
-            legSteps.forEach((s: any, idx: number) => {
-              if (s.name) roadNames.push(s.name);
-              const maneuver = mapOsrmManeuver(s.maneuver?.type, s.maneuver?.modifier);
-              const isLast = idx === legSteps.length - 1;
-              const exitNum = typeof s.maneuver?.exit === 'number' ? s.maneuver.exit : undefined;
-
-              const osrmLaneHint = extractOsrmLaneGuidance(s, maneuver);
-
-              turnSteps.push({
-                id: `osrm-step-${idx}`,
-                maneuver: isLast ? 'arrive' : maneuver,
-                destinationSide: isLast && (s.maneuver?.modifier === 'left' || s.maneuver?.modifier === 'right')
-                  ? s.maneuver.modifier
-                  : undefined,
-                instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, exitNum),
-                distanceMeters: Math.round(s.distance),
-                durationSeconds: Math.round(s.duration),
-                coordinates: s.maneuver?.location || rawCoordinates[0],
-                speedLimitKmH: /\be\d+\b/i.test(s.name || '') ? 110 : 80,
-                speedLimitSource: 'estimated',
-                laneGuidance: osrmLaneHint
-                  ? osrmLaneHint
-                  : maneuver === 'flyover'
-                  ? 'Use middle or right lanes for flyover'
-                  : maneuver === 'underpass'
-                  ? 'Keep left to avoid flyover'
-                  : undefined,
-                exitNumber: exitNum
-              });
-            });
-
-            // Ensure at least arrival step
-            if (turnSteps.length === 0) {
-              turnSteps.push({
-                id: 'osrm-step-0',
-                maneuver: 'arrive',
-                instruction: `Arrive at ${destinationTitle || 'destination'}`,
-                distanceMeters: 0,
-                durationSeconds: 0,
-                coordinates: destination
-              });
-            }
-
-            const tollPlazaKeys = determineRouteTollPlazas(
-              start,
-              destination,
-              destinationTitle || '',
-              roadNames,
-              distanceKmVal
-            );
-
-            const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal);
-
-            // Connect user's current GPS location directly to route so navigation line starts right at user puck
-            const fullRouteCoordinates: [number, number][] = [start, ...rawCoordinates];
-
-            return {
-              coordinates: fullRouteCoordinates,
-              distanceKm: distanceKmVal,
-              durationMinutes: traffic.totalMinutes,
-              steps: turnSteps,
-              tollPlazaKeys,
-              profile,
-              destinationName: destinationTitle || 'Destination',
-              traffic
-            };
-          }
-        }
-      } catch {
-        // Continue to secondary router endpoint if primary fails or times out
-      } finally {
-        clearTimeout(timeoutId);
-      }
+  const providers: Array<{ name: ProviderName; run: () => Promise<RouteResult | null> }> = [
+    {
+      name: 'osrm',
+      run: () => fetchOsrmRoute(`${OSRM_PRIMARY_BASE}/route/v1/driving`, start, destination, profile, destinationTitle, geometryDetail)
+    },
+    {
+      name: 'osmde',
+      run: () => fetchOsrmRoute(`${OSRM_MIRROR_BASE}/route/v1/driving`, start, destination, profile, destinationTitle, geometryDetail)
+    },
+    {
+      name: 'valhalla',
+      run: () => fetchValhallaRoute(start, destination, profile, destinationTitle)
     }
+  ];
+
+  const unblocked = providers.filter(provider => !isProviderBlocked(provider.name));
+  // If every provider is in cooldown, still try them once rather than refusing
+  // to calculate a route for 10 minutes after a transient outage.
+  const attempts = unblocked.length > 0 ? unblocked : providers;
+
+  for (let i = 0; i < attempts.length; i++) {
+    const provider = attempts[i];
+    if (i > 0) {
+      // Brief backoff before the next provider so a rate-limited server does
+      // not immediately burn the fallback on the same burst.
+      await new Promise(resolve => setTimeout(resolve, 750));
+    }
+
+    try {
+      const route = await provider.run();
+      if (route) {
+        recordProviderSuccess(provider.name);
+        return route;
+      }
+    } catch {
+      // Try the next provider.
+    }
+
+    recordProviderFailure(provider.name);
   }
 
   throw new RouteUnavailableError(

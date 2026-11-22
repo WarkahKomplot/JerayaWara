@@ -114,8 +114,9 @@ describe('Connectivity liveness check', () => {
     try {
       expect(await isActuallyOnline()).toBe(true);
       expect(await isActuallyOnline()).toBe(true);
-      // Second call served from cache — only one probe
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      // Probes run in parallel against OSRM primary, the OSM.de mirror and
+      // Valhalla; the second isActuallyOnline() call is served from cache.
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
     } finally {
       fetchSpy.mockRestore();
     }
