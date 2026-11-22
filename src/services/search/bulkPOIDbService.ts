@@ -21,6 +21,16 @@ export function calculateDistanceKm(
   return parseFloat((R * c).toFixed(1));
 }
 
+/**
+ * Resolves the bundled POI index against the Vite base path so the app works when
+ * hosted under a sub-path (GitHub Pages project sites) as well as at the domain
+ * root. A root-absolute '/data/...' fetch silently 404s under '/JerayaWara/'.
+ */
+export function buildPoiIndexUrl(baseUrl: string = import.meta.env.BASE_URL): string {
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${base}data/overture-poi-index.json`;
+}
+
 let syncPromise: Promise<void> | null = null;
 
 export function resetBulkSyncPromiseForTest() {
@@ -52,7 +62,7 @@ export async function syncBulkPOIsInStore(): Promise<void> {
       }
 
       // Fetch static asset
-      const res = await fetch('/data/overture-poi-index.json');
+      const res = await fetch(buildPoiIndexUrl());
       if (!res.ok) return;
 
       const data = await res.json();

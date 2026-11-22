@@ -13,18 +13,9 @@
     <link rel="manifest" href="/manifest.json" />
     <title>JerayaWara — Malaysia Navigation</title>
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-    <script>
-      // Clean up legacy caches from previous builds
-      if (typeof window !== 'undefined' && 'caches' in window) {
-        caches.keys().then(function(keys) {
-          keys.forEach(function(k) {
-            if (k.startsWith('jerayawara-v') && k !== 'jerayawara-v10') {
-              caches.delete(k);
-            }
-          });
-        });
-      }
-    </script>
+    <!-- Cache lifecycle is owned by public/sw.js (activate handler). Do not delete
+         app caches here: a second copy of the version list drifts and can wipe the
+         active precache on every page load. -->
   </head>
   <body class="bg-slate-900 text-slate-100 antialiased">
     <div id="root"></div>

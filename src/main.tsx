@@ -6,9 +6,12 @@ import './index.css';
 // Register PWA Service Worker
 if ('serviceWorker' in navigator && (import.meta.env.PROD || process.env.NODE_ENV === 'production')) {
   window.addEventListener('load', () => {
-    const swUrl = `${import.meta.env.BASE_URL}sw.js?v=10`;
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     navigator.serviceWorker
-      .register(swUrl)
+      // `updateViaCache: 'none'` makes the browser revalidate sw.js itself on every
+      // update check, replacing the old `?v=N` query string that drifted from the
+      // cache version declared in public/sw.js.
+      .register(swUrl, { updateViaCache: 'none' })
       .then(reg => {
         reg.update();
         console.log('JerayaWara PWA Service Worker registered:', reg.scope);

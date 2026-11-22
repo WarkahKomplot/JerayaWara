@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jerayawara-v11';
+const CACHE_NAME = 'jerayawara-v12';
 const TILE_CACHE_NAME = 'jerayawara-tiles-v1';
 const KEEP_CACHES = [CACHE_NAME, TILE_CACHE_NAME];
 

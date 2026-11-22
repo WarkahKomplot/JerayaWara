@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-191%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-198%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -20,22 +20,22 @@
 ## 🌟 Key Features
 
 ### 🌐 1. Online Navigation (Main Function)
-* **Redundant Multi-Mirror Routing**: Live turn-by-turn routing with automatic millisecond failover between OSRM primary and `routing.openstreetmap.de` mirrors, preventing dropouts.
+* **Redundant Multi-Mirror Routing**: Turn-by-turn routing that falls back automatically from OSRM's public server to the `routing.openstreetmap.de` mirror when the primary is slow, rate-limited, or unreachable.
 * **Turn-by-Turn Audio & Lane Guidance**: Bilingual (Bahasa Melayu & English) voice directions, highway exit numbers, and Malaysian dedicated motorcycle lane (*Lorong Motosikal*) callouts.
-* **Live Traffic Adjustments**: Corridor congestion monitoring with motorcycle lane-filtering ETA adjustments and expressway CCTV snapshots.
+* **Peak-Hour Traffic Modelling**: ETA adjustment from a local Malaysian time-of-day model (weekday rush, Friday *balik kampung*, Sunday return) with motorcycle lane-filtering allowances. This is a deterministic model, not a live traffic feed.
 
 ### 🛡️ 2. Offline Resilience Shield (Safety Net)
-* **Corridor Tile Pre-caching**: Upon pressing *Start Navigation*, map tiles along the route corridor (zoom 14–16) are pre-fetched into a dedicated Service Worker cache (`jerayawara-tiles-v1`), eliminating blank grey grids in dead zones.
+* **Corridor Tile Pre-caching**: Upon pressing *Start Navigation*, map raster tiles along the route corridor (zoom 14–16, capped at ~350 tiles) are pre-fetched into a dedicated Service Worker cache (`jerayawara-tiles-v1`), eliminating blank grey grids in dead zones.
 * **Tunnel Dead-Reckoning Engine**: Smoothly projects vehicle position forward along the route line when GPS signal drops inside tunnels (SMART Tunnel E38, Genting Sempah) or deep underpasses.
 * **Crash & Tab-Reload Session Recovery**: Persists active trip state into `localStorage` (valid 2.5 hours); accidental browser closures, memory evictions, or incoming phone calls restore your navigation instantly.
 * **Graceful Detour Handling**: Retains current route line during signal dropouts and triggers an auto-reroute the exact second internet connectivity returns.
 
 ### 🚗 3. Dedicated Travel Profiles
 * **Car**: Full expressway guidance, toll calculation, and AES speed camera alerts.
-* **Motorcycle**: Avoids prohibited routes (SMART Tunnel), highlights sheltered rain bays under flyovers, factors in zero-toll exemptions, and computes lane-filtering peak ETAs.
+* **Motorcycle**: Flags prohibited routes (SMART Tunnel E38) with a surface-route warning, highlights sheltered rain bays under flyovers, applies zero-toll exemptions, and computes lane-filtering peak ETAs.
 
 ### 🔍 4. Search & Highway Intelligence
-* **Tiered Search (<1ms)**: Instant RAM lookup for major Malaysian highway exits, R&Rs, hospitals, and national landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), with offline IndexedDB backup.
+* **Tiered Search**: Instant in-memory lookup across 161 curated Malaysian highway exits, R&Rs, hospitals, and national landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), falling back to an IndexedDB POI index and then online Nominatim/Photon geocoding.
 * **Malaysian Toll Breakdown**: Physical crossing detection with chainage rate tables (PLUS E1/E2 closed network, MEX, KESAS, LDP, Penang Bridges).
 * **AES / AwAS Radar**: Directional camera warnings with national speed limits (110 / 90 / 80 km/h).
 * **Banjir Kilat (Flood) Radar**: Historical flash-flood blackspots alert when heavy rain is detected.
@@ -58,6 +58,17 @@
 
 ---
 
+## ⚠️ Known Limitations
+
+* **Routing is online-only.** A route must be calculated through OSRM (with an `routing.openstreetmap.de` mirror). There is no on-device routing graph: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
+* **Regional pack downloads are placeholders.** The Offline Region Manager (`src/services/offline/regionManager.ts`) stores pack metadata and simulated progress only; it does not download the advertised 40–65 MB tile/graph bundles. Real offline map coverage comes from corridor tile pre-caching.
+* **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
+* **Car and motorcycle share one routing profile.** Both request OSRM `driving`; motorcycle mode changes tolls, SMART Tunnel restrictions, shelter alerts and the ETA model, not the road network used.
+* **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
+* **Map tiles come from the public OSM tile server.** Bulk pre-fetching is acceptable for personal use but remains subject to the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+
+---
+
 ## 🚀 Development Setup
 
 ```bash
@@ -71,7 +82,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (191 tests across 38 suites)
+# Run automated tests (198 tests across 40 suites)
 npm test
 
 # Production build
