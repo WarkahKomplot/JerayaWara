@@ -74,7 +74,8 @@
 
 * **Routing is online-only and best-effort.** A route is calculated through three free public providers (OSRM, the `routing.openstreetmap.de` mirror, Valhalla). There is no on-device routing graph and no SLA: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
 * **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
-* **Toll estimates are best-effort, not billing-grade.** Gate coordinates, fare tables and concessionaire rates are approximate and undated; some plazas can be missed or mispriced. Verify against official rates before relying on the total.
+* **Toll estimates are best-effort, not billing-grade.** Gate coordinates, fare tables and concessionaire rates are approximate and benchmarked against the 2026-11 snapshot; some plazas can be missed or mispriced. Verify against official concessionaire rates before relying on the total.
+* **AES camera coordinates are approximate.** Navigation alerts require cameras to sit within 65 m of the calculated route corridor; cameras on parallel service roads or with rough coordinates may not fire. Free cruising uses a 500 m proximity radius.
 * **Car-only.** The vehicle mode selector and motorcycle-specific features (lane callouts, rain-shelter radar, SMART Tunnel restriction banner, bike ETA discount) have been removed. The toll engine still carries Class 0 fare tables for future use.
 * **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
 * **Offline map coverage is corridor-only.** Only the pre-cached route corridor is available offline; panning away from it or zooming outside the budgeted window shows grey tiles. Route planning itself still requires connectivity.
