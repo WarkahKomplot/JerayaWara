@@ -1,4 +1,4 @@
-import { distanceKm } from '../routing/malaysiaRoadNetwork';
+import { distanceKm } from '../geo/distance';
 
 export interface AESCamera {
   id: string;

@@ -1,15 +1,15 @@
-# Handoff — five pending commits (car-only, offline tiles, pack UI, routing failover, hardening)
+# Handoff — six pending commits (car-only, offline tiles, pack UI, routing failover, hardening, cleanup)
 
 **Prepared:** 2026-11-22
 **Branch:** `main`
 **Remote `origin/main`:** `aa5fe1a`
-**Local HEAD:** cache/search/install hardening — **5 commits ahead, not pushed**
+**Local HEAD:** dead-code and repository cleanup — **6 commits ahead, not pushed**
 **Session baseline:** `a2b0ad7`
 
-Push all five pending commits:
+Push all six pending commits:
 
 ```bash
-git log --oneline -7   # expect: hardening, routing failover, pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
+git log --oneline -8   # expect: cleanup, hardening, routing failover, pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
 git push origin main
 ```
 
@@ -115,7 +115,7 @@ real offline coverage now comes from corridor tile pre-caching.
 
 ---
 
-## Pending commit 5 — storage, search and install hardening (HEAD)
+## Pending commit 5 — storage, search and install hardening
 
 `feat(pwa): bound caches, throttle geocoding, add route cache and install icons`
 
@@ -150,19 +150,39 @@ New tests: `geocodeRateLimit`, `routeCache`, `useServiceWorkerUpdate`,
 
 ---
 
+## Pending commit 6 — dead-code and repository cleanup (HEAD)
+
+`chore: remove dead modules, retire region tables and untrack dist`
+
+- **Dexie `version(3)`** drops the unused `regions` and `tiles` tables left over from
+  the removed regional-pack manager; `offlineDb` now exposes only `pois` and
+  `savedPlaces`.
+- **Deleted `overturePOIService.ts`** and its test — the app uses the curated
+  directory plus the GeoNames index, and nothing called the Overture searcher.
+- **Split `distanceKm`** into `src/services/geo/distance.ts` and deleted
+  `malaysiaRoadNetwork.ts` (~580 lines of unused corridor geometry) and its
+  corridor-chaining test.
+- **Untracked `dist/`** and added it to `.gitignore`. GitHub Pages builds the
+  artifact in CI, so committed bundles were duplicate output and made every diff
+  noisy. The local `dist/` directory remains for previews but is ignored.
+- **Tests:** added `tests/offline/db.test.ts` (schema) and `tests/geo/distance.test.ts`;
+  removed 10 obsolete Overture/corridor tests.
+
+---
+
 ## Verification (fresh, after the final edit)
 
 ```
 npx tsc --noEmit → exit 0
-npm test         → 45 test files, 211 tests passed
+npm test         → 45 test files, 204 tests passed
 npm run build    → tsc + vite build OK; pre-existing >500 kB MapLibre chunk warning
 ```
 
-Bundle: `dist/assets/index-Dzc-5hLe.js` ≈ 233.3 kB (gzip 66.7 kB); the bundled
-GeoNames POI index is ~1.1 MB and is fetched lazily on first search.
+Bundle (local build): `dist/assets/index-7Dl4Rvn7.js` ≈ 228.0 kB (gzip 65.2 kB); the
+bundled GeoNames POI index is ~1.1 MB and is fetched lazily on first search.
+`dist/` is now gitignored — CI builds the artifact.
 Local `node scripts/healthcheck.mjs` passes: OSRM primary + mirror up, Valhalla
-intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `dist/` is rebuilt in the commit and still ships
-`jerayawara-v12`. `node_modules/` is gitignored.
+intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `node_modules/` is gitignored.
 
 ---
 
@@ -170,7 +190,7 @@ intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `di
 
 ```bash
 git status                 # clean
-git push origin main       # pushes all five commits
+git push origin main       # pushes all six commits
 ```
 
 CI runs `npm ci` → `npm test` → `npm run build` → Pages.
@@ -179,8 +199,8 @@ CI runs `npm ci` → `npm test` → `npm run build` → Pages.
 > address, set `user.email` and `git commit --amend --reset-author` on each commit
 > before pushing.
 
-**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all five. After
-pushing, revert the five SHAs.
+**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all six. After
+pushing, revert the six SHAs.
 
 ---
 
@@ -194,8 +214,6 @@ pushing, revert the five SHAs.
 - **Speed limits are always `'estimated'`**, so the red speeding state never fires.
 - **POI index refreshes are manual:** rerun `scripts/build-geonames-poi-index.py`
   and bump `POI_INDEX_VERSION` in `bulkPOIDbService.ts` alongside `updatedAt`.
-- **`dist/` is tracked** even though CI rebuilds it.
-- **`malaysiaRoadNetwork.ts`** is mostly a `distanceKm` helper plus unused corridor data.
 - **Valhalla's demo server is slow and has no SLA**; it is a fallback only, with a
   12 s timeout. Watch the daily health-check issue if it degrades.
 - **Basemap is still OSM raster.** Switching to OpenFreeMap vector tiles remains an

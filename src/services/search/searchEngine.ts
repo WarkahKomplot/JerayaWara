@@ -1,8 +1,6 @@
 import { SearchItem } from './types';
 import { MALAYSIA_OFFLINE_POIS } from './malaysiaPOIData';
 import { searchBulkPOIs, syncBulkPOIsInStore } from './bulkPOIDbService';
-export { searchOvertureIndex, bucketHash } from './overturePOIService';
-export type { OvertureIndexData } from './overturePOIService';
 export { syncBulkPOIsInStore, searchBulkPOIs };
 
 const MALAYSIAN_ABBREVIATIONS: Record<string, string> = {

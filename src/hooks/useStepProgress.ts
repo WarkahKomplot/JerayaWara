@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { distanceKm } from '../services/routing/malaysiaRoadNetwork';
+import { distanceKm } from '../services/geo/distance';
 import { RouteResult, TurnStep } from '../services/routing/types';
 
 export interface StepProgress {
