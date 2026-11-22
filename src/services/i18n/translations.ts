@@ -8,7 +8,6 @@ export const UI_TRANSLATIONS = {
     appName: 'JerayaWara',
     gpsActive: 'GPS Aktif',
     gpsSearching: 'Mencari GPS...',
-    offlineMap: 'Peta Luar Talian',
     autoSolar: 'AUTO (Suria)',
     dayMode: 'SIANG',
     nightMode: 'MALAM',
@@ -104,12 +103,6 @@ export const UI_TRANSLATIONS = {
     close: 'Tutup',
 
     // Region Download Modal
-    offlineModalTitle: 'Peta Luar Talian Malaysia',
-    offlineModalSubtitle: 'Muat turun pek peta vektor MapLibre mengikut zon negeri untuk navigasi tanpa capaian internet.',
-    readyToUse: 'Sedia Digunakan',
-    downloading: 'Memuat turun...',
-    download: 'Muat Turun',
-    delete: 'Padam',
 
     // Map Controls
     mapRouteOverview: 'Lihat Semua Laluan',
@@ -124,7 +117,6 @@ export const UI_TRANSLATIONS = {
     appName: 'JerayaWara',
     gpsActive: 'GPS Active',
     gpsSearching: 'Searching GPS...',
-    offlineMap: 'Offline Maps',
     autoSolar: 'AUTO (Solar)',
     dayMode: 'DAY',
     nightMode: 'NIGHT',
@@ -220,12 +212,6 @@ export const UI_TRANSLATIONS = {
     close: 'Close',
 
     // Region Download Modal
-    offlineModalTitle: 'Malaysia Offline Maps',
-    offlineModalSubtitle: 'Download MapLibre vector map packs by state zone for offline navigation without internet access.',
-    readyToUse: 'Ready to Use',
-    downloading: 'Downloading...',
-    download: 'Download',
-    delete: 'Delete',
 
     // Map Controls
     mapRouteOverview: 'Route Overview: View full road path',

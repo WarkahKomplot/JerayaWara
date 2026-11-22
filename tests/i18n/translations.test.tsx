@@ -4,7 +4,6 @@ import { getLocalizedStepInstruction, UI_TRANSLATIONS } from '../../src/services
 import { FavoritesQuickChips } from '../../src/components/favorites/FavoritesQuickChips';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
 import { TollBreakdownModal } from '../../src/components/navigation/TollBreakdownModal';
-import { RegionDownloadModal } from '../../src/components/offline/RegionDownloadModal';
 import { EnRouteServicesCard } from '../../src/components/navigation/EnRouteServicesCard';
 import { RouteResult } from '../../src/services/routing/types';
 import { TollBreakdown } from '../../src/services/toll/types';
@@ -178,26 +177,6 @@ describe('Bilingual Localization System (BM / EN)', () => {
     expect(screen.getByText('Malaysian Highway Toll Breakdown')).toBeDefined();
     expect(screen.getByText(/Total Estimated Toll/i)).toBeDefined();
     expect(screen.getByText('Close')).toBeDefined();
-  });
-
-  it('renders RegionDownloadModal in Bahasa Melayu and English', () => {
-    const { rerender } = render(
-      <RegionDownloadModal
-        isOpen={true}
-        onClose={() => {}}
-        lang="ms"
-      />
-    );
-    expect(screen.getByText('Peta Luar Talian Malaysia')).toBeDefined();
-
-    rerender(
-      <RegionDownloadModal
-        isOpen={true}
-        onClose={() => {}}
-        lang="en"
-      />
-    );
-    expect(screen.getByText('Malaysia Offline Maps')).toBeDefined();
   });
 
   it('renders EnRouteServicesCard in Bahasa Melayu and English', () => {

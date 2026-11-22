@@ -48,6 +48,14 @@ describe('App Header and Language Toggle Integration', () => {
     expect(screen.queryByText(/^Kereta$|^Car$/)).toBeNull();
   });
 
+  it('does not expose a fake offline map download option', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Offline Maps|Peta Luar Talian/i)).toBeNull();
+    });
+  });
+
   it('renders FavoritesQuickChips and allows resetting a saved favorite via App handler', async () => {
     const mockFavs = [
       {

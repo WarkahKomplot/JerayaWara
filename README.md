@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-197%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-194%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -60,7 +60,6 @@
 ## ⚠️ Known Limitations
 
 * **Routing is online-only.** A route must be calculated through OSRM (with an `routing.openstreetmap.de` mirror). There is no on-device routing graph: without connectivity the app keeps the active route, pre-cached corridor tiles and tunnel dead-reckoning alive, but cannot plan a new route.
-* **Regional pack downloads are placeholders.** The Offline Region Manager (`src/services/offline/regionManager.ts`) stores pack metadata and simulated progress only; it does not download the advertised 40–65 MB tile/graph bundles. Real offline map coverage comes from corridor tile pre-caching.
 * **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
 * **Car-only.** The vehicle mode selector and motorcycle-specific features (lane callouts, rain-shelter radar, SMART Tunnel restriction banner, bike ETA discount) have been removed. The toll engine still carries Class 0 fare tables for future use.
 * **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
@@ -82,7 +81,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (197 tests across 40 suites)
+# Run automated tests (194 tests across 39 suites)
 npm test
 
 # Production build

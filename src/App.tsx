@@ -6,9 +6,8 @@ import { SpeedometerOverlay } from './components/navigation/SpeedometerOverlay';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { RoutePreviewSheet } from './components/navigation/RoutePreviewSheet';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
-import { RegionDownloadModal } from './components/offline/RegionDownloadModal';
-import { SearchBar } from './components/search/SearchBar';
 import { AppShell } from './components/layout/AppShell';
+import { SearchBar } from './components/search/SearchBar';
 import { JerayaWaraLogo } from './components/brand/JerayaWaraLogo';
 import { FavoritesQuickChips } from './components/favorites/FavoritesQuickChips';
 
@@ -27,7 +26,6 @@ import { estimateRouteTolls } from './services/toll/tollCalculator';
 import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
 import { SearchItem } from './services/search/types';
-import { regionManager } from './services/offline/regionManager';
 import { WeatherInfo, fetchLiveWeather } from './services/weather/weatherService';
 import { findNearbyAESCamera } from './services/traffic/aesCameraData';
 import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
@@ -43,7 +41,7 @@ import {
   clearActiveNavSession
 } from './services/navigation/navigationSession';
 import { DeadReckoningEngine, distanceMeters, bearingDegrees } from './services/navigation/deadReckoning';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
+import { Moon, Sun, ShieldAlert, Radio, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -262,52 +260,6 @@ export function App() {
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
-  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
-  const [autoDownloadNotice, setAutoDownloadNotice] = useState<string | null>(null);
-  const noticeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastCheckedCoordRef = useRef<[number, number] | null>(null);
-  const lastCheckedTimeRef = useRef<number>(0);
-
-  // Proximity Geofencing: Throttled check to avoid excessive DB queries and memory churn
-  useEffect(() => {
-    let isMounted = true;
-    if (!coords) return;
-
-    const now = Date.now();
-    // Only check if at least 15 seconds have passed or user has moved significantly (> 500m)
-    if (lastCheckedCoordRef.current && now - lastCheckedTimeRef.current < 15000) {
-      const [prevLng, prevLat] = lastCheckedCoordRef.current;
-      const dLng = Math.abs(coords[0] - prevLng);
-      const dLat = Math.abs(coords[1] - prevLat);
-      if (dLng < 0.005 && dLat < 0.005) {
-        return;
-      }
-    }
-
-    lastCheckedCoordRef.current = coords;
-    lastCheckedTimeRef.current = now;
-
-    regionManager.handleProximityGeofence(coords).then(triggered => {
-      if (isMounted && triggered.length > 0) {
-        setAutoDownloadNotice(`Approaching boundary — Auto-downloading ${triggered.join(', ')} pack`);
-        if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-        noticeTimerRef.current = setTimeout(() => {
-          if (isMounted) {
-            setAutoDownloadNotice(null);
-            noticeTimerRef.current = null;
-          }
-        }, 5000);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      if (noticeTimerRef.current) {
-        clearTimeout(noticeTimerRef.current);
-        noticeTimerRef.current = null;
-      }
-    };
-  }, [coords]);
 
   // Handle destination selection: compute the route and show the preview sheet.
   // Navigation only starts when the user taps "Start Navigation".
@@ -655,17 +607,8 @@ export function App() {
               </div>
             </div>
 
-            {/* Quick Actions (Offline Region Manager & Theme Toggle) */}
+            {/* Quick Actions (Theme & Screen Wake Lock) */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => setIsRegionModalOpen(true)}
-                className="flex items-center gap-1 rounded-lg bg-slate-800/90 px-2 py-1 text-[11px] font-semibold text-slate-300 border border-slate-700/60 shadow hover:text-white"
-                title={t('offlineMap', voiceLanguage)}
-              >
-                <HardDrive className="h-3 w-3 text-emerald-400" />
-                <span className="hidden sm:inline text-[10px]">{t('offlineMap', voiceLanguage)}</span>
-              </button>
-
               {/* Malaysia Sunrise/Sunset Day-Night Toggle */}
               <button
                 onClick={cycleThemeMode}
@@ -765,14 +708,6 @@ export function App() {
                     ? 'Mod Terowong: Simulasi pergerakan kenderaan aktif.'
                     : 'Tunnel Mode: Dead-reckoning corridor simulation active.'}
                 </span>
-              </div>
-            )}
-
-            {/* Auto Boundary Download Banner */}
-            {autoDownloadNotice && (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-600/90 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur animate-bounce">
-                <Radio className="h-4 w-4 animate-spin" />
-                <span>{autoDownloadNotice}</span>
               </div>
             )}
 
@@ -963,13 +898,6 @@ export function App() {
         isOpen={isTollModalOpen}
         onClose={() => setIsTollModalOpen(false)}
         tollBreakdown={tollBreakdown}
-        lang={voiceLanguage}
-      />
-
-      {/* Offline Region Pack Manager Modal */}
-      <RegionDownloadModal
-        isOpen={isRegionModalOpen}
-        onClose={() => setIsRegionModalOpen(false)}
         lang={voiceLanguage}
       />
 
