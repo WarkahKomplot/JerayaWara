@@ -58,26 +58,6 @@ describe('EnRouteServicesCard Component', () => {
     expect(handleCategory).toHaveBeenCalledWith('ev');
   });
 
-  it('displays motorcycle rain shelter badge when shelter prop is present', () => {
-    render(
-      <EnRouteServicesCard
-        amenities={mockAmenities}
-        activeCategory="all"
-        onSelectCategory={vi.fn()}
-        shelter={{
-          id: 'ms-1',
-          name: 'Pondok Teduhan Jejantas KM 312',
-          expressway: 'PLUS E1',
-          kmMarker: 'KM 312',
-          coordinates: [101.350, 3.850],
-          hasDedicatedBay: true
-        }}
-      />
-    );
-
-    expect(screen.getByText(/Pondok Teduhan Jejantas KM 312/i)).toBeDefined();
-  });
-
   it('renders PlugShare deep link button for EV fast charger stations', () => {
     render(
       <EnRouteServicesCard

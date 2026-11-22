@@ -23,7 +23,6 @@ export interface TurnStep {
   durationSeconds: number;
   coordinates: [number, number]; // [lng, lat]
   speedLimitKmH?: number;
-  isMotorcycleLane?: boolean;
   tollPlazaKey?: string;
   laneGuidance?: string;
   exitNumber?: number; // Roundabout exit number (1, 2, 3, etc.)

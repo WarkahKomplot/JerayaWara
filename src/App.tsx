@@ -3,7 +3,6 @@ import { MapContainer } from './components/map/MapContainer';
 import { MapErrorBoundary } from './components/map/MapErrorBoundary';
 import { TurnBanner } from './components/navigation/TurnBanner';
 import { SpeedometerOverlay } from './components/navigation/SpeedometerOverlay';
-import { ModeSelector } from './components/navigation/ModeSelector';
 import { TripSummaryDrawer } from './components/navigation/TripSummaryDrawer';
 import { RoutePreviewSheet } from './components/navigation/RoutePreviewSheet';
 import { TollBreakdownModal } from './components/navigation/TollBreakdownModal';
@@ -33,7 +32,6 @@ import { WeatherInfo, fetchLiveWeather } from './services/weather/weatherService
 import { findNearbyAESCamera } from './services/traffic/aesCameraData';
 import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
 import { getUpcomingAmenities } from './services/amenities/amenitiesService';
-import { findNearbyMotorcycleShelter } from './services/amenities/motorcycleSheltersData';
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
@@ -45,7 +43,7 @@ import {
   clearActiveNavSession
 } from './services/navigation/navigationSession';
 import { DeadReckoningEngine, distanceMeters, bearingDegrees } from './services/navigation/deadReckoning';
-import { HardDrive, Moon, Sun, ShieldAlert, Radio, AlertOctagon, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
+import { HardDrive, Moon, Sun, ShieldAlert, Radio, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
 
 export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -64,7 +62,9 @@ export function App() {
   const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
   const { isInstallable, isInstalled, isIOS, isDismissed, promptInstall, dismissBanner } = usePwaInstall();
 
-  const [vehicleMode, setVehicleMode] = useState<VehicleClass>('car');
+  // Car-only build: there is no vehicle mode selector. The toll engine still
+  // carries class-0 (motorcycle) fare data, but the product always requests Class 1.
+  const vehicleMode: VehicleClass = 'car';
   const [activeRoute, setActiveRoute] = useState<RouteResult | null>(null);
   const [tollBreakdown, setTollBreakdown] = useState<TollBreakdown | null>(null);
 
@@ -163,10 +163,8 @@ export function App() {
   const [manualRainMode, setManualRainMode] = useState<boolean | null>(null);
   const lastWarnedAESRef = useRef<string>('');
   const lastWarnedFloodRef = useRef<string>('');
-  const lastWarnedShelterRef = useRef<string>('');
   const lastWarnedAESTimeRef = useRef<number>(0);
   const lastWarnedFloodTimeRef = useRef<number>(0);
-  const lastWarnedShelterTimeRef = useRef<number>(0);
 
   // Live Weather effect (updates with coordinate movement)
   const coordKey = `${coords[0].toFixed(2)},${coords[1].toFixed(2)}`;
@@ -209,11 +207,6 @@ export function App() {
   const nearbyFloodHotspot = useMemo(() => {
     return findNearbyFloodHotspot(coords, isRaining, 2.5);
   }, [radarCoordKey, isRaining]);
-
-  // Motorcycle Expressway Rain Shelter Radar
-  const nearbyMotorcycleShelter = useMemo(() => {
-    return findNearbyMotorcycleShelter(coords, isRaining, vehicleMode, 3.0);
-  }, [radarCoordKey, isRaining, vehicleMode]);
 
   // Expressway En-Route Petrol & EV Fast Charger Stop Planner
   const [amenityCategory, setAmenityCategory] = useState<'all' | 'petrol' | 'ev'>('all');
@@ -266,24 +259,6 @@ export function App() {
       }
     }
   }, [nearbyFloodHotspot, isVoiceEnabled, voiceLanguage]);
-
-  // Voice alert when approaching Motorcycle Rain Shelter during rain
-  useEffect(() => {
-    const now = Date.now();
-    if (nearbyMotorcycleShelter && isVoiceEnabled) {
-      const isNewTarget = lastWarnedShelterRef.current !== nearbyMotorcycleShelter.id;
-      const isCooldownElapsed = now - lastWarnedShelterTimeRef.current > 180000;
-
-      if (isNewTarget || isCooldownElapsed) {
-        lastWarnedShelterRef.current = nearbyMotorcycleShelter.id;
-        lastWarnedShelterTimeRef.current = now;
-        const msg = voiceLanguage === 'ms'
-          ? `Pondok teduhan hujan motosikal di hadapan pada ${nearbyMotorcycleShelter.kmMarker}.`
-          : `Motorcycle rain shelter ahead at ${nearbyMotorcycleShelter.kmMarker}.`;
-        speakNavigationVoice(msg, isVoiceEnabled, voiceLanguage);
-      }
-    }
-  }, [nearbyMotorcycleShelter, isVoiceEnabled, voiceLanguage]);
 
   // Modals
   const [isTollModalOpen, setIsTollModalOpen] = useState(false);
@@ -394,7 +369,6 @@ export function App() {
     if (session && session.route && session.route.coordinates?.length > 1) {
       setActiveRoute(session.route);
       setTollBreakdown(session.tollBreakdown);
-      setVehicleMode(session.vehicleMode);
       setActiveDestinationTitle(session.destinationTitle);
       setIsNavigating(true);
       requestLock();
@@ -521,25 +495,6 @@ export function App() {
       regionId: 'pinned'
     };
     handleSelectDestination(destinationItem);
-  };
-
-  // Recalculate if user changes mode mid-route
-  const handleModeChange = async (mode: VehicleClass) => {
-    setVehicleMode(mode);
-    if (activeRoute && activeRoute.coordinates && activeRoute.coordinates.length > 0) {
-      setTollBreakdown(null);
-      const dest = activeRoute.coordinates[activeRoute.coordinates.length - 1];
-      if (dest) {
-        const reRoute = await calculateRoute(coords, dest, mode, activeRoute.destinationName, 'full');
-        const reTolls = estimateRouteTolls(reRoute.tollPlazaKeys, mode, reRoute.coordinates);
-        setActiveRoute(reRoute);
-        setTollBreakdown(reTolls);
-        saveActiveNavSession(reRoute, reTolls, mode, activeRoute.destinationName);
-        if (reRoute.coordinates?.length) {
-          preloadCorridorTiles(reRoute.coordinates).catch(() => {});
-        }
-      }
-    }
   };
 
   // Auto-end navigation ~10s after arrival so the driver doesn't have to tap
@@ -767,18 +722,6 @@ export function App() {
               </div>
             )}
 
-            {/* Motorcycle Tunnel / Expressway Restriction Alert */}
-            {vehicleMode === 'motorcycle' && tollBreakdown?.hasMotorcycleRestriction && (
-              <div className="flex items-center gap-2 rounded-xl bg-red-600 px-3.5 py-2.5 text-xs font-black text-white shadow-xl animate-pulse border border-red-400/50">
-                <AlertOctagon className="h-5 w-5 flex-shrink-0" />
-                <span>
-                  {voiceLanguage === 'ms'
-                    ? 'SEKATAN: Motosikal dilarang di Terowong SMART E38. Ikut laluan atas.'
-                    : 'RESTRICTION: Motorcycles prohibited on SMART Tunnel E38. Follow surface route.'}
-                </span>
-              </div>
-            )}
-
             {/* Complete GPS Signal Loss Alert */}
             {isNavigating && !isGpsLocked && !resolvedNavPos.isExtrapolated && (
               <div className="flex items-center gap-2 rounded-xl bg-rose-700/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-rose-500/40">
@@ -864,7 +807,6 @@ export function App() {
                 laneGuidance={currentStep.laneGuidance}
                 speedLimit={currentStep.speedLimitKmH}
                 currentSpeed={isNavigating ? resolvedNavPos.speedKmH : speedKmH}
-                isMotorcycleLane={currentStep.isMotorcycleLane}
                 isVoiceEnabled={isVoiceEnabled}
                 onToggleVoice={toggleVoice}
                 voiceLanguage={voiceLanguage}
@@ -906,13 +848,6 @@ export function App() {
                   lang={voiceLanguage}
                   userLocation={coords}
                 />
-                <div className="flex justify-center">
-                  <ModeSelector
-                    selectedMode={vehicleMode}
-                    onSelectMode={handleModeChange}
-                    lang={voiceLanguage}
-                  />
-                </div>
               </div>
             )}
           </div>
@@ -924,11 +859,6 @@ export function App() {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   {voiceLanguage === 'ms' ? 'Langkah Laluan Berperingkat' : 'Route Step By Step'}
                 </span>
-                <ModeSelector
-                  selectedMode={vehicleMode}
-                  onSelectMode={handleModeChange}
-                  lang={voiceLanguage}
-                />
               </div>
 
               {/* Steps List (Flex-grow so it fills available height on tall desktop monitors) */}
@@ -968,7 +898,6 @@ export function App() {
               amenities={upcomingAmenities}
               amenityCategory={amenityCategory}
               onSelectAmenityCategory={setAmenityCategory}
-              shelter={nearbyMotorcycleShelter}
               lang={voiceLanguage}
               onRefreshAmenities={() => setAmenityRefreshTrigger(c => c + 1)}
             />

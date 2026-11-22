@@ -5,7 +5,6 @@ import {
   CornerUpLeft,
   RotateCw,
   MapPin,
-  ShieldAlert,
   Volume2,
   VolumeX,
   TrendingUp,
@@ -21,7 +20,6 @@ export interface TurnBannerProps {
   laneGuidance?: string;
   speedLimit?: number;
   currentSpeed?: number;
-  isMotorcycleLane?: boolean;
   isVoiceEnabled?: boolean;
   onToggleVoice?: () => void;
   voiceLanguage?: 'ms' | 'en';
@@ -36,7 +34,6 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
   laneGuidance,
   speedLimit,
   currentSpeed = 0,
-  isMotorcycleLane,
   isVoiceEnabled = true,
   onToggleVoice,
   voiceLanguage = 'en',
@@ -98,13 +95,6 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-slate-900/95 text-white shadow-2xl backdrop-blur-xl border border-slate-700/60 p-4 transition-all">
-      {isMotorcycleLane && (
-        <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-          <ShieldAlert className="h-3.5 w-3.5 text-emerald-400" />
-          <span>{voiceLanguage === 'ms' ? 'Lorong Motosikal Khas' : 'Dedicated Motorcycle Lane'}</span>
-        </div>
-      )}
-
       <div className="flex items-center gap-4">
         {/* Maneuver Icon Tile */}
         <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/30">

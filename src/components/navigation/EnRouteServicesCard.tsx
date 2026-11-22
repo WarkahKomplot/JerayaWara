@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Fuel, Zap, ShieldAlert, MapPin, ExternalLink, RefreshCw } from 'lucide-react';
+import { Fuel, Zap, MapPin, ExternalLink, RefreshCw } from 'lucide-react';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
-import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
 import { Language, t } from '../../services/i18n/translations';
 import { getPlugShareUrl, syncOsmEvStations } from '../../services/amenities/osmEvService';
 
@@ -9,7 +8,6 @@ export interface EnRouteServicesCardProps {
   amenities: EnRouteAmenityWithDistance[];
   activeCategory: 'all' | 'petrol' | 'ev';
   onSelectCategory: (category: 'all' | 'petrol' | 'ev') => void;
-  shelter?: MotorcycleShelter | null;
   lang?: Language;
   onRefreshAmenities?: () => void;
 }
@@ -18,7 +16,6 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
   amenities,
   activeCategory,
   onSelectCategory,
-  shelter,
   lang = 'ms',
   onRefreshAmenities
 }) => {
@@ -162,21 +159,6 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
             <RefreshCw className={`h-3 w-3 ${isSyncingEv ? 'animate-spin' : ''}`} />
             <span>{isSyncingEv ? t('syncingOsmEv', lang) : t('syncOsmEv', lang)}</span>
           </button>
-        </div>
-      )}
-
-      {/* Motorcycle Rain Shelter Alert Banner */}
-      {shelter && (
-        <div className="mt-2.5 flex items-center gap-2.5 rounded-xl bg-blue-950/70 border border-blue-800/70 p-2.5 text-blue-200">
-          <ShieldAlert className="h-5 w-5 text-blue-400 flex-shrink-0 animate-bounce" />
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-black text-white truncate">
-              {shelter.name}
-            </div>
-            <div className="text-[10px] text-blue-300">
-              {shelter.expressway} {shelter.kmMarker} · {lang === 'ms' ? 'Teluk Berteduh Motosikal' : 'Motorcycle Rain Shelter'}
-            </div>
-          </div>
         </div>
       )}
 

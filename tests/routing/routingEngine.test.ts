@@ -62,12 +62,6 @@ describe('Routing Engine', () => {
     expect(route.destinationName).toBe('Seremban');
   });
 
-  it('motorcycle route flags dedicated motorcycle lanes and exemptions', async () => {
-    const route = await calculateRoute(klCoords, serembanCoords, 'motorcycle');
-    expect(route.profile).toBe('motorcycle');
-    expect(route.steps.some(s => s.instruction.toLowerCase().includes('motosikal') || s.isMotorcycleLane)).toBe(true);
-  });
-
   describe('Route Drift & Geometry Integrity (routeGap Algorithm)', () => {
     const referenceCorridor: [number, number][] = [
       [101.693, 3.141],

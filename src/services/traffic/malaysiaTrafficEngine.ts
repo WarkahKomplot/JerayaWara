@@ -1,5 +1,4 @@
 import { TrafficAnalysis, TrafficLevel } from './types';
-import { VehicleClass } from '../toll/types';
 
 export interface MalaysiaTime {
   hours: number;
@@ -254,7 +253,6 @@ export function detectRouteCorridors(routeCoordinates: [number, number][]): stri
 export function analyzeRouteTraffic(
   routeCoordinates: [number, number][],
   freeFlowMinutes: number,
-  vehicleMode: VehicleClass = 'car',
   referenceDate: Date = new Date()
 ): TrafficAnalysis {
   if (!routeCoordinates || routeCoordinates.length < 2 || freeFlowMinutes <= 0) {
@@ -302,12 +300,7 @@ export function analyzeRouteTraffic(
   }
 
   // Calculate gross delay in minutes
-  let delayMinutes = Math.round(freeFlowMinutes * delayMultiplier);
-
-  // Motorcycles have lane filtering and dedicated motorcycle paths in Malaysia (75% discount)
-  if (vehicleMode === 'motorcycle') {
-    delayMinutes = Math.round(delayMinutes * 0.25);
-  }
+  const delayMinutes = Math.round(freeFlowMinutes * delayMultiplier);
 
   const totalMinutes = freeFlowMinutes + delayMinutes;
   const delayFactor = parseFloat((totalMinutes / freeFlowMinutes).toFixed(2));

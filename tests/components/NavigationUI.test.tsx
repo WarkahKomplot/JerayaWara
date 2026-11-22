@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TurnBanner } from '../../src/components/navigation/TurnBanner';
 import { SearchBar } from '../../src/components/search/SearchBar';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
-import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { SpeedometerOverlay } from '../../src/components/navigation/SpeedometerOverlay';
 import { RouteResult } from '../../src/services/routing/types';
 import { EnRouteAmenityWithDistance } from '../../src/services/amenities/types';
@@ -22,14 +21,6 @@ describe('Navigation UI Components', () => {
     expect(screen.getByText('Exit 215 onto PLUS Hwy E2')).toBeDefined();
     expect(screen.getByText(/450 m/i)).toBeDefined();
     expect(screen.getByText('110')).toBeDefined();
-  });
-
-  it('renders mode switchers for Car and Motorcycle', () => {
-    const handleSelect = vi.fn();
-    render(<ModeSelector selectedMode="car" onSelectMode={handleSelect} />);
-
-    expect(screen.getByText(/Car/i)).toBeDefined();
-    expect(screen.getByText(/Motorcycle/i)).toBeDefined();
   });
 
   it('invokes onSelectDestination when user clicks a search item', async () => {

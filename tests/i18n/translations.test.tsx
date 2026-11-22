@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { getLocalizedStepInstruction, UI_TRANSLATIONS } from '../../src/services/i18n/translations';
-import { ModeSelector } from '../../src/components/navigation/ModeSelector';
 import { FavoritesQuickChips } from '../../src/components/favorites/FavoritesQuickChips';
 import { TripSummaryDrawer } from '../../src/components/navigation/TripSummaryDrawer';
 import { TollBreakdownModal } from '../../src/components/navigation/TollBreakdownModal';
@@ -47,16 +46,6 @@ describe('Bilingual Localization System (BM / EN)', () => {
     };
     expect(getLocalizedStepInstruction(stepArrive, 'ms', 'Genting Highlands')).toBe('Tiba di Genting Highlands');
     expect(getLocalizedStepInstruction(stepArrive, 'en', 'Genting Highlands')).toBe('Arrive at Genting Highlands');
-  });
-
-  it('renders ModeSelector in Bahasa Melayu and English', () => {
-    const { rerender } = render(<ModeSelector selectedMode="car" onSelectMode={() => {}} lang="ms" />);
-    expect(screen.getByText('Kereta')).toBeDefined();
-    expect(screen.getByText('Motosikal')).toBeDefined();
-
-    rerender(<ModeSelector selectedMode="car" onSelectMode={() => {}} lang="en" />);
-    expect(screen.getByText('Car')).toBeDefined();
-    expect(screen.getByText('Motorcycle')).toBeDefined();
   });
 
   it('renders FavoritesQuickChips labels in Bahasa Melayu and English', () => {

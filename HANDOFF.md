@@ -1,96 +1,94 @@
-# Handoff — JerayaWara PWA fixes (ready to push)
+# Handoff — car-only mode removal (one commit to push)
 
 **Prepared:** 2026-11-22
 **Branch:** `main`
-**Baseline:** `a2b0ad7` (was in sync with `origin/main`)
-**Status:** the fixes are **committed locally but not pushed**. The commit on top of
-`a2b0ad7` is the only new commit; run `git log --oneline -3` to confirm before pushing.
+**Remote `origin/main`:** `aa5fe1a` (`ci: trigger GitHub Pages deployment`)
+**Local HEAD:** the car-only commit — **1 commit ahead of origin, not pushed**
+**Session baseline:** `a2b0ad7`
 
-This note exists so the agent/person uploading to GitHub knows exactly what changed,
-why, and what was deliberately left out.
-
----
-
-## Why these changes
-
-1. **The PWA deleted its own offline app-shell cache on every page load.**
-   `index.html` contained an inline bootstrap script that deleted every
-   `jerayawara-v*` cache except `jerayawara-v10`, while `public/sw.js` stored the
-   app shell in `jerayawara-v11`. Every load therefore wiped the active precache.
-   The registration also carried a stale `?v=10`, a third independent version.
-
-2. **The bundled POI index 404'd on GitHub Pages.**
-   `bulkPOIDbService.ts` fetched `/data/overture-poi-index.json` from the domain
-   root. The site is served from `/JerayaWara/`, where that path does not exist.
-   The production `base` is `./`, so the URL now derives from `import.meta.env.BASE_URL`.
-
-3. **The README overclaimed.** "Live traffic", "CCTV snapshots", "instant <1ms"
-   search, "avoids prohibited routes", and "millisecond failover" did not match the
-   implementation. A Known Limitations section now records the real behaviour.
+This note tells the uploader exactly what is pending and what is already live.
 
 ---
 
-## What changed
+## Already published (do not re-do)
 
-### 1. Service-worker cache lifecycle — app shell no longer self-destructs
-- `index.html`: removed the inline `caches.delete(...)` bootstrap block; left a
-  comment pointing to `public/sw.js` as the single owner of cache names.
-- `public/sw.js`: `CACHE_NAME` bumped `jerayawara-v11` → `jerayawara-v12`, so the
-  activate handler removes the old shell cache and repopulates the new one.
-- `src/main.tsx`: registers `${BASE_URL}sw.js` with `{ updateViaCache: 'none' }`
-  instead of `sw.js?v=10`, and still calls `reg.update()`.
+- **`80f82b6` — `fix(pwa): stop wiping the app-shell cache and fix subpath POI fetch`**
+  - `index.html` no longer deletes `jerayawara-v*` caches (it was wiping the live v11 shell on every load).
+  - `public/sw.js` cache bumped to `jerayawara-v12`; `sw.js` registered without the stale `?v=10`, with `updateViaCache: 'none'`.
+  - POI index URL derives from `import.meta.env.BASE_URL`, so it works under `/JerayaWara/`.
+  - README claims tightened + Known Limitations added; two regression test files added.
+- **`aa5fe1a` — empty CI-trigger commit.** Not created in this session; it is already on `origin/main`.
 
-### 2. POI index URL respects the deploy sub-path
-- `src/services/search/bulkPOIDbService.ts`: added exported
-  `buildPoiIndexUrl(baseUrl = import.meta.env.BASE_URL)`, which normalizes a
-  trailing slash and returns `<base>data/overture-poi-index.json`.
-  `syncBulkPOIsInStore()` now fetches through it.
-
-### 3. README now matches the code
-- "Live Traffic Adjustments / CCTV snapshots" → "Peak-Hour Traffic Modelling"
-  (explicitly a deterministic local model).
-- "Redundant Multi-Mirror Routing … millisecond failover" → automatic fallback
-  to the `routing.openstreetmap.de` mirror.
-- "Motorcycle: Avoids prohibited routes" → "Flags prohibited routes … with a
-  surface-route warning" (the app warns, it does not reroute around them).
-- Corridor pre-caching now states the ~350-tile cap; search states the 161-entry
-  curated directory and the IndexedDB/Nominatim/Photon tiers.
-- Added **Known Limitations**: online-only routing, simulated regional packs,
-  estimated speed limits, shared car/motorcycle OSRM profile, modelled (not live)
-  traffic, OSM tile policy.
-- Test badge and setup comment updated: 198 tests / 40 files.
-
-### 4. Regression tests added (written first, observed failing)
-- `tests/pwa/serviceWorkerAssets.test.ts` — cache names stay owned by `sw.js`,
-  no `?v=` registration query, `updateViaCache: 'none'` present.
-- `tests/search/poiIndexUrl.test.ts` — root, sub-path, relative (`./`) and
-  default `BASE_URL` resolution.
-
-### 5. Build artifacts
-- `dist/` is tracked in this repo, so it was rebuilt. The old
-  `dist/assets/index-1X2N1Ji_.js` is deleted; the new bundle is
-  `dist/assets/index-DdRX_kKP.js`. `dist/sw.js` carries `jerayawara-v12`.
-
-**Files touched:** `README.md`, `HANDOFF.md`, `index.html`, `public/sw.js`,
-`src/main.tsx`, `src/services/search/bulkPOIDbService.ts`,
-`dist/index.html`, `dist/sw.js`, `dist/assets/*`, plus the two new test files.
+Both are on GitHub. The push to make now only carries the car-only commit.
 
 ---
 
-## Verification already run (in this checkout)
+## Pending commit — remove motorcycle mode, car-only
+
+**Message:** `feat!: remove motorcycle mode and make the PWA car-only`
+
+### Product surface removed
+- `src/components/navigation/ModeSelector.tsx` deleted; both render sites removed from
+  `src/App.tsx` (pre-navigation search area and the desktop/foldable step-list header).
+- `vehicleMode` is no longer state: `App` uses a constant `'car'`, and the saved-session
+  restore no longer applies a stored `vehicleMode` (old sessions resume as car).
+- `handleModeChange` (mid-route mode switch) deleted.
+
+### Bike-only features removed
+- **Rain-shelter radar:** `src/services/amenities/motorcycleSheltersData.ts` and its test
+  deleted; App radar/voice alert, `TripSummaryDrawer` prop and
+  `EnRouteServicesCard` shelter banner removed.
+- **SMART Tunnel restriction banner** (was gated on `vehicleMode === 'motorcycle'`) removed.
+- **Motorcycle lane callouts:** `formatStepInstruction` no longer emits
+  "Lorong Motosikal" text; `TurnBanner` no longer renders the green lane badge.
+  `TurnStep.isMotorcycleLane` removed from `src/services/routing/types.ts`.
+- **Bike ETA discount:** `analyzeRouteTraffic` no longer takes a `vehicleMode` argument
+  and no longer applies the 25% lane-filtering discount.
+
+### Knock-on cleanup
+- `src/services/routing/sampleCorridors.ts` deleted — it was unused and referenced the
+  removed `isMotorcycleLane` field.
+- i18n keys removed from both dictionaries: `modeCar`, `modeMotorcycle`,
+  `motorcycleShelterAlert`, `motorcycleLaneAlert`, `tollClassMotorcycle`.
+  The toll modal now always labels the vehicle as Class 1.
+- Tests updated: deleted the motorcycle-shelter suite and the ModeSelector tests;
+  removed the motorcycle cases from the traffic and routing suites. Added
+  `tests/AppHeader.test.tsx` assertion that the PWA renders no Car/Motorcycle picker
+  (written first, observed failing, then made green).
+- README rewritten for car-only: Car profile only, no bike-lane claims, limitations and
+  test counts updated (190 tests / 39 files).
+
+### Deliberately retained (domain, not UI)
+- `VehicleClass = 'car' | 'motorcycle'`, the toll engine's Class 0 rates and
+  `motorcycleProhibited` gate flags, and their unit tests. The app always requests
+  Class 1, so these are inert fare data. A future full purge can remove them, but that
+  is a separate, larger change.
+
+**Files in this commit:** `README.md`, `HANDOFF.md`, `dist/*`, `src/App.tsx`,
+`src/components/navigation/{EnRouteServicesCard,TollBreakdownModal,TripSummaryDrawer,TurnBanner}.tsx`,
+deleted `ModeSelector.tsx`, `src/services/amenities/motorcycleSheltersData.ts`,
+`src/services/i18n/translations.ts`, `src/services/routing/{routingEngine,types}.ts`,
+deleted `src/services/routing/sampleCorridors.ts`,
+`src/services/traffic/malaysiaTrafficEngine.ts`, plus the test files listed above.
+
+---
+
+## Verification (fresh, after the final edit)
 
 ```
-npm ci        → 284 packages installed (Node v24.18.0, npm 11.16.0)
-npm test      → 40 test files, 198 tests passed (all green)
-npm run build → tsc + vite build OK; only the pre-existing >500 kB MapLibre
-                chunk warning
+npx tsc --noEmit → exit 0
+npm test         → 39 test files, 190 tests passed
+npm run build    → tsc + vite build OK; pre-existing >500 kB MapLibre chunk warning
 ```
 
-The build confirms `dist/sw.js` declares `jerayawara-v12`, `dist/index.html` has
-no cache-deletion bootstrap, and the shipped bundle contains
-`updateViaCache:"none"` and the relative `data/overture-poi-index.json` path.
+Bundle size dropped from ~242.5 kB to ~235.1 kB (gzip ~68.2 → ~66.4 kB) because the
+selector, shelter data and bike instruction branches are gone. `dist/` is rebuilt in the
+commit and still ships `jerayawara-v12`.
 
-`node_modules/` is present locally and gitignored — do not commit it.
+The suite prints `act(...)` warnings from pre-existing component tests; they are not
+failures and were present before this change.
+
+`node_modules/` is installed locally and gitignored — do not commit it.
 
 ---
 
@@ -99,46 +97,33 @@ no cache-deletion bootstrap, and the shipped bundle contains
 From `/Users/arief/projects/jerayawara pwa`:
 
 ```bash
-git status                 # should be clean
-git log --oneline -3       # the fix commit should be HEAD, parent a2b0ad7
+git status                 # clean
+git log --oneline -3       # car-only commit at HEAD, parent aa5fe1a
 git push origin main
 ```
 
-The push triggers `.github/workflows/deploy.yml`, which runs
-`npm ci` → `npm test` → `npm run build` and deploys `./dist` to GitHub Pages.
-If the workflow fails, the tests above are the first thing to compare against.
+This pushes only the car-only commit. The push triggers `.github/workflows/deploy.yml`
+(`npm ci` → `npm test` → `npm run build` → Pages).
 
-> The commit was created with the machine's auto-detected identity
-> (`Arief Zakaria <arief@Ariefs-MacBook.local>`). If the uploaded commit should
-> carry a GitHub-linked address, set `user.email` and run
-> `git commit --amend --reset-author` before pushing.
+> The commit uses the machine's auto-detected identity
+> (`Arief Zakaria <arief@Ariefs-MacBook.local>`). If it should carry a GitHub-linked
+> address, set `user.email` and run `git commit --amend --reset-author` before pushing.
 
-**Rollback:** `git reset --hard a2b0ad7` before pushing (discards the fix commit),
-or `git revert <fix-sha>` if it is already published. Note that remote clients that
-already loaded `jerayawara-v12` will keep it until the next SW update.
+**Rollback:** before pushing, `git reset --hard aa5fe1a` discards the car-only commit.
+After pushing, `git revert <sha>`.
 
 ---
 
-## Deliberately NOT changed (follow-ups)
+## Remaining follow-ups (not in this commit)
 
-These are known and documented in the README, but were out of scope for this fix:
-
-- **Regional packs are still simulated.** `regionManager.downloadRegion()` fakes
-  progress and stores metadata; `RegionDownloadModal` still advertises 40–65 MB
-  packs and the app still announces "Auto-downloading … pack". Either implement
-  real packed tiles/graphs or relabel the UI copy.
-- **Car and motorcycle still share OSRM `driving`.** Motorcycle mode only affects
-  tolls, restrictions, shelters and the ETA model.
+- **Regional packs are still simulated.** `regionManager.downloadRegion()` fakes progress
+  and stores metadata; `RegionDownloadModal` still advertises 40–65 MB packs and the app
+  announces "Auto-downloading … pack". Implement real packs or relabel the UI copy.
 - **Speed limits are always `'estimated'`**, so the red speeding state in
   `SpeedometerOverlay` never fires by design.
-- **Bulk POI index is tiny** (`public/data/overture-poi-index.json`, 17 records)
-  and only syncs lazily on first search; consider expanding it or removing the
-  layer.
-- **MapLibre CSS is loaded twice** (bundled via `MapContainer` import and the
-  unpkg `<link>` in `index.html`); the unpkg link is an avoidable network
-  dependency.
-- **`dist/` is committed** even though CI rebuilds it; consider gitignoring it to
-  keep future diffs small.
-- **Unused routing data**: `src/services/routing/sampleCorridors.ts` is unused and
-  `malaysiaRoadNetwork.ts` is now mainly a `distanceKm` helper despite ~580 lines
-  of corridor geometry.
+- **Bulk POI index is tiny** (`public/data/overture-poi-index.json`, 17 records) and only
+  syncs lazily on first search.
+- **MapLibre CSS is loaded twice** (bundled import plus the unpkg `<link>` in `index.html`).
+- **`dist/` is tracked** even though CI rebuilds it.
+- **`malaysiaRoadNetwork.ts`** is now mainly a `distanceKm` helper despite ~580 lines of
+  corridor geometry.

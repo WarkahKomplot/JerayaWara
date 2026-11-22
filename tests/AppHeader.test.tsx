@@ -39,6 +39,15 @@ describe('App Header and Language Toggle Integration', () => {
     });
   });
 
+  it('offers no vehicle mode selector — the PWA is car-only', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Motosikal|Motorcycle/i)).toBeNull();
+    });
+    expect(screen.queryByText(/^Kereta$|^Car$/)).toBeNull();
+  });
+
   it('renders FavoritesQuickChips and allows resetting a saved favorite via App handler', async () => {
     const mockFavs = [
       {

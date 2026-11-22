@@ -14,7 +14,6 @@ export const UI_TRANSLATIONS = {
     nightMode: 'MALAM',
     switchLangTooltip: 'Tukar ke English (EN)',
     flashFloodAlert: 'Banjir Kilat: Awas takungan air di',
-    motorcycleShelterAlert: 'Pondok Teduhan Motosikal:',
     ahead: 'di hadapan',
     driveCarefully: 'Pandu dengan cermat',
 
@@ -33,13 +32,8 @@ export const UI_TRANSLATIONS = {
     favHometown: 'Balik Kampung',
     deleteFav: 'Padam / Reset',
 
-    // Mode Selector
-    modeCar: 'Kereta',
-    modeMotorcycle: 'Motosikal',
-
     // Turn Banner
     inDistance: 'Dalam',
-    motorcycleLaneAlert: 'Lorong Motosikal Khas (Dedicated Lane)',
     turnLeft: 'Belok kiri ke',
     turnRight: 'Belok kanan ke',
     slightLeft: 'Kekal kiri ke',
@@ -105,7 +99,6 @@ export const UI_TRANSLATIONS = {
     tollModalSubtitle: 'Anggaran rasmi kadar plaza tol PLUS, KESAS, MEX, LDP & Jambatan Pulau Pinang',
     totalTollEstimate: 'Jumlah Anggaran Tol',
     tollClassCar: 'Kelas 1 (Kereta / Van)',
-    tollClassMotorcycle: 'Motosikal (Percuma)',
     paymentMethods: 'Kaedah Pembayaran',
     paymentMethodsDesc: 'Touch \'n Go, SmartTAG, RFID & MyDebit / Kad Kredit (PayDirect)',
     close: 'Tutup',
@@ -137,7 +130,6 @@ export const UI_TRANSLATIONS = {
     nightMode: 'NIGHT',
     switchLangTooltip: 'Switch to Bahasa Melayu (BM)',
     flashFloodAlert: 'Flash Flood: Water ponding alert at',
-    motorcycleShelterAlert: 'Motorcycle Rain Shelter:',
     ahead: 'ahead',
     driveCarefully: 'Drive safely',
 
@@ -156,13 +148,8 @@ export const UI_TRANSLATIONS = {
     favHometown: 'Hometown',
     deleteFav: 'Delete / Reset',
 
-    // Mode Selector
-    modeCar: 'Car',
-    modeMotorcycle: 'Motorcycle',
-
     // Turn Banner
     inDistance: 'In',
-    motorcycleLaneAlert: 'Dedicated Motorcycle Lane',
     turnLeft: 'Turn left onto',
     turnRight: 'Turn right onto',
     slightLeft: 'Keep left onto',
@@ -228,7 +215,6 @@ export const UI_TRANSLATIONS = {
     tollModalSubtitle: 'Official toll plaza rates for PLUS, KESAS, MEX, LDP & Penang Bridges',
     totalTollEstimate: 'Total Estimated Toll',
     tollClassCar: 'Class 1 (Car / Van)',
-    tollClassMotorcycle: 'Motorcycle (Toll Free)',
     paymentMethods: 'Payment Methods',
     paymentMethodsDesc: 'Touch \'n Go, SmartTAG, RFID & MyDebit / Credit Card (PayDirect)',
     close: 'Close',

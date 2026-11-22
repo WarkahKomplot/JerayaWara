@@ -3,7 +3,6 @@ import { Clock, CreditCard, X, ChevronRight, ListOrdered, ChevronDown, ChevronUp
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
 import { EnRouteAmenityWithDistance } from '../../services/amenities/types';
-import { MotorcycleShelter } from '../../services/amenities/motorcycleSheltersData';
 import { EnRouteServicesCard } from './EnRouteServicesCard';
 import { Language, t, getLocalizedStepInstruction } from '../../services/i18n/translations';
 
@@ -19,7 +18,6 @@ export interface TripSummaryDrawerProps {
   amenities?: EnRouteAmenityWithDistance[];
   amenityCategory?: 'all' | 'petrol' | 'ev';
   onSelectAmenityCategory?: (cat: 'all' | 'petrol' | 'ev') => void;
-  shelter?: MotorcycleShelter | null;
   trafficCongestion?: {
     level: string;
     label: string;
@@ -45,7 +43,6 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
   amenities,
   amenityCategory = 'all',
   onSelectAmenityCategory,
-  shelter,
   trafficCongestion,
   initialExpanded = false,
   lang = 'ms',
@@ -253,8 +250,8 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
         )}
       </div>
 
-      {/* En-Route Services Bar & Collapsible Card (Petrol, EV, Shelters) */}
-      {((amenities && amenities.length > 0) || shelter) && (
+      {/* En-Route Services Bar & Collapsible Card (Petrol & EV) */}
+      {amenities && amenities.length > 0 && (
         <div className="mt-3">
           <button
             type="button"
@@ -293,7 +290,6 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                   setLocalCategory(cat);
                   onSelectAmenityCategory?.(cat);
                 }}
-                shelter={shelter}
                 lang={lang}
                 onRefreshAmenities={onRefreshAmenities}
               />

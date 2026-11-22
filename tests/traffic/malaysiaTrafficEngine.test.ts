@@ -58,7 +58,6 @@ describe('Malaysian Peak-Hour Traffic Congestion Engine', () => {
     const analysis = analyzeRouteTraffic(
       kajangToSerembanRoute,
       freeFlowMinutes,
-      'car',
       tuesdayEveningRush
     );
 
@@ -70,35 +69,11 @@ describe('Malaysian Peak-Hour Traffic Congestion Engine', () => {
     expect(analysis.corridorsDetected.some(c => c.includes('E2') || c.includes('PLUS'))).toBe(true);
   });
 
-  it('gives motorcycle mode a 75% congestion bypass discount in traffic', () => {
-    const tuesdayEveningRush = new Date('2026-11-03T10:30:00Z');
-    const freeFlowMinutes = 35;
-
-    const carAnalysis = analyzeRouteTraffic(
-      kajangToSerembanRoute,
-      freeFlowMinutes,
-      'car',
-      tuesdayEveningRush
-    );
-
-    const motoAnalysis = analyzeRouteTraffic(
-      kajangToSerembanRoute,
-      freeFlowMinutes,
-      'motorcycle',
-      tuesdayEveningRush
-    );
-
-    expect(motoAnalysis.delayMinutes).toBeLessThan(carAnalysis.delayMinutes);
-    // Motorcycles weave or use dedicated lanes, saving substantial time
-    expect(motoAnalysis.delayMinutes).toBeLessThanOrEqual(Math.round(carAnalysis.delayMinutes * 0.35));
-  });
-
   it('reports smooth travel during off-peak hours with zero or negligible delay', () => {
     const wednesdayMidnight = new Date('2026-11-04T15:00:00Z'); // 23:00 MYT
     const analysis = analyzeRouteTraffic(
       kajangToSerembanRoute,
       35,
-      'car',
       wednesdayMidnight
     );
 

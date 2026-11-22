@@ -84,28 +84,13 @@ function mapOsrmManeuver(type: string, modifier?: string): ManeuverType {
   return 'straight';
 }
 
-const MALAYSIAN_EXPRESSWAY_PATTERN =
-  /\b(plus|kesas|federal|lebuhraya|expressway|utara|selatan|e1|e2)\b/i;
-
-/** True when the road name refers to a Malaysian expressway with a dedicated motorcycle lane. */
-function isMalaysianExpressway(roadName: string | undefined): boolean {
-  return !!roadName && MALAYSIAN_EXPRESSWAY_PATTERN.test(roadName);
-}
-
 function formatStepInstruction(
   maneuver: ManeuverType,
   roadName: string,
   destTitle?: string,
-  profile?: VehicleClass,
   exitNumber?: number
 ): string {
   const road = roadName && roadName !== 'unnamed' && roadName.trim() !== '' ? roadName : 'primary road';
-
-  if (profile === 'motorcycle' && isMalaysianExpressway(road)) {
-    if (maneuver === 'straight') {
-      return `Follow dedicated motorcycle lane (Lorong Motosikal) on ${road}`;
-    }
-  }
 
   switch (maneuver) {
     case 'arrive':
@@ -144,15 +129,13 @@ function formatStepInstruction(
  * - Specific entry and exit locations along closed expressway systems (PLUS E1, E2, LPT E8)
  * - Barrier toll plazas crossed (MEX E20, KESAS E5, LDP E11, SMART E38, Penang Bridges)
  * - Destination name and coordinates
- * - Vehicle mode (motorcycle exemptions & SMART restrictions)
  */
 export function determineRouteTollPlazas(
   start: [number, number],
   dest: [number, number],
   destTitle: string,
   roadNames: string[],
-  _distanceKmVal: number,
-  _profile: VehicleClass
+  _distanceKmVal: number
 ): string[] {
   const keys: string[] = [];
 
@@ -364,8 +347,6 @@ export async function calculateRoute(
               const isLast = idx === legSteps.length - 1;
               const exitNum = typeof s.maneuver?.exit === 'number' ? s.maneuver.exit : undefined;
 
-              const isMoto = profile === 'motorcycle' && isMalaysianExpressway(s.name);
-
               const osrmLaneHint = extractOsrmLaneGuidance(s, maneuver);
 
               turnSteps.push({
@@ -374,16 +355,13 @@ export async function calculateRoute(
                 destinationSide: isLast && (s.maneuver?.modifier === 'left' || s.maneuver?.modifier === 'right')
                   ? s.maneuver.modifier
                   : undefined,
-                instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, profile, exitNum),
+                instruction: formatStepInstruction(isLast ? 'arrive' : maneuver, s.name, destinationTitle, exitNum),
                 distanceMeters: Math.round(s.distance),
                 durationSeconds: Math.round(s.duration),
                 coordinates: s.maneuver?.location || rawCoordinates[0],
                 speedLimitKmH: /\be\d+\b/i.test(s.name || '') ? 110 : 80,
                 speedLimitSource: 'estimated',
-                isMotorcycleLane: isMoto,
-                laneGuidance: isMoto
-                  ? 'Use dedicated motorcycle lane (Lorong Motosikal)'
-                  : osrmLaneHint
+                laneGuidance: osrmLaneHint
                   ? osrmLaneHint
                   : maneuver === 'flyover'
                   ? 'Use middle or right lanes for flyover'
@@ -411,11 +389,10 @@ export async function calculateRoute(
               destination,
               destinationTitle || '',
               roadNames,
-              distanceKmVal,
-              profile
+              distanceKmVal
             );
 
-            const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal, profile);
+            const traffic = analyzeRouteTraffic(rawCoordinates, durationMinutesVal);
 
             // Connect user's current GPS location directly to route so navigation line starts right at user puck
             const fullRouteCoordinates: [number, number][] = [start, ...rawCoordinates];
