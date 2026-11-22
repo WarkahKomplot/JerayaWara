@@ -204,7 +204,10 @@ export function App() {
       routePolyline: isNavigating && activeRoute ? activeRoute.coordinates : undefined,
       heading,
       speedKmH,
-      thresholdKm: 1.0
+      // Navigation is corridor-verified so 1 km ahead is useful; free cruising
+      // has no road context, and a 1 km radius pulled in cameras on parallel
+      // roads, so keep that mode tighter.
+      thresholdKm: isNavigating ? 1.0 : 0.5
     });
   }, [radarCoordKey, isNavigating, activeRoute, heading, speedKmH]);
 

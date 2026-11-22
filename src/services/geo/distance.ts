@@ -17,3 +17,16 @@ export function distanceKm(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 10) / 10;
 }
+
+/** Precise distance in meters between two [lng, lat] points. */
+export function distanceMeters(
+  coord1: [number, number],
+  coord2: [number, number]
+): number {
+  const dLng =
+    (coord2[0] - coord1[0]) *
+    111320 *
+    Math.cos((((coord1[1] + coord2[1]) / 2) * Math.PI) / 180);
+  const dLat = (coord2[1] - coord1[1]) * 110574;
+  return Math.hypot(dLng, dLat);
+}

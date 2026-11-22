@@ -1,4 +1,4 @@
-import { distanceKm } from '../geo/distance';
+import { distanceMeters } from '../geo/distance';
 
 export interface AESCamera {
   id: string;
@@ -456,17 +456,21 @@ export function findNearbyAESCamera(
 
     for (const cam of MALAYSIA_AES_CAMERAS) {
       // Fast radial pre-filter (ignore cameras > 2.5km away)
-      const straightDistKm = distanceKm(userCoord, cam.coordinates);
-      if (straightDistKm > 2.5) continue;
+      if (distanceMeters(userCoord, cam.coordinates) > 2500) continue;
 
       // Find closest segment from the camera to the upcoming route
       let camMinDistToRoute = Infinity;
       let camClosestSegIdx = -1;
 
+      // Scan roughly 2 km ahead. A segment-count cap (the old 35-segment
+      // shortcut) is unreliable because OSRM segment length varies with road
+      // density and could skip a camera only 700 m ahead.
+      let lookaheadMeters = 0;
+
       for (let j = userClosestSegIdx; j < routePolyline.length - 1; j++) {
-        // Performance optimization: stop lookahead once segments are far past camera proximity
-        if (j - userClosestSegIdx > 35 && distanceKm(cam.coordinates, routePolyline[j]) > 2.5) {
-          break;
+        if (j > userClosestSegIdx) {
+          lookaheadMeters += distanceMeters(routePolyline[j], routePolyline[j + 1]);
+          if (lookaheadMeters > 2000) break;
         }
         const d = distancePointToSegmentMeters(cam.coordinates, routePolyline[j], routePolyline[j + 1]);
         if (d < camMinDistToRoute) {
@@ -491,34 +495,41 @@ export function findNearbyAESCamera(
         continue;
       }
 
+      // Precise projections: summing distanceKm() per segment rounds every
+      // segment to 0.1 km first, which on dense OSRM geometry can turn a 2.5 km
+      // gap into ~0 m and trigger an alert for a camera kilometres away.
+      const userSegA = routePolyline[userClosestSegIdx];
+      const userSegB = routePolyline[userClosestSegIdx + 1];
+      const userSegLenMeters = distanceMeters(userSegA, userSegB);
+      const { t: tUser } = projectPointOntoSegment(userCoord, userSegA, userSegB);
+
+      const camSegA = routePolyline[camClosestSegIdx];
+      const camSegB = routePolyline[camClosestSegIdx + 1];
+      const camSegLenMeters = distanceMeters(camSegA, camSegB);
+      const { t: tCam } = projectPointOntoSegment(cam.coordinates, camSegA, camSegB);
+
       // 3. LONGITUDINAL CHECK: If on the very same segment, has the user already passed the camera?
       if (camClosestSegIdx === userClosestSegIdx) {
-        const segLenMeters = Math.hypot(
-          (segB[0] - segA[0]) * 111320 * Math.cos(((segA[1] + segB[1]) / 2) * (Math.PI / 180)),
-          (segB[1] - segA[1]) * 110574
-        );
-        const { t: tUser } = projectPointOntoSegment(userCoord, segA, segB);
-        const { t: tCam } = projectPointOntoSegment(cam.coordinates, segA, segB);
-
         // If user is already past the camera by more than 15 meters:
-        const bufferT = segLenMeters > 0 ? 15 / segLenMeters : 0;
+        const bufferT = userSegLenMeters > 0 ? 15 / userSegLenMeters : 0;
         if (tUser > tCam + bufferT) {
           // Passed camera already!
           continue;
         }
       }
 
-      // Calculate path distance along route polyline
+      // Precise path distance along the route polyline.
       let distAlongRouteMeters = 0;
       if (camClosestSegIdx === userClosestSegIdx) {
-        distAlongRouteMeters = Math.round(distanceKm(userCoord, cam.coordinates) * 1000);
+        distAlongRouteMeters = Math.max(0, tCam - tUser) * userSegLenMeters;
       } else {
-        distAlongRouteMeters += Math.round(distanceKm(userCoord, routePolyline[userClosestSegIdx + 1]) * 1000);
+        distAlongRouteMeters = (1 - tUser) * userSegLenMeters;
         for (let k = userClosestSegIdx + 1; k < camClosestSegIdx; k++) {
-          distAlongRouteMeters += Math.round(distanceKm(routePolyline[k], routePolyline[k + 1]) * 1000);
+          distAlongRouteMeters += distanceMeters(routePolyline[k], routePolyline[k + 1]);
         }
-        distAlongRouteMeters += Math.round(distanceKm(routePolyline[camClosestSegIdx], cam.coordinates) * 1000);
+        distAlongRouteMeters += tCam * camSegLenMeters;
       }
+      distAlongRouteMeters = Math.round(distAlongRouteMeters);
 
       if (distAlongRouteMeters <= thresholdMeters && distAlongRouteMeters < minRouteDist) {
         minRouteDist = distAlongRouteMeters;
@@ -538,7 +549,7 @@ export function findNearbyAESCamera(
   let minDistanceMeters = Infinity;
 
   for (const cam of MALAYSIA_AES_CAMERAS) {
-    const distMeters = Math.round(distanceKm(userCoord, cam.coordinates) * 1000);
+    const distMeters = Math.round(distanceMeters(userCoord, cam.coordinates));
 
     if (distMeters <= thresholdMeters && distMeters < minDistanceMeters) {
       // If moving and heading is available:

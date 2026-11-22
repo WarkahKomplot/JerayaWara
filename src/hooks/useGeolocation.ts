@@ -21,6 +21,35 @@ export interface LocationState {
  * The watch is restarted when the mode flips; the deadband filter prevents
  * redundant state churn within either mode.
  */
+/**
+ * Resolves a usable travel heading. `pos.coords.heading` is null whenever the
+ * device cannot determine course (common at low speed and on some Android
+ * builds); defaulting it to 0 silently made the app believe it was driving
+ * north, which skewed the AES forward-cone warnings and rotated the follow
+ * camera north. Fall back to the bearing between consecutive fixes instead.
+ */
+export function resolveHeading(
+  previous: [number, number] | null,
+  current: [number, number],
+  reported: number | null | undefined
+): number {
+  if (reported !== null && reported !== undefined && !Number.isNaN(reported)) {
+    return reported;
+  }
+  if (!previous) return 0;
+
+  const [prevLng, prevLat] = previous;
+  const [lng, lat] = current;
+  const y = Math.sin(((lng - prevLng) * Math.PI) / 180) * Math.cos((lat * Math.PI) / 180);
+  const x =
+    Math.cos((prevLat * Math.PI) / 180) * Math.sin((lat * Math.PI) / 180) -
+    Math.sin((prevLat * Math.PI) / 180) *
+      Math.cos((lat * Math.PI) / 180) *
+      Math.cos(((lng - prevLng) * Math.PI) / 180);
+
+  return (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+}
+
 export function useGeolocation(options?: {
   /** High-accuracy GNSS while true; battery-saver watch while false. Default false. */
   highAccuracy?: boolean;
@@ -54,16 +83,18 @@ export function useGeolocation(options?: {
       lastEmittedRef.current = null;
       lastPositionRef.current = null;
       navigator.geolocation.getCurrentPosition(pos => {
+        const resumeCoord: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        const resumeHeading = resolveHeading(null, resumeCoord, pos.coords.heading);
         lastEmittedRef.current = {
-          coord: [pos.coords.longitude, pos.coords.latitude],
-          heading: Math.round(pos.coords.heading ?? 0),
+          coord: resumeCoord,
+          heading: Math.round(resumeHeading),
           speedKmH: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
           accuracy: Math.round(pos.coords.accuracy)
         };
         setLocation(prev => ({
           ...prev,
-          coords: [pos.coords.longitude, pos.coords.latitude],
-          heading: Math.round(pos.coords.heading ?? 0),
+          coords: resumeCoord,
+          heading: Math.round(resumeHeading),
           speedKmH: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
           accuracy: Math.round(pos.coords.accuracy),
           isGpsLocked: true,
@@ -97,22 +128,7 @@ export function useGeolocation(options?: {
         const accuracy = pos.coords.accuracy;
         const speed = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
 
-        let heading = pos.coords.heading ?? 0;
-        // If device heading is unavailable, approximate from previous position
-        if (heading === null || isNaN(heading)) {
-          if (lastPositionRef.current) {
-            const [prevLng, prevLat] = lastPositionRef.current;
-            const y = Math.sin((lng - prevLng) * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180));
-            const x =
-              Math.cos(prevLat * (Math.PI / 180)) * Math.sin(lat * (Math.PI / 180)) -
-              Math.sin(prevLat * (Math.PI / 180)) *
-                Math.cos(lat * (Math.PI / 180)) *
-                Math.cos((lng - prevLng) * (Math.PI / 180));
-            heading = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
-          } else {
-            heading = 0;
-          }
-        }
+        const heading = resolveHeading(lastPositionRef.current, currentCoord, pos.coords.heading);
         lastPositionRef.current = currentCoord;
 
         const roundedHeading = Math.round(heading);

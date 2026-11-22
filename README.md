@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-207%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-214%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -37,7 +37,7 @@
 ### 🔍 4. Search & Highway Intelligence
 * **Tiered Search**: Instant in-memory lookup across 161 curated highway exits, R&Rs, hospitals and landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), then a bundled IndexedDB index of ~21,700 Malaysian cities, towns and villages, and finally rate-limited Nominatim/Photon geocoding.
 * **Malaysian Toll Breakdown**: Physical crossing detection with chainage rate tables (PLUS E1/E2 closed network, MEX, KESAS, LDP, Penang Bridges).
-* **AES / AwAS Radar**: Directional camera warnings with national speed limits (110 / 90 / 80 km/h).
+* **AES / AwAS Radar**: Directional camera warnings with national speed limits (110 / 90 / 80 km/h), precise along-route distance and heading filtering so cameras on parallel roads or behind you do not fire.
 * **Banjir Kilat (Flood) Radar**: Historical flash-flood blackspots alert when heavy rain is detected.
 
 ---
@@ -93,7 +93,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (207 tests across 46 suites)
+# Run automated tests (214 tests across 48 suites)
 npm test
 
 # Production build
