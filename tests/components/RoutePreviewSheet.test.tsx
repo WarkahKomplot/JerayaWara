@@ -84,4 +84,22 @@ describe('RoutePreviewSheet (pre-departure confirmation)', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onStart).not.toHaveBeenCalled();
   });
+
+  it('labels a cached route and warns that it may be stale', () => {
+    render(
+      <RoutePreviewSheet
+        route={realRoute}
+        tolls={tolls}
+        isCalculating={false}
+        isCached={true}
+        cachedAt={new Date('2026-11-22T10:30:00+08:00').getTime()}
+        lang="en"
+        onStart={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Cached route/)).toBeTruthy();
+    expect(screen.getByText(/may be out of date/)).toBeTruthy();
+  });
 });

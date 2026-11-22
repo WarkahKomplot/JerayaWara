@@ -55,3 +55,30 @@ jobs:
                 body
               });
             }
+
+      - name: Close the open issue after recovery
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Upstream routing/tile health check failing';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            for (const issue of issues.filter(issue => issue.title === title)) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Recovered: all critical upstream services responded on ${new Date().toISOString()}. Closing this issue.`
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }

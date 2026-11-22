@@ -10,6 +10,9 @@ export interface RoutePreviewSheetProps {
   isCalculating: boolean;
   /** Honest failure message (e.g. no connection) shown when route is null. */
   errorMessage?: string | null;
+  /** True when this preview is a locally cached route because routing failed. */
+  isCached?: boolean;
+  cachedAt?: number;
   lang?: Language;
   onStart: () => void;
   onCancel: () => void;
@@ -25,6 +28,8 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
   tolls,
   isCalculating,
   errorMessage,
+  isCached = false,
+  cachedAt,
   lang = 'ms',
   onStart,
   onCancel
@@ -71,6 +76,9 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
   if (!route) return null;
 
   const trafficDelay = route.traffic?.delayMinutes ?? 0;
+  const cachedTime = cachedAt
+    ? new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
 
   return (
     <div className="fixed bottom-4 left-1/2 z-40 w-[min(92vw,26rem)] -translate-x-1/2">
@@ -83,9 +91,15 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold truncate">{route.destinationName}</p>
-              <p className="flex items-center gap-1 text-[10px] text-slate-400">
-                <Wifi className="h-3 w-3" />
-                {lang === 'ms' ? 'Laluan jalan sebenar' : 'Real road route'}
+              <p className={`flex items-center gap-1 text-[10px] ${isCached ? 'text-amber-300' : 'text-slate-400'}`}>
+                {isCached ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
+                {isCached
+                  ? lang === 'ms'
+                    ? `Laluan cache ${cachedTime}`
+                    : `Cached route ${cachedTime}`
+                  : lang === 'ms'
+                  ? 'Laluan jalan sebenar'
+                  : 'Real road route'}
               </p>
             </div>
           </div>
@@ -135,6 +149,17 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
           <div className="px-4 pb-2">
             <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 text-[11px] text-amber-300">
               {route.traffic.labelEn} — {route.traffic.reason}
+            </p>
+          </div>
+        )}
+
+        {/* Cached-route warning */}
+        {isCached && (
+          <div className="px-4 pb-2">
+            <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 text-[11px] text-amber-300">
+              {lang === 'ms'
+                ? 'Salinan luar talian — laluan mungkin tidak terkini.'
+                : 'Offline copy — the route may be out of date.'}
             </p>
           </div>
         )}

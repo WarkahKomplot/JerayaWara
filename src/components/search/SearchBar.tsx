@@ -44,11 +44,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
     let isCurrent = true;
     setIsLoading(true);
+    const controller = new AbortController();
 
     const timer = setTimeout(() => {
       // Fall back to navigator.onLine if isOnline is undefined or false but browser has active internet connection
       const effectiveOnline = typeof isOnline === 'boolean' ? (isOnline || (typeof navigator !== 'undefined' && navigator.onLine)) : true;
-      searchDestinations(query, effectiveOnline, userLocation).then(res => {
+      searchDestinations(query, effectiveOnline, userLocation, controller.signal).then(res => {
         if (isCurrent) {
           setResults(res);
           setIsOpen(true);
@@ -62,6 +63,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return () => {
       isCurrent = false;
       clearTimeout(timer);
+      // Drop the queued/active geocoding request for superseded keystrokes.
+      controller.abort();
     };
   }, [query, isOnline]);
 

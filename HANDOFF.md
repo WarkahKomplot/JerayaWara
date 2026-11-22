@@ -1,15 +1,15 @@
-# Handoff — four pending commits (car-only, offline tiles, fake pack UI, routing failover)
+# Handoff — five pending commits (car-only, offline tiles, pack UI, routing failover, hardening)
 
 **Prepared:** 2026-11-22
 **Branch:** `main`
 **Remote `origin/main`:** `aa5fe1a`
-**Local HEAD:** routing failover + health checks — **4 commits ahead, not pushed**
+**Local HEAD:** cache/search/install hardening — **5 commits ahead, not pushed**
 **Session baseline:** `a2b0ad7`
 
-Push all four pending commits:
+Push all five pending commits:
 
 ```bash
-git log --oneline -6   # expect: routing failover, pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
+git log --oneline -7   # expect: hardening, routing failover, pack-UI removal, offline fix, car-only, aa5fe1a, 80f82b6
 git push origin main
 ```
 
@@ -62,7 +62,7 @@ zoom-major, starving long routes. Changes:
 
 ---
 
-## Pending commit 3 — remove the simulated offline-map download UI (HEAD)
+## Pending commit 3 — remove the simulated offline-map download UI
 
 `refactor(offline)!: remove the simulated region-pack downloader`
 
@@ -85,7 +85,7 @@ real offline coverage now comes from corridor tile pre-caching.
 
 ---
 
-## Pending commit 4 — routing failover, monitoring & attribution (HEAD)
+## Pending commit 4 — routing failover, monitoring & attribution
 
 `feat(routing): add Valhalla fallback, circuit breaker and free health checks`
 
@@ -115,15 +115,51 @@ real offline coverage now comes from corridor tile pre-caching.
 
 ---
 
+## Pending commit 5 — storage, search and install hardening (HEAD)
+
+`feat(pwa): bound caches, throttle geocoding, add route cache and install icons`
+
+- **Tile cache cap:** `public/sw.js` trims `jerayawara-tiles-v1` to 3,000 entries on
+  activate and every 100 tile writes, evicting oldest-first.
+- **Update prompt:** `main.tsx` dispatches `jerayawara:sw-update-ready` when a new
+  worker installs; `useServiceWorkerUpdate` + `UpdatePrompt` render a non-blocking
+  "Reload" toast instead of leaving users on stale JS.
+- **Polite geocoding:** `searchEngine.ts` queues Nominatim at ~1 req/s and Photon at
+  ~0.4 req/s, caches parsed results in localStorage for 7 days (100-entry cap, LRU
+  prune), caps each search at two query variants, and supports an abort `signal`.
+  `SearchBar` aborts the previous request on every keystroke.
+- **Last-good route cache:** `routeCache.ts` keeps 6 recent routes for 7 days
+  (start/destination rounded to ~100 m). `App` falls back to a cached route with a
+  "Cached route" label and stale warning when routing fails, and Start Navigation
+  no longer throws if the full-geometry refetch fails.
+- **Install icons:** generated `icon-192.png`, `icon-512.png`,
+  `icon-maskable-512.png`, and `apple-touch-icon.png`. The manifest now ships PNG
+  any + maskable entries, `index.html` links the iOS icon, and the SW precaches them.
+- **Offline POI index:** replaced the 17-record Overture sample with a
+  **21,684-record GeoNames index** (`public/data/malaysia-poi-index.json`, ~1.1 MB)
+  covering cities, towns, villages, malls and hospitals. Rebuild with
+  `scripts/build-geonames-poi-index.py` (GeoNames, CC BY 4.0). A version marker
+  replaces the old 17-record cache; `bulkPOISync.test.ts` imports the real asset
+  and finds Kajang. The index is warmed 1.2 s after mount, and `searchBulkPOIs`
+  awaits the one-time import if a first search still arrives first.
+- **Health check:** the workflow now closes its issue after recovery.
+- **Docs/data attribution:** README license notes OSM (ODbL) + GeoNames (CC BY 4.0).
+
+New tests: `geocodeRateLimit`, `routeCache`, `useServiceWorkerUpdate`,
+`poiIndexAsset`, `bulkPOISync`, cached-route preview, and manifest icon assertions.
+
+---
+
 ## Verification (fresh, after the final edit)
 
 ```
 npx tsc --noEmit → exit 0
-npm test         → 40 test files, 198 tests passed
+npm test         → 45 test files, 211 tests passed
 npm run build    → tsc + vite build OK; pre-existing >500 kB MapLibre chunk warning
 ```
 
-Bundle: `dist/assets/index-DrfloBYa.js` ≈ 228.0 kB (gzip 65.0 kB).
+Bundle: `dist/assets/index-Dzc-5hLe.js` ≈ 233.3 kB (gzip 66.7 kB); the bundled
+GeoNames POI index is ~1.1 MB and is fetched lazily on first search.
 Local `node scripts/healthcheck.mjs` passes: OSRM primary + mirror up, Valhalla
 intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `dist/` is rebuilt in the commit and still ships
 `jerayawara-v12`. `node_modules/` is gitignored.
@@ -134,7 +170,7 @@ intermittently slow (reported but non-fatal), tiles and Nominatim reachable. `di
 
 ```bash
 git status                 # clean
-git push origin main       # pushes all four commits
+git push origin main       # pushes all five commits
 ```
 
 CI runs `npm ci` → `npm test` → `npm run build` → Pages.
@@ -143,8 +179,8 @@ CI runs `npm ci` → `npm test` → `npm run build` → Pages.
 > address, set `user.email` and `git commit --amend --reset-author` on each commit
 > before pushing.
 
-**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all four. After
-pushing, revert the four SHAs.
+**Rollback:** before pushing, `git reset --hard aa5fe1a` discards all five. After
+pushing, revert the five SHAs.
 
 ---
 
@@ -156,7 +192,8 @@ pushing, revert the four SHAs.
 - **Dead Dexie schema:** `offlineDb.regions` / `offlineDb.tiles` are unused after the
   pack-UI removal; drop them with a `version(3)` migration when convenient.
 - **Speed limits are always `'estimated'`**, so the red speeding state never fires.
-- **Bulk POI index is tiny** (17 records) and syncs lazily on first search.
+- **POI index refreshes are manual:** rerun `scripts/build-geonames-poi-index.py`
+  and bump `POI_INDEX_VERSION` in `bulkPOIDbService.ts` alongside `updatedAt`.
 - **`dist/` is tracked** even though CI rebuilds it.
 - **`malaysiaRoadNetwork.ts`** is mostly a `distanceKm` helper plus unused corridor data.
 - **Valhalla's demo server is slow and has no SLA**; it is a fallback only, with a

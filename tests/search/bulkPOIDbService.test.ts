@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { offlineDb } from '../../src/services/offline/db';
-import { searchBulkPOIs } from '../../src/services/search/bulkPOIDbService';
+import {
+  searchBulkPOIs,
+  resetBulkSyncPromiseForTest
+} from '../../src/services/search/bulkPOIDbService';
 
 describe('Bulk POI IndexedDB Service', () => {
   beforeEach(async () => {
@@ -60,4 +63,27 @@ describe('Bulk POI IndexedDB Service', () => {
     expect(results[0].distanceKm).toBeDefined();
     expect(results[0].distanceKm).toBeLessThan(5);
   });
+
+  it('imports the bundled index on the first search when the store is empty', async () => {
+    const payload = {
+      count: 2,
+      updatedAt: '2026-11-22',
+      records: [
+        ['Kajang', 101.79, 2.99, 'city', 'Selangor'],
+        ['Tapah', 101.26, 4.2, 'city', 'Perak']
+      ]
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 })));
+
+    resetBulkSyncPromiseForTest();
+    localStorage.removeItem('jerayawara_poi_index_version');
+
+    const results = await searchBulkPOIs('Kajang', 5);
+
+    expect(results.some(result => result.title === 'Kajang')).toBe(true);
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });

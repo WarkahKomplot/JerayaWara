@@ -14,6 +14,26 @@ if ('serviceWorker' in navigator && (import.meta.env.PROD || process.env.NODE_EN
       .register(swUrl, { updateViaCache: 'none' })
       .then(reg => {
         reg.update();
+
+        const notifyUpdateReady = () => {
+          window.dispatchEvent(new CustomEvent('jerayawara:sw-update-ready'));
+        };
+
+        // A worker already waiting means a deploy landed while this tab was open.
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          notifyUpdateReady();
+        }
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              notifyUpdateReady();
+            }
+          });
+        });
+
         console.log('JerayaWara PWA Service Worker registered:', reg.scope);
       })
       .catch(err => {

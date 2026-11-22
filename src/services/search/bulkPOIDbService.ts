@@ -28,8 +28,12 @@ export function calculateDistanceKm(
  */
 export function buildPoiIndexUrl(baseUrl: string = import.meta.env.BASE_URL): string {
   const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${base}data/overture-poi-index.json`;
+  return `${base}data/malaysia-poi-index.json`;
 }
+
+// Bump alongside public/data/malaysia-poi-index.json's updatedAt.
+const POI_INDEX_VERSION_KEY = 'jerayawara_poi_index_version';
+const POI_INDEX_VERSION = '2026-11-22';
 
 let syncPromise: Promise<void> | null = null;
 
@@ -57,16 +61,26 @@ export async function syncBulkPOIsInStore(): Promise<void> {
   syncPromise = (async () => {
     try {
       const count = await offlineDb.pois.count();
-      if (count > 0) {
-        return; // Already populated
+      let storedVersion: string | null = null;
+      try {
+        storedVersion = localStorage.getItem(POI_INDEX_VERSION_KEY);
+      } catch {
+        // Private mode / sandboxed iframe
       }
 
-      // Fetch static asset
+      // The old 17-record Overture sample is still in some installs; the version
+      // marker forces a one-time replacement with the GeoNames index.
+      if (count > 0 && storedVersion === POI_INDEX_VERSION) {
+        return;
+      }
+
       const res = await fetch(buildPoiIndexUrl());
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`POI index HTTP ${res.status}`);
 
       const data = await res.json();
-      if (!data || !Array.isArray(data.records)) return;
+      if (!data || !Array.isArray(data.records) || data.records.length === 0) {
+        throw new Error('POI index empty');
+      }
 
       const recordsToInsert: OfflinePOIRecord[] = data.records.map((r: any, idx: number) => {
         const title = r[0];
@@ -89,11 +103,20 @@ export async function syncBulkPOIsInStore(): Promise<void> {
         };
       });
 
-      if (recordsToInsert.length > 0) {
-        await offlineDb.pois.bulkPut(recordsToInsert);
+      // Replace only after the new asset has parsed successfully.
+      if (count > 0) {
+        await offlineDb.pois.clear();
+      }
+      await offlineDb.pois.bulkPut(recordsToInsert);
+
+      try {
+        localStorage.setItem(POI_INDEX_VERSION_KEY, POI_INDEX_VERSION);
+      } catch {
+        // Cache marker is best-effort.
       }
     } catch {
-      // Graceful ignore if offline or fetch fails
+      // Offline or asset failure: allow a later search to retry.
+      syncPromise = null;
     }
   })();
 
@@ -113,11 +136,13 @@ export async function searchBulkPOIs(
   if (tokens.length === 0) return [];
 
   try {
-    // If not yet loaded, trigger background sync
-    const totalCount = await offlineDb.pois.count();
+    // If not yet loaded, wait for the one-time import so the first search still
+    // finds towns from the bundled index (normally warmed at app startup).
+    let totalCount = await offlineDb.pois.count();
     if (totalCount === 0) {
-      syncBulkPOIsInStore();
-      return [];
+      await syncBulkPOIsInStore();
+      totalCount = await offlineDb.pois.count();
+      if (totalCount === 0) return [];
     }
 
     // Query matching tokens

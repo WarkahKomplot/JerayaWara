@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-198%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-211%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -34,7 +34,7 @@
 * **Car**: Full expressway guidance, Class 1 toll calculation, en-route petrol/EV stops, and AES speed camera alerts.
 
 ### 🔍 4. Search & Highway Intelligence
-* **Tiered Search**: Instant in-memory lookup across 161 curated Malaysian highway exits, R&Rs, hospitals, and national landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), falling back to an IndexedDB POI index and then online Nominatim/Photon geocoding.
+* **Tiered Search**: Instant in-memory lookup across 161 curated highway exits, R&Rs, hospitals and landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), then a bundled IndexedDB index of ~21,700 Malaysian cities, towns and villages, and finally rate-limited Nominatim/Photon geocoding.
 * **Malaysian Toll Breakdown**: Physical crossing detection with chainage rate tables (PLUS E1/E2 closed network, MEX, KESAS, LDP, Penang Bridges).
 * **AES / AwAS Radar**: Directional camera warnings with national speed limits (110 / 90 / 80 km/h).
 * **Banjir Kilat (Flood) Radar**: Historical flash-flood blackspots alert when heavy rain is detected.
@@ -59,8 +59,11 @@
 
 ## 🩺 Reliability & Monitoring
 
-* **Automatic failover** across three keyless routing providers, with a per-provider circuit breaker.
-* **No paid uptime service or server:** a scheduled GitHub Action runs `scripts/healthcheck.mjs` daily (07:00 MYT), checks routing, tiles and geocoding, and opens a GitHub issue when a critical dependency is down.
+* **Automatic failover** across three keyless routing providers, with a per-provider circuit breaker and a last-good route cache for short outages.
+* **No paid uptime service or server:** a scheduled GitHub Action runs `scripts/healthcheck.mjs` daily (07:00 MYT), checks routing, tiles and geocoding, and opens/closes a GitHub issue as the dependency health changes.
+* **Polite online search:** Nominatim is limited to roughly one request per second, Photon is throttled, results are cached for 7 days, and superseded keystrokes are aborted.
+* **Bounded offline storage:** the service-worker tile cache is capped at 3,000 entries, and a new app version prompts for reload instead of silently going stale.
+* **Installable everywhere:** PNG + maskable icons and an iOS `apple-touch-icon` are bundled alongside the SVGs.
 * **Graceful degradation:** search falls back to the bundled POI directory, tiles come from the service-worker cache once viewed, and an active trip resumes from `localStorage` after a reload.
 
 ---
@@ -89,7 +92,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (198 tests across 40 suites)
+# Run automated tests (211 tests across 45 suites)
 npm test
 
 # Production build
@@ -101,4 +104,4 @@ npm run build
 ## 📄 License
 
 Open-source under the [MIT License](LICENSE).  
-Map data &copy; [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors and [Overture Maps Foundation](https://overturemaps.org/).
+Map data &copy; [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL). Place names from [GeoNames](https://www.geonames.org/) (CC BY 4.0).

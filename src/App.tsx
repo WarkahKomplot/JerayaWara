@@ -19,9 +19,12 @@ import { useVoiceNavigation } from './hooks/useVoiceNavigation';
 import { useAutoReroute } from './hooks/useAutoReroute';
 import { useStepProgress } from './hooks/useStepProgress';
 import { usePwaInstall } from './hooks/usePwaInstall';
+import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
 import { PwaInstallBanner } from './components/common/PwaInstallBanner';
+import { UpdatePrompt } from './components/common/UpdatePrompt';
 
 import { calculateRoute, RouteUnavailableError } from './services/routing/routingEngine';
+import { cacheRoute, getCachedRoute } from './services/routing/routeCache';
 import { estimateRouteTolls } from './services/toll/tollCalculator';
 import { RouteResult } from './services/routing/types';
 import { VehicleClass, TollBreakdown } from './services/toll/types';
@@ -30,6 +33,7 @@ import { WeatherInfo, fetchLiveWeather } from './services/weather/weatherService
 import { findNearbyAESCamera } from './services/traffic/aesCameraData';
 import { findNearbyFloodHotspot } from './services/safety/floodHotspotsData';
 import { getUpcomingAmenities } from './services/amenities/amenitiesService';
+import { syncBulkPOIsInStore } from './services/search/bulkPOIDbService';
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
@@ -59,6 +63,7 @@ export function App() {
   const { isLocked, isScreenAwakeEnabled, toggleWakeLock, requestLock, releaseLock } = useWakeLock(true);
   const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
   const { isInstallable, isInstalled, isIOS, isDismissed, promptInstall, dismissBanner } = usePwaInstall();
+  const { isUpdateReady, reload: reloadForUpdate } = useServiceWorkerUpdate();
 
   // Car-only build: there is no vehicle mode selector. The toll engine still
   // carries class-0 (motorcycle) fare data, but the product always requests Class 1.
@@ -110,6 +115,8 @@ export function App() {
   // Route preview: computed route awaiting "Start Navigation" confirmation
   const [previewRoute, setPreviewRoute] = useState<RouteResult | null>(null);
   const [previewTolls, setPreviewTolls] = useState<TollBreakdown | null>(null);
+  const [previewIsCached, setPreviewIsCached] = useState(false);
+  const [previewCachedAt, setPreviewCachedAt] = useState<number | undefined>(undefined);
   const [isCalculatingPreview, setIsCalculatingPreview] = useState(false);
 
   // Honest failure state: routing is online-only, so no connection = no route
@@ -268,6 +275,8 @@ export function App() {
     setManualStepOverride(null);
     setIsCalculatingPreview(true);
     setRouteError(null);
+    setPreviewIsCached(false);
+    setPreviewCachedAt(undefined);
     setActiveDestinationTitle(item.title);
 
     // Preview only draws a line — simplified geometry keeps the request small on
@@ -278,8 +287,23 @@ export function App() {
       setIsCalculatingPreview(false);
       setPreviewRoute(route);
       setPreviewTolls(tolls);
+      cacheRoute(route, coords, item.coordinates);
     } catch (err) {
       setIsCalculatingPreview(false);
+
+      // Routing is online-only; if we calculated this same trip recently, offer
+      // that route instead of a dead end.
+      const cached = getCachedRoute(coords, item.coordinates, vehicleMode);
+      if (cached) {
+        setPreviewRoute(cached.route);
+        setPreviewTolls(
+          estimateRouteTolls(cached.route.tollPlazaKeys, vehicleMode, cached.route.coordinates)
+        );
+        setPreviewIsCached(true);
+        setPreviewCachedAt(cached.savedAt);
+        return;
+      }
+
       setRouteError(
         err instanceof RouteUnavailableError
           ? voiceLanguage === 'ms'
@@ -328,6 +352,15 @@ export function App() {
         preloadCorridorTiles(session.route.coordinates).catch(() => {});
       }
     }
+  }, []);
+
+  // Warm the bundled place index shortly after mount so the first search
+  // already includes the ~21k towns/villages, without delaying first paint.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      syncBulkPOIsInStore().catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timer);
   }, []);
 
   // Animate demo vehicle continuously and smoothly along the route at 30-60 FPS
@@ -407,12 +440,17 @@ export function App() {
 
     let route = previewRoute;
     let tolls = previewTolls;
-    if (route.coordinates.length > 0 && route.steps.length > 0 && route.steps[0].id?.startsWith('osrm-')) {
+    if (!previewIsCached && route.coordinates.length > 0 && route.steps.length > 0 && route.steps[0].id?.startsWith('osrm-')) {
       const startCoord = route.coordinates[0];
       const destCoord = route.coordinates[route.coordinates.length - 1];
-      const fullRoute = await calculateRoute(startCoord, destCoord, route.profile, route.destinationName, 'full');
-      route = fullRoute;
-      tolls = estimateRouteTolls(route.tollPlazaKeys, route.profile, route.coordinates);
+      try {
+        const fullRoute = await calculateRoute(startCoord, destCoord, route.profile, route.destinationName, 'full');
+        route = fullRoute;
+        tolls = estimateRouteTolls(route.tollPlazaKeys, route.profile, route.coordinates);
+        cacheRoute(fullRoute, startCoord, destCoord);
+      } catch {
+        // The preview route (possibly a cached copy) is still usable offline.
+      }
     }
 
     setActiveRoute(route);
@@ -422,6 +460,8 @@ export function App() {
     announceStart(route.destinationName);
     setPreviewRoute(null);
     setPreviewTolls(null);
+    setPreviewIsCached(false);
+    setPreviewCachedAt(undefined);
 
     // Persist session & pre-cache corridor tiles
     saveActiveNavSession(route, tolls, route.profile, route.destinationName);
@@ -433,6 +473,8 @@ export function App() {
   const handleCancelPreview = () => {
     setPreviewRoute(null);
     setPreviewTolls(null);
+    setPreviewIsCached(false);
+    setPreviewCachedAt(undefined);
     setRouteError(null);
   };
 
@@ -893,6 +935,12 @@ export function App() {
         }
       />
 
+      <UpdatePrompt
+        isVisible={isUpdateReady}
+        onReload={reloadForUpdate}
+        lang={voiceLanguage}
+      />
+
       {/* Toll Breakdown Modal */}
       <TollBreakdownModal
         isOpen={isTollModalOpen}
@@ -907,6 +955,8 @@ export function App() {
         tolls={previewTolls}
         isCalculating={isCalculatingPreview}
         errorMessage={routeError}
+        isCached={previewIsCached}
+        cachedAt={previewCachedAt}
         lang={voiceLanguage}
         onStart={handleStartNavigation}
         onCancel={handleCancelPreview}

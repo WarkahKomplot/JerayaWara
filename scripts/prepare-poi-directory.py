@@ -56,7 +56,7 @@ def build_index(compact_file, output_file):
 def main():
     parser = argparse.ArgumentParser(description="Prepare offline Overture POI directory")
     parser.add_argument('--input', type=pathlib.Path, help="Input GeoJSON-seq file")
-    parser.add_argument('--output', type=pathlib.Path, default=pathlib.Path('public/data/overture-poi-index.json'))
+    parser.add_argument('--output', type=pathlib.Path, default=pathlib.Path('public/data/malaysia-poi-index.json'))
     args = parser.parse_args()
 
     base = pathlib.Path(__file__).resolve().parent.parent

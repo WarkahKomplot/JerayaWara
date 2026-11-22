@@ -180,10 +180,361 @@ export function calculateDistanceKm(
   return Math.round(R * c * 10) / 10;
 }
 
+
+// ---------------------------------------------------------------------------
+// Online geocoding: rate limiting, caching and cancellation
+//
+// Nominatim's usage policy is one request per second, and the previous code
+// fired every query variant at both Nominatim and Photon in parallel on each
+// keystroke. A small serialised queue plus a localStorage TTL cache keeps us
+// inside the policy and makes repeat searches instant. Aborting the caller's
+// signal removes queued work when the user keeps typing.
+// ---------------------------------------------------------------------------
+
+const NOMINATIM_DEFAULT_INTERVAL_MS = 1100;
+const PHOTON_DEFAULT_INTERVAL_MS = 400;
+const GEOCODE_REQUEST_TIMEOUT_MS = 3500;
+const GEOCODE_CACHE_PREFIX = 'jerayawara_geocode_v1:';
+const GEOCODE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const GEOCODE_CACHE_MAX_ENTRIES = 100;
+
+type GeocodeProvider = 'nominatim' | 'photon';
+
+interface GeocodeCacheEntry {
+  savedAt: number;
+  items: SearchItem[];
+}
+
+let nominatimIntervalMs = NOMINATIM_DEFAULT_INTERVAL_MS;
+let photonIntervalMs = PHOTON_DEFAULT_INTERVAL_MS;
+let nominatimQueue: Promise<void> = Promise.resolve();
+let photonQueue: Promise<void> = Promise.resolve();
+let lastNominatimAt = 0;
+let lastPhotonAt = 0;
+
+/** Test-only: shortens the queue delay and resets queue state. */
+export function resetGeocodeMachineryForTest(): void {
+  nominatimIntervalMs = 0;
+  photonIntervalMs = 0;
+  nominatimQueue = Promise.resolve();
+  photonQueue = Promise.resolve();
+  lastNominatimAt = 0;
+  lastPhotonAt = 0;
+  clearGeocodeCacheForTest();
+}
+
+/** Test-only: removes all cached geocoding results. */
+export function clearGeocodeCacheForTest(): void {
+  const store = geocodeStorage();
+  if (!store) return;
+  const keys: string[] = [];
+  for (let i = 0; i < store.length; i++) {
+    const key = store.key(i);
+    if (key?.startsWith(GEOCODE_CACHE_PREFIX)) keys.push(key);
+  }
+  keys.forEach(key => store.removeItem(key));
+}
+
+function geocodeStorage(): Storage | null {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null;
+  } catch {
+    return null;
+  }
+}
+
+function geocodeCacheKey(provider: GeocodeProvider, query: string): string {
+  return `${GEOCODE_CACHE_PREFIX}${provider}:${query.trim().toLowerCase()}`;
+}
+
+function readGeocodeCache(provider: GeocodeProvider, query: string): SearchItem[] | null {
+  const store = geocodeStorage();
+  if (!store) return null;
+  const key = geocodeCacheKey(provider, query);
+  try {
+    const raw = store.getItem(key);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as GeocodeCacheEntry;
+    if (!Array.isArray(entry?.items) || Date.now() - entry.savedAt > GEOCODE_CACHE_TTL_MS) {
+      store.removeItem(key);
+      return null;
+    }
+    return entry.items;
+  } catch {
+    store.removeItem(key);
+    return null;
+  }
+}
+
+function writeGeocodeCache(provider: GeocodeProvider, query: string, items: SearchItem[]): void {
+  if (items.length === 0) return;
+  const store = geocodeStorage();
+  if (!store) return;
+  try {
+    const entry: GeocodeCacheEntry = { savedAt: Date.now(), items };
+    store.setItem(geocodeCacheKey(provider, query), JSON.stringify(entry));
+    pruneGeocodeCache(store);
+  } catch {
+    // Quota/private mode: caching is an optimisation, never a requirement.
+  }
+}
+
+function pruneGeocodeCache(store: Storage): void {
+  const now = Date.now();
+  const entries: Array<{ key: string; savedAt: number }> = [];
+
+  for (let i = 0; i < store.length; i++) {
+    const key = store.key(i);
+    if (!key?.startsWith(GEOCODE_CACHE_PREFIX)) continue;
+    try {
+      const entry = JSON.parse(store.getItem(key) ?? '') as GeocodeCacheEntry;
+      if (!entry?.savedAt || now - entry.savedAt > GEOCODE_CACHE_TTL_MS) {
+        store.removeItem(key);
+      } else {
+        entries.push({ key, savedAt: entry.savedAt });
+      }
+    } catch {
+      store.removeItem(key);
+    }
+  }
+
+  if (entries.length > GEOCODE_CACHE_MAX_ENTRIES) {
+    entries
+      .sort((a, b) => a.savedAt - b.savedAt)
+      .slice(0, entries.length - GEOCODE_CACHE_MAX_ENTRIES)
+      .forEach(entry => store.removeItem(entry.key));
+  }
+}
+
+function abortError(): DOMException {
+  return new DOMException('Aborted', 'AbortError');
+}
+
+function delayWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortError());
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(abortError());
+    };
+    const cleanup = () => signal?.removeEventListener('abort', onAbort);
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+async function enqueueGeocodeRequest(
+  provider: GeocodeProvider,
+  signal?: AbortSignal
+): Promise<void> {
+  const isNominatim = provider === 'nominatim';
+  const previous = isNominatim ? nominatimQueue : photonQueue;
+
+  const run = previous.then(async () => {
+    const last = isNominatim ? lastNominatimAt : lastPhotonAt;
+    const interval = isNominatim ? nominatimIntervalMs : photonIntervalMs;
+    const waitMs = Math.max(0, last + interval - Date.now());
+    if (waitMs > 0) await delayWithSignal(waitMs, signal);
+    if (isNominatim) lastNominatimAt = Date.now();
+    else lastPhotonAt = Date.now();
+  });
+
+  // Keep the queue moving even if this particular request was aborted.
+  const tail = run.catch(() => {});
+  if (isNominatim) nominatimQueue = tail;
+  else photonQueue = tail;
+
+  await run;
+}
+
+function createRequestSignal(signal: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onAbort = () => controller.abort();
+
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    }
+  };
+}
+
+function parseNominatimResults(raw: any[]): SearchItem[] {
+  const results: SearchItem[] = [];
+  const seen = new Set<string>();
+
+  for (const item of raw) {
+    const id = `osm-${item.place_id}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    const parts = item.display_name
+      ? String(item.display_name).split(',').map((part: string) => part.trim())
+      : [];
+    const title = parts[0] || item.display_name || 'Location';
+    const subtitle = parts.slice(1, 4).join(', ') || item.display_name || 'Malaysia';
+
+    const type = String(item.type || '').toLowerCase();
+    const osmClass = String(item.class || '').toLowerCase();
+    let category: SearchItem['category'] = 'landmark';
+
+    if (osmClass === 'shop' || type.includes('mall') || type.includes('supermarket')) {
+      category = 'shopping';
+    } else if (osmClass === 'amenity' && (type === 'hospital' || type === 'clinic')) {
+      category = 'hospital';
+    } else if (osmClass === 'amenity' && (type === 'university' || type === 'college')) {
+      category = 'university';
+    } else if (osmClass === 'highway' && type.includes('toll')) {
+      category = 'toll_plaza';
+    } else if (osmClass === 'aeroway' || osmClass === 'railway') {
+      category = 'transit';
+    }
+
+    results.push({
+      id,
+      title,
+      subtitle,
+      category,
+      coordinates: [parseFloat(item.lon), parseFloat(item.lat)],
+      regionId: 'online',
+      _osmClass: osmClass,
+      _osmType: type
+    } as SearchItem & { _osmClass?: string; _osmType?: string });
+  }
+
+  return results;
+}
+
+function parsePhotonResults(geojson: any, fallbackTitle: string): SearchItem[] {
+  return (geojson?.features || [])
+    .filter((feature: any) => {
+      const country = String(
+        feature.properties?.country || feature.properties?.countrycode || ''
+      ).toLowerCase();
+      return country.includes('malaysia') || country === 'my';
+    })
+    .map((feature: any) => {
+      const properties = feature.properties || {};
+      const subtitleParts = [
+        properties.street,
+        properties.locality,
+        properties.city,
+        properties.state
+      ].filter(Boolean);
+
+      return {
+        id: `photon-${properties.osm_id || Math.random()}`,
+        title: properties.name || fallbackTitle,
+        subtitle: subtitleParts.join(', ') || 'Malaysia',
+        category:
+          properties.osm_key === 'shop' || properties.osm_value === 'mall'
+            ? 'shopping'
+            : 'landmark',
+        coordinates: [
+          feature.geometry.coordinates[0],
+          feature.geometry.coordinates[1]
+        ] as [number, number],
+        regionId: 'online',
+        _osmClass: properties.osm_key || '',
+        _osmType: properties.osm_value || ''
+      } as SearchItem & { _osmClass?: string; _osmType?: string };
+    });
+}
+
+async function fetchNominatimItems(
+  query: string,
+  signal?: AbortSignal
+): Promise<SearchItem[]> {
+  const cached = readGeocodeCache('nominatim', query);
+  if (cached) return cached;
+
+  await enqueueGeocodeRequest('nominatim', signal);
+
+  const { signal: requestSignal, cleanup } = createRequestSignal(
+    signal,
+    GEOCODE_REQUEST_TIMEOUT_MS
+  );
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+      query
+    )}&countrycodes=my&format=json&addressdetails=1&limit=8`;
+    const res = await fetch(url, {
+      signal: requestSignal,
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) return [];
+
+    const items = parseNominatimResults(await res.json());
+    writeGeocodeCache('nominatim', query, items);
+    return items;
+  } catch {
+    return [];
+  } finally {
+    cleanup();
+  }
+}
+
+async function fetchPhotonItems(
+  query: string,
+  signal?: AbortSignal,
+  userLocation?: [number, number]
+): Promise<SearchItem[]> {
+  const cached = readGeocodeCache('photon', query);
+  if (cached) return cached;
+
+  await enqueueGeocodeRequest('photon', signal);
+
+  const { signal: requestSignal, cleanup } = createRequestSignal(
+    signal,
+    GEOCODE_REQUEST_TIMEOUT_MS
+  );
+
+  try {
+    const centerLat = userLocation ? userLocation[1].toFixed(4) : '3.1390';
+    const centerLng = userLocation ? userLocation[0].toFixed(4) : '101.6869';
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(
+      query
+    )}&lat=${centerLat}&lon=${centerLng}&limit=8`;
+
+    const res = await fetch(url, {
+      signal: requestSignal,
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) return [];
+
+    const items = parsePhotonResults(await res.json(), query);
+    writeGeocodeCache('photon', query, items);
+    return items;
+  } catch {
+    return [];
+  } finally {
+    cleanup();
+  }
+}
+
 export async function searchDestinations(
   query: string,
   isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true,
-  userLocation?: [number, number]
+  userLocation?: [number, number],
+  signal?: AbortSignal
 ): Promise<SearchItem[]> {
   const cleanQuery = query.trim().toLowerCase();
   if (!cleanQuery) return [];
@@ -265,194 +616,59 @@ export async function searchDestinations(
     return combinedOffline;
   }
 
-  // 2. If online, fetch from open Nominatim API and Photon fallback (Malaysia restricted)
-  let timeoutId: any;
-  try {
-    const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 3500);
+  // 2. Online: Nominatim + Photon through the rate-limited, cached client.
+  const searchQueryParam = expandedQuery !== cleanQuery ? expandedQuery : query;
+  // Cap the variants: every extra variant costs one request per provider and
+  // Nominatim allows one request per second.
+  const onlineQueries = Array.from(new Set([searchQueryParam, cleanQuery])).slice(0, 2);
 
-    const searchQueryParam = expandedQuery !== cleanQuery ? expandedQuery : query;
-    const fetchNominatim = async (q: string) => {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        q
-      )}&countrycodes=my&format=json&addressdetails=1&limit=8`;
-      const r = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'JerayaWara-Malaysia-Nav-PWA/1.0'
-        }
-      });
-      return r.ok ? await r.json() : [];
-    };
+  const settled = await Promise.allSettled(
+    onlineQueries.flatMap(queryVariant => [
+      fetchNominatimItems(queryVariant, signal),
+      fetchPhotonItems(queryVariant, signal, userLocation)
+    ])
+  );
 
-    const fetchPhoton = async (q: string): Promise<SearchItem[]> => {
-      try {
-        const centerLat = userLocation ? userLocation[1].toFixed(4) : '3.1390';
-        const centerLng = userLocation ? userLocation[0].toFixed(4) : '101.6869';
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${centerLat}&lon=${centerLng}&limit=8`;
-        const r = await fetch(url, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json' }
-        });
-        if (!r.ok) return [];
-        const geojson = await r.json();
-        return (geojson.features || [])
-          .filter((f: any) => {
-            const country = (f.properties?.country || f.properties?.countrycode || '').toLowerCase();
-            return country.includes('malaysia') || country === 'my';
-          })
-          .map((f: any) => {
-            const p = f.properties || {};
-            const subtitleParts = [p.street, p.locality, p.city, p.state].filter(Boolean);
-            return {
-              id: `photon-${p.osm_id || Math.random()}`,
-              title: p.name || query,
-              subtitle: subtitleParts.join(', ') || 'Malaysia',
-              category: (p.osm_key === 'shop' || p.osm_value === 'mall' ? 'shopping' : 'landmark') as SearchItem['category'],
-              coordinates: [f.geometry.coordinates[0], f.geometry.coordinates[1]] as [number, number],
-              regionId: 'online',
-              _osmClass: p.osm_key || '',
-              _osmType: p.osm_value || ''
-            };
-          });
-      } catch {
-        return [];
-      }
-    };
-
-    // Parallel multi-query synthesis: Search exact query + expanded colloquial query
-    const searchQueries = new Set<string>();
-    searchQueries.add(searchQueryParam);
-    if (cleanQuery !== searchQueryParam) {
-      searchQueries.add(cleanQuery);
-    }
-
-    // Generic prefix & suffix expansion for all Malaysian commercial POIs:
-    // If a user types "metro kajang" or "paradigm", also check "plaza metro kajang", "metro kajang mall", etc.
-    const genericPrefixes = ['plaza', 'mall', 'kompleks', 'pasar raya', 'hospital', 'klinik', 'masjid'];
-    const genericSuffixes = ['mall', 'plaza', 'centre', 'center', 'supermarket', 'hypermarket'];
-
-    // Suffix variants
-    for (const s of genericSuffixes) {
-      if (!cleanQuery.includes(s)) {
-        searchQueries.add(`${cleanQuery} ${s}`);
-        break; // Add top suffix variant
-      }
-    }
-
-    // Prefix variants (e.g. "metro kajang" -> "plaza metro kajang")
-    if (!genericPrefixes.some(p => cleanQuery.startsWith(p))) {
-      searchQueries.add(`plaza ${cleanQuery}`);
-    }
-
-    // Execute queries in parallel
-    const queryPromises: Promise<any[]>[] = [];
-    searchQueries.forEach(q => {
-      queryPromises.push(fetchNominatim(q));
-      queryPromises.push(fetchPhoton(q));
-    });
-
-    const settled = await Promise.allSettled(queryPromises);
-    const combinedOnlineRaw: any[] = [];
-    settled.forEach(res => {
-      if (res.status === 'fulfilled' && Array.isArray(res.value)) {
-        combinedOnlineRaw.push(...res.value);
-      }
-    });
-
-    const onlineResults: SearchItem[] = [];
-    const seenOnlineIds = new Set<string>();
-
-    for (const item of combinedOnlineRaw) {
-      // Determine if item is from Nominatim or Photon
-      const isPhoton = item.id && String(item.id).startsWith('photon-');
-      if (isPhoton) {
-        if (!seenOnlineIds.has(item.id)) {
-          seenOnlineIds.add(item.id);
-          onlineResults.push(item);
-        }
-        continue;
-      }
-
-      // Nominatim item parsing
-      const id = `osm-${item.place_id}`;
-      if (seenOnlineIds.has(id)) continue;
-      seenOnlineIds.add(id);
-
-      const parts = item.display_name ? item.display_name.split(',').map((p: string) => p.trim()) : [];
-      const primaryTitle = parts[0] || item.display_name || 'Location';
-      const secondarySubtitle = parts.slice(1, 4).join(', ') || item.display_name || 'Malaysia';
-
-      let category: SearchItem['category'] = 'landmark';
-      const type = (item.type || '').toLowerCase();
-      const osmClass = (item.class || '').toLowerCase();
-
-      if (osmClass === 'shop' || type.includes('mall') || type.includes('supermarket')) {
-        category = 'shopping';
-      } else if (osmClass === 'amenity' && (type === 'hospital' || type === 'clinic')) {
-        category = 'hospital';
-      } else if (osmClass === 'amenity' && (type === 'university' || type === 'college')) {
-        category = 'university';
-      } else if (osmClass === 'highway' && type.includes('toll')) {
-        category = 'toll_plaza';
-      } else if (osmClass === 'aeroway' || osmClass === 'railway') {
-        category = 'transit';
-      }
-
-      onlineResults.push({
-        id,
-        title: primaryTitle,
-        subtitle: secondarySubtitle,
-        category,
-        coordinates: [parseFloat(item.lon), parseFloat(item.lat)],
-        regionId: 'online',
-        _osmClass: osmClass,
-        _osmType: type
-      } as SearchItem & { _osmClass?: string; _osmType?: string });
-    }
-
-    // Rank venues / destinations (shops, buildings, amenities, hospitals) ABOVE railway tracks or bus stops
-    onlineResults.sort((a: any, b: any) => {
-      const aIsInfrastructure = a._osmClass === 'railway' || a._osmType === 'bus_stop' || a._osmClass === 'highway';
-      const bIsInfrastructure = b._osmClass === 'railway' || b._osmType === 'bus_stop' || b._osmClass === 'highway';
-      if (!aIsInfrastructure && bIsInfrastructure) return -1;
-      if (aIsInfrastructure && !bIsInfrastructure) return 1;
-      return 0;
-    });
-
-    // Merge and deduplicate by title
-    const seenTitles = new Set(combinedOffline.map(m => m.title.toLowerCase()));
-    const filteredOnline = onlineResults.filter(
-      o => !seenTitles.has(o.title.toLowerCase())
-    );
-
-    // Helper to enrich and sort by distance
-    const rankResults = (items: SearchItem[]): SearchItem[] => {
-      if (!userLocation) return items;
-      return items
-        .map(item => ({
-          ...item,
-          distanceKm: item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
-        }))
-        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
-    };
-
-    return rankResults([...combinedOffline, ...filteredOnline]);
-  } catch {
-    // If online search fails or timeouts, smoothly fall back to offline directory
-  } finally {
-    clearTimeout(timeoutId);
+  const combinedOnline: SearchItem[] = [];
+  for (const result of settled) {
+    if (result.status === 'fulfilled') combinedOnline.push(...result.value);
   }
 
-  if (userLocation) {
-    return combinedOffline
+  const onlineResults: SearchItem[] = [];
+  const seenOnlineIds = new Set<string>();
+  for (const item of combinedOnline) {
+    if (seenOnlineIds.has(item.id)) continue;
+    seenOnlineIds.add(item.id);
+    onlineResults.push(item);
+  }
+
+  // Rank venues/destinations above railway tracks or bus stops.
+  onlineResults.sort((a: any, b: any) => {
+    const aIsInfrastructure =
+      a._osmClass === 'railway' || a._osmType === 'bus_stop' || a._osmClass === 'highway';
+    const bIsInfrastructure =
+      b._osmClass === 'railway' || b._osmType === 'bus_stop' || b._osmClass === 'highway';
+    if (!aIsInfrastructure && bIsInfrastructure) return -1;
+    if (aIsInfrastructure && !bIsInfrastructure) return 1;
+    return 0;
+  });
+
+  // Merge and deduplicate by title.
+  const seenTitles = new Set(combinedOffline.map(item => item.title.toLowerCase()));
+  const filteredOnline = onlineResults.filter(
+    item => !seenTitles.has(item.title.toLowerCase())
+  );
+
+  const rankResults = (items: SearchItem[]): SearchItem[] => {
+    if (!userLocation) return items;
+    return items
       .map(item => ({
         ...item,
-        distanceKm: item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
+        distanceKm:
+          item.distanceKm ?? calculateDistanceKm(userLocation, item.coordinates)
       }))
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
-  }
+  };
 
-  return combinedOffline;
+  return rankResults([...combinedOffline, ...filteredOnline]);
 }
