@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-204%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-207%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -23,6 +23,7 @@
 * **Triple-Provider Routing Failover**: Turn-by-turn routing tries OSRM's public server, then the `routing.openstreetmap.de` mirror, then the Valhalla demo server. Providers that fail repeatedly are skipped for 10 minutes so a dead endpoint does not slow every calculation.
 * **Turn-by-Turn Audio & Lane Guidance**: Bilingual (Bahasa Melayu & English) voice directions, highway exit numbers, and OSRM-derived lane hints.
 * **Peak-Hour Traffic Modelling**: ETA adjustment from a local Malaysian time-of-day model (weekday rush, Friday *balik kampung*, Sunday return). This is a deterministic model, not a live traffic feed.
+* **Follow Camera**: a 60 fps loop eases the puck and camera together, with speed-adaptive zoom (close in traffic, wider on the highway). Manual zoom is preserved instead of reset on each GPS fix, pinch keeps following, and dragging hands control back to the user until recenter.
 
 ### 🛡️ 2. Offline Resilience Shield (Safety Net)
 * **Corridor Tile Pre-caching**: On *Start Navigation*, raster tiles at the zooms the navigation camera actually requests (z16–18 for the 256 px OSM source) are pre-fetched into a dedicated Service Worker cache (`jerayawara-tiles-v1`). Planning is distance-prioritised within a ~12 MB byte budget and topped up every ~3 km while driving, instead of a flat tile cap that starved long routes.
@@ -92,7 +93,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (204 tests across 45 suites)
+# Run automated tests (207 tests across 46 suites)
 npm test
 
 # Production build

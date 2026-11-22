@@ -908,6 +908,7 @@ export function App() {
               <MapContainer
                 userLocation={isNavigating ? resolvedNavPos.coords : coords}
                 heading={isNavigating ? resolvedNavPos.heading : heading}
+                speedKmH={isNavigating ? resolvedNavPos.speedKmH : speedKmH}
                 theme={theme}
                 routePolyline={activeRoute?.coordinates}
                 onMapClick={handleMapClick}

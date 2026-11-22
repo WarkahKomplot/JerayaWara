@@ -4,12 +4,16 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
+import {
+  navigationZoomForSpeed,
+  clampUserZoomOffset
+} from '../../services/map/navigationZoom';
 import { Language } from '../../services/i18n/translations';
-import { NAVIGATION_CAMERA_ZOOM } from '../../services/offline/tileMath';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
   heading: number;
+  speedKmH?: number;
   theme: AppTheme;
   routePolyline?: [number, number][];
   onMapClick?: (coords: [number, number]) => void;
@@ -22,6 +26,7 @@ export interface MapContainerProps {
 export const MapContainer: React.FC<MapContainerProps> = ({
   userLocation,
   heading,
+  speedKmH = 0,
   theme,
   routePolyline,
   onMapClick,
@@ -43,12 +48,44 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [isFollowMode, setIsFollowMode] = useState(false);
   const [currentBearing, setCurrentBearing] = useState(0);
   const rotateRafRef = useRef<number | null>(null);
-  const lastCameraCenterRef = useRef<[number, number]>([0, 0]);
-  const lastCameraBearingRef = useRef<number>(-1);
-  const lastLocationUpdateRef = useRef<number>(performance.now());
-  const smoothedHeadingRef = useRef<number>(heading);
   const isNavigatingRef = useRef(isNavigating);
   isNavigatingRef.current = isNavigating;
+
+  // Camera loop state. Target values come from props; display values are eased
+  // toward them at 60 fps so the puck stays centred on real 1 Hz GPS fixes.
+  const targetLocationRef = useRef<[number, number]>(userLocation);
+  const targetHeadingRef = useRef(heading);
+  const targetSpeedRef = useRef(speedKmH);
+  const displayLocationRef = useRef<[number, number]>(userLocation);
+  const displayHeadingRef = useRef(heading);
+  const displayZoomRef = useRef(navigationZoomForSpeed(speedKmH));
+  const userZoomOffsetRef = useRef(0);
+  const followModeRef = useRef(false);
+  const is3DRef = useRef(is3D);
+  const isUserZoomingRef = useRef(false);
+  const cameraRafRef = useRef<number | null>(null);
+  const lastFrameRef = useRef(0);
+  const navigationStartedRef = useRef(false);
+
+  useEffect(() => {
+    targetLocationRef.current = userLocation;
+  }, [userLocation]);
+
+  useEffect(() => {
+    targetHeadingRef.current = heading;
+  }, [heading]);
+
+  useEffect(() => {
+    targetSpeedRef.current = speedKmH;
+  }, [speedKmH]);
+
+  useEffect(() => {
+    is3DRef.current = is3D;
+  }, [is3D]);
+
+  useEffect(() => {
+    followModeRef.current = isFollowMode;
+  }, [isFollowMode]);
 
   // Initialize Map
   useEffect(() => {
@@ -100,6 +137,22 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     map.on('dragstart', () => {
       setIsFollowMode(false);
+      followModeRef.current = false;
+    });
+
+    // Pinch/wheel zoom keeps following the puck, but the user's zoom level is
+    // remembered as an offset instead of being reset on the next GPS fix.
+    map.on('zoomstart', (event) => {
+      if (event.originalEvent) isUserZoomingRef.current = true;
+    });
+
+    map.on('zoomend', () => {
+      if (!isUserZoomingRef.current) return;
+      isUserZoomingRef.current = false;
+      if (!isNavigatingRef.current || !followModeRef.current) return;
+      const base = navigationZoomForSpeed(targetSpeedRef.current);
+      userZoomOffsetRef.current = clampUserZoomOffset(map.getZoom() - base);
+      displayZoomRef.current = map.getZoom();
     });
 
     map.on('click', (e) => {
@@ -161,89 +214,121 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   useEffect(() => {
     if (!isNavigating) {
       setIsFollowMode(false);
-    }
-  }, [isNavigating]);
-
-  // Entering navigation snaps the camera into Google-Maps-style follow mode
-  // immediately: zoomed close, pitched forward, following the puck — instead of
-  // zooming out to the whole-route overview and staying there.
-  const navigationStartedRef = useRef(false);
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (isNavigating && !navigationStartedRef.current) {
-      navigationStartedRef.current = true;
-      setIsFollowMode(true);
-      lastCameraCenterRef.current = userLocation;
-      lastCameraBearingRef.current = heading;
-      mapRef.current.flyTo({
-        center: userLocation,
-        zoom: NAVIGATION_CAMERA_ZOOM,
-        bearing: heading,
-        pitch: is3D ? 58 : 0,
-        duration: 900
-      });
-    }
-    if (!isNavigating) {
+      followModeRef.current = false;
       navigationStartedRef.current = false;
     }
   }, [isNavigating]);
 
-  // Focus specific step when selected from turn list
+  // Entering navigation snaps into follow mode at the speed-appropriate zoom.
+  useEffect(() => {
+    if (!isNavigating || !mapRef.current) return;
+    if (navigationStartedRef.current) return;
+
+    navigationStartedRef.current = true;
+    setIsFollowMode(true);
+    followModeRef.current = true;
+    userZoomOffsetRef.current = 0;
+    displayLocationRef.current = userLocation;
+    displayHeadingRef.current = heading;
+    displayZoomRef.current = navigationZoomForSpeed(speedKmH);
+
+    if (markerRef.current) markerRef.current.setLngLat(userLocation);
+    if (puckHeadingElRef.current) {
+      puckHeadingElRef.current.style.transform = `rotate(${heading}deg)`;
+    }
+
+    mapRef.current.jumpTo({
+      center: userLocation,
+      zoom: displayZoomRef.current,
+      bearing: heading,
+      pitch: is3DRef.current ? 58 : 0
+    });
+    // Intentionally only runs when navigation starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating]);
+
+  // Selecting a step in the itinerary should move the camera, so leave follow
+  // mode; the recenter button brings the puck back.
   useEffect(() => {
     if (!focusStepCoord || !mapRef.current) return;
+    setIsFollowMode(false);
+    followModeRef.current = false;
     mapRef.current.flyTo({
       center: focusStepCoord,
       zoom: 16.5,
       pitch: is3D ? 55 : 0,
       duration: 800
     });
-  }, [focusStepCoord]);
+  }, [focusStepCoord, is3D]);
 
-  // Update User Location & Follow Camera with high-refresh smoothness
+  // Marker updates outside active navigation.
   useEffect(() => {
-    if (!mapRef.current || !markerRef.current) return;
-
-    const now = performance.now();
-    const dt = now - lastLocationUpdateRef.current;
-    lastLocationUpdateRef.current = now;
-
-    // Smooth shortest-arc heading unwrapping so it never spins 350 deg the wrong way
-    const currentHeading = smoothedHeadingRef.current;
-    const diff = ((heading - (currentHeading % 360) + 540) % 360) - 180;
-    const targetHeading = currentHeading + diff;
-    smoothedHeadingRef.current = targetHeading;
-
+    if (isNavigating || !markerRef.current) return;
+    const diff = ((heading - (displayHeadingRef.current % 360) + 540) % 360) - 180;
+    displayHeadingRef.current += diff;
     markerRef.current.setLngLat(userLocation);
-
     if (puckHeadingElRef.current) {
-      puckHeadingElRef.current.style.transform = `rotate(${targetHeading}deg)`;
+      puckHeadingElRef.current.style.transform = `rotate(${displayHeadingRef.current}deg)`;
     }
+  }, [userLocation, heading, isNavigating]);
 
-    // Follow camera while navigating when follow mode is active
-    if (isNavigating && isFollowMode) {
-      const isHighFrequency = dt < 180; // Animation frame or high-frequency updates
-      if (isHighFrequency) {
-        // Direct synchronization: marker and camera update in the exact same frame with zero lag or stutter
-        mapRef.current.jumpTo({
-          center: userLocation,
-          bearing: targetHeading,
-          pitch: is3D ? 58 : 0,
-          zoom: NAVIGATION_CAMERA_ZOOM
-        });
-      } else {
-        // Real-world 1Hz GPS ticks (~1000ms): linear ease matching the update interval
-        const easeDuration = Math.min(1200, Math.max(300, dt));
-        mapRef.current.easeTo({
-          center: userLocation,
-          bearing: targetHeading,
-          pitch: is3D ? 58 : 0,
-          zoom: NAVIGATION_CAMERA_ZOOM,
-          duration: easeDuration,
-          easing: (t) => t // Linear constant velocity so it glides smoothly between GPS fixes
+  // 60 fps follow loop: ease the puck and camera together between GPS fixes.
+  useEffect(() => {
+    if (!isNavigating) return;
+
+    lastFrameRef.current = performance.now();
+
+    const frame = (now: number) => {
+      const map = mapRef.current;
+      const marker = markerRef.current;
+      if (!map || !marker) {
+        cameraRafRef.current = requestAnimationFrame(frame);
+        return;
+      }
+
+      const dt = Math.min(0.1, Math.max(0.001, (now - lastFrameRef.current) / 1000));
+      lastFrameRef.current = now;
+      const alpha = 1 - Math.exp(-dt * 10);
+
+      const target = targetLocationRef.current;
+      const current = displayLocationRef.current;
+      displayLocationRef.current = [
+        current[0] + (target[0] - current[0]) * alpha,
+        current[1] + (target[1] - current[1]) * alpha
+      ];
+
+      const headingDelta =
+        ((targetHeadingRef.current - (displayHeadingRef.current % 360) + 540) % 360) - 180;
+      displayHeadingRef.current += headingDelta * alpha;
+
+      marker.setLngLat(displayLocationRef.current);
+      if (puckHeadingElRef.current) {
+        puckHeadingElRef.current.style.transform = `rotate(${displayHeadingRef.current}deg)`;
+      }
+
+      if (followModeRef.current && !isUserZoomingRef.current) {
+        const targetZoom =
+          navigationZoomForSpeed(targetSpeedRef.current) + userZoomOffsetRef.current;
+        displayZoomRef.current += (targetZoom - displayZoomRef.current) * alpha;
+
+        map.jumpTo({
+          center: displayLocationRef.current,
+          bearing: displayHeadingRef.current,
+          pitch: is3DRef.current ? 58 : 0,
+          zoom: displayZoomRef.current
         });
       }
-    }
-  }, [userLocation, heading, isNavigating, isFollowMode, is3D]);
+
+      cameraRafRef.current = requestAnimationFrame(frame);
+    };
+
+    cameraRafRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (cameraRafRef.current) cancelAnimationFrame(cameraRafRef.current);
+      cameraRafRef.current = null;
+    };
+  }, [isNavigating]);
 
   // Helper to draw or update route polyline and destination pin
   const renderRouteOnMap = () => {
@@ -413,25 +498,52 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     };
   }, [routePolyline]);
 
-  const handleZoomIn = () => mapRef.current?.zoomIn();
-  const handleZoomOut = () => mapRef.current?.zoomOut();
-  const handleResetBearing = () => mapRef.current?.resetNorth();
+  const applyUserZoom = (delta: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!isNavigating || !followModeRef.current) {
+      if (delta > 0) map.zoomIn();
+      else map.zoomOut();
+      return;
+    }
+
+    const base = navigationZoomForSpeed(targetSpeedRef.current);
+    const current = displayZoomRef.current;
+    userZoomOffsetRef.current = clampUserZoomOffset(current + delta - base);
+    displayZoomRef.current = current + delta;
+  };
+  const handleZoomIn = () => applyUserZoom(0.5);
+  const handleZoomOut = () => applyUserZoom(-0.5);
+  const handleResetBearing = () => {
+    if (isNavigating) {
+      setIsFollowMode(false);
+      followModeRef.current = false;
+    }
+    mapRef.current?.resetNorth();
+  };
   const handleRecenter = () => {
     setIsFollowMode(true);
-    lastCameraCenterRef.current = userLocation;
-    lastCameraBearingRef.current = heading;
+    followModeRef.current = true;
+    displayLocationRef.current = targetLocationRef.current;
+    displayHeadingRef.current = targetHeadingRef.current;
+
     if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: userLocation,
-        zoom: NAVIGATION_CAMERA_ZOOM,
-        bearing: heading,
-        pitch: is3D ? 58 : 0,
-        duration: 800
+      const zoom = isNavigating
+        ? navigationZoomForSpeed(targetSpeedRef.current) + userZoomOffsetRef.current
+        : mapRef.current.getZoom();
+      displayZoomRef.current = zoom;
+      mapRef.current.jumpTo({
+        center: targetLocationRef.current,
+        zoom,
+        bearing: targetHeadingRef.current,
+        pitch: is3D ? 58 : 0
       });
     }
   };
   const handleFitRouteOverview = () => {
     setIsFollowMode(false);
+    followModeRef.current = false;
     fitRouteBounds();
   };
   const handleToggle3D = () => {
