@@ -5,6 +5,7 @@ import { getMapLibreStyle } from './mapStyles';
 import { AppTheme } from '../../hooks/useDeviceTheme';
 import { MapControls } from './MapControls';
 import { Language } from '../../services/i18n/translations';
+import { NAVIGATION_CAMERA_ZOOM } from '../../services/offline/tileMath';
 
 export interface MapContainerProps {
   userLocation: [number, number]; // [lng, lat]
@@ -176,7 +177,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       lastCameraBearingRef.current = heading;
       mapRef.current.flyTo({
         center: userLocation,
-        zoom: 17,
+        zoom: NAVIGATION_CAMERA_ZOOM,
         bearing: heading,
         pitch: is3D ? 58 : 0,
         duration: 900
@@ -227,7 +228,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           center: userLocation,
           bearing: targetHeading,
           pitch: is3D ? 58 : 0,
-          zoom: 16.8
+          zoom: NAVIGATION_CAMERA_ZOOM
         });
       } else {
         // Real-world 1Hz GPS ticks (~1000ms): linear ease matching the update interval
@@ -236,7 +237,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           center: userLocation,
           bearing: targetHeading,
           pitch: is3D ? 58 : 0,
-          zoom: 16.8,
+          zoom: NAVIGATION_CAMERA_ZOOM,
           duration: easeDuration,
           easing: (t) => t // Linear constant velocity so it glides smoothly between GPS fixes
         });
@@ -422,7 +423,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     if (mapRef.current) {
       mapRef.current.flyTo({
         center: userLocation,
-        zoom: 16.5,
+        zoom: NAVIGATION_CAMERA_ZOOM,
         bearing: heading,
         pitch: is3D ? 58 : 0,
         duration: 800

@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-190%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-197%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -25,7 +25,7 @@
 * **Peak-Hour Traffic Modelling**: ETA adjustment from a local Malaysian time-of-day model (weekday rush, Friday *balik kampung*, Sunday return). This is a deterministic model, not a live traffic feed.
 
 ### 🛡️ 2. Offline Resilience Shield (Safety Net)
-* **Corridor Tile Pre-caching**: Upon pressing *Start Navigation*, map raster tiles along the route corridor (zoom 14–16, capped at ~350 tiles) are pre-fetched into a dedicated Service Worker cache (`jerayawara-tiles-v1`), eliminating blank grey grids in dead zones.
+* **Corridor Tile Pre-caching**: On *Start Navigation*, raster tiles at the zooms the navigation camera actually requests (z16–18 for the 256 px OSM source) are pre-fetched into a dedicated Service Worker cache (`jerayawara-tiles-v1`). Planning is distance-prioritised within a ~12 MB byte budget and topped up every ~3 km while driving, instead of a flat tile cap that starved long routes.
 * **Tunnel Dead-Reckoning Engine**: Smoothly projects vehicle position forward along the route line when GPS signal drops inside tunnels (SMART Tunnel E38, Genting Sempah) or deep underpasses.
 * **Crash & Tab-Reload Session Recovery**: Persists active trip state into `localStorage` (valid 2.5 hours); accidental browser closures, memory evictions, or incoming phone calls restore your navigation instantly.
 * **Graceful Detour Handling**: Retains current route line during signal dropouts and triggers an auto-reroute the exact second internet connectivity returns.
@@ -64,7 +64,8 @@
 * **Speed limits are estimated.** Limits are derived from road class/name and marked `speedLimitSource: 'estimated'`; the speeding alert is intentionally suppressed rather than risk a false alarm.
 * **Car-only.** The vehicle mode selector and motorcycle-specific features (lane callouts, rain-shelter radar, SMART Tunnel restriction banner, bike ETA discount) have been removed. The toll engine still carries Class 0 fare tables for future use.
 * **Traffic is modelled, not live.** No live feeds, incident reporting, or CCTV snapshots.
-* **Map tiles come from the public OSM tile server.** Bulk pre-fetching is acceptable for personal use but remains subject to the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
+* **Offline map coverage is corridor-only.** Only the pre-cached route corridor is available offline; panning away from it or zooming outside the budgeted window shows grey tiles. Route planning itself still requires connectivity.
+* **Map tiles come from the public OSM tile server.** Corridor pre-caching fetches roughly 10–12 MB per route, but bulk redistribution or continuous nationwide prefetching is still subject to the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/).
 
 ---
 
@@ -81,7 +82,7 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (190 tests across 39 suites)
+# Run automated tests (197 tests across 40 suites)
 npm test
 
 # Production build

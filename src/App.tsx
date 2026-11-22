@@ -510,6 +510,28 @@ export function App() {
     }
   }, [isNavigating, isNearDestination]);
 
+  // Stream corridor tiles ahead of the vehicle. A single preload pass is
+  // byte-budgeted, so long routes would otherwise only cover the first stretch;
+  // re-running from the current position tops up the next chunk every ~3 km.
+  const lastTileTopUpRef = useRef<[number, number] | null>(null);
+  useEffect(() => {
+    if (!isNavigating || !activeRoute?.coordinates || activeRoute.coordinates.length < 2) {
+      lastTileTopUpRef.current = null;
+      return;
+    }
+
+    const pos = resolvedNavPos.coords;
+    const last = lastTileTopUpRef.current;
+    if (last && distanceMeters(last, pos) < 3000) return;
+
+    lastTileTopUpRef.current = pos;
+    preloadCorridorTiles(activeRoute.coordinates, {
+      startFromCoord: pos,
+      aheadMeters: 25000,
+      maxBytes: 4 * 1024 * 1024
+    }).catch(() => {});
+  }, [isNavigating, activeRoute, resolvedNavPos.coords]);
+
   const handleEndNavigation = () => {
     setIsNavigating(false);
     setActiveRoute(null);

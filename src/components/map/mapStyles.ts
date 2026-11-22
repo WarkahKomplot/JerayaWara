@@ -1,4 +1,5 @@
 import { AppTheme } from '../../hooks/useDeviceTheme';
+import { RASTER_SOURCE_TILE_SIZE } from '../../services/offline/tileMath';
 
 export function getMapLibreStyle(theme: AppTheme): any {
   const isNight = theme === 'night';
@@ -14,7 +15,7 @@ export function getMapLibreStyle(theme: AppTheme): any {
         tiles: [
           'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
         ],
-        tileSize: 256,
+        tileSize: RASTER_SOURCE_TILE_SIZE,
         attribution: '&copy; OpenStreetMap contributors'
       }
     },
