@@ -1,14 +1,5 @@
 import Dexie, { Table } from 'dexie';
 
-export interface SavedPlaceRecord {
-  id?: number;
-  name: string;
-  category: 'home' | 'work' | 'favorite' | 'recent';
-  coordinates: [number, number]; // [lng, lat]
-  address?: string;
-  savedAt: number;
-}
-
 export interface OfflinePOIRecord {
   id: string;
   title: string;
@@ -21,7 +12,6 @@ export interface OfflinePOIRecord {
 }
 
 export class JerayaWaraDatabase extends Dexie {
-  savedPlaces!: Table<SavedPlaceRecord, number>;
   pois!: Table<OfflinePOIRecord, string>;
 
   constructor() {
@@ -44,6 +34,14 @@ export class JerayaWaraDatabase extends Dexie {
       regions: null,
       tiles: null,
       savedPlaces: '++id, category, name, savedAt',
+      pois: 'id, category, regionId, *tokens'
+    });
+
+    // Saved places were never wired into the UI; favourites use their own DB.
+    this.version(4).stores({
+      regions: null,
+      tiles: null,
+      savedPlaces: null,
       pois: 'id, category, regionId, *tokens'
     });
   }

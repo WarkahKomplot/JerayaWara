@@ -3,7 +3,7 @@
 > **JerayaWara** *(Sarawakian / Borneo Malay for "Roadway Voyager")* is a zero-cost, high-reliability Progressive Web App (PWA) built specifically for Malaysian roads across Peninsular Malaysia, Sabah, and Sarawak.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?style=for-the-badge&logo=github)](https://warkahkomplot.github.io/JerayaWara/)
-[![Tests](https://img.shields.io/badge/Vitest-216%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
+[![Tests](https://img.shields.io/badge/Vitest-221%20Passed-brightgreen?style=for-the-badge&logo=vitest)](https://github.com/WarkahKomplot/JerayaWara)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 📱 **Live Web App**: [https://warkahkomplot.github.io/JerayaWara/](https://warkahkomplot.github.io/JerayaWara/)
@@ -36,7 +36,7 @@
 
 ### 🔍 4. Search & Highway Intelligence
 * **Tiered Search**: Instant in-memory lookup across 161 curated highway exits, R&Rs, hospitals and landmarks (*KLCC*, *Menara 1 Sentrum*, *Arjuna JB*), then a bundled IndexedDB index of ~21,700 Malaysian cities, towns and villages, and finally rate-limited Nominatim/Photon geocoding.
-* **Malaysian Toll Breakdown**: Physical crossing detection with chainage rate tables (PLUS E1/E2 closed network, MEX, KESAS, LDP, Penang Bridges).
+* **Malaysian Toll Breakdown**: Physical crossing detection with chainage rate tables (PLUS E1/E2 closed network, MEX, KESAS, LDP, Penang Bridges). Totals are labelled as estimates with the rate snapshot date.
 * **AES / AwAS Radar**: Directional camera warnings with national speed limits (110 / 90 / 80 km/h), precise along-route distance and heading filtering so cameras on parallel roads or behind you do not fire.
 * **Banjir Kilat (Flood) Radar**: Historical flash-flood blackspots alert when heavy rain is detected.
 
@@ -65,6 +65,7 @@
 * **Polite online search:** Nominatim is limited to roughly one request per second, Photon is throttled, results are cached for 7 days, and superseded keystrokes are aborted.
 * **Bounded offline storage:** the service-worker tile cache is capped at 3,000 entries, and a new app version prompts for reload instead of silently going stale.
 * **Installable everywhere:** PNG + maskable icons and an iOS `apple-touch-icon` are bundled alongside the SVGs.
+* **Crash and offline safety nets:** a root error boundary keeps the PWA reloadable, and an offline banner explains when cached maps/data are in use.
 * **Graceful degradation:** search falls back to the bundled POI directory, tiles come from the service-worker cache once viewed, and an active trip resumes from `localStorage` after a reload.
 
 ---
@@ -94,11 +95,15 @@ npm install
 # Start local dev server
 npm run dev
 
-# Run automated tests (216 tests across 48 suites)
+# Run automated tests (221 tests across 52 suites)
 npm test
 
 # Production build
 npm run build
+
+# Data audits (live OSRM; no billing guarantee)
+npm run audit:tolls
+npm run audit:aes
 ```
 
 ---

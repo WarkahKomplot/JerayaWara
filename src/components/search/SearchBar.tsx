@@ -47,8 +47,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const controller = new AbortController();
 
     const timer = setTimeout(() => {
-      // Fall back to navigator.onLine if isOnline is undefined or false but browser has active internet connection
-      const effectiveOnline = typeof isOnline === 'boolean' ? (isOnline || (typeof navigator !== 'undefined' && navigator.onLine)) : true;
+      // Respect explicit isOnline boolean prop; only fall back to navigator.onLine if isOnline is undefined
+      const effectiveOnline = typeof isOnline === 'boolean' ? isOnline : (typeof navigator !== 'undefined' ? navigator.onLine : true);
       searchDestinations(query, effectiveOnline, userLocation, controller.signal).then(res => {
         if (isCurrent) {
           setResults(res);

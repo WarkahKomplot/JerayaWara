@@ -20,6 +20,7 @@ import { useAutoReroute } from './hooks/useAutoReroute';
 import { useStepProgress } from './hooks/useStepProgress';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { useServiceWorkerUpdate } from './hooks/useServiceWorkerUpdate';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { PwaInstallBanner } from './components/common/PwaInstallBanner';
 import { UpdatePrompt } from './components/common/UpdatePrompt';
 
@@ -45,7 +46,7 @@ import {
   clearActiveNavSession
 } from './services/navigation/navigationSession';
 import { DeadReckoningEngine, distanceMeters, bearingDegrees } from './services/navigation/deadReckoning';
-import { Moon, Sun, ShieldAlert, Radio, Satellite, Zap, Waves, RefreshCw, MapPin } from 'lucide-react';
+import { Moon, Sun, ShieldAlert, Radio, Satellite, Zap, Waves, RefreshCw, MapPin, WifiOff } from 'lucide-react';
 
 export function App() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -64,6 +65,7 @@ export function App() {
   const { isFoldableUnfolded, isDesktop } = useFoldableDetection();
   const { isInstallable, isInstalled, isIOS, isDismissed, promptInstall, dismissBanner } = usePwaInstall();
   const { isUpdateReady, reload: reloadForUpdate } = useServiceWorkerUpdate();
+  const isOnline = useOnlineStatus();
 
   // Car-only build: there is no vehicle mode selector. The toll engine still
   // carries class-0 (motorcycle) fare data, but the product always requests Class 1.
@@ -715,6 +717,17 @@ export function App() {
         }
         topBanner={
           <div className="space-y-2">
+            {!isOnline && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-600/90 border border-amber-400/60 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur">
+                <WifiOff className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  {voiceLanguage === 'ms'
+                    ? 'Luar talian — peta dan data cache digunakan.'
+                    : 'Offline — using cached maps and data.'}
+                </span>
+              </div>
+            )}
+
             {/* Banjir Kilat (Flash Flood) Caution Alert Banner */}
             {nearbyFloodHotspot && (
               <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-900 to-blue-900 border-2 border-cyan-400 px-3.5 py-2 text-xs font-black text-white shadow-2xl animate-pulse">
@@ -846,7 +859,7 @@ export function App() {
                 />
                 <SearchBar
                   onSelectDestination={handleSelectDestination}
-                  isOnline={navigator.onLine}
+                  isOnline={isOnline}
                   lang={voiceLanguage}
                   userLocation={coords}
                 />

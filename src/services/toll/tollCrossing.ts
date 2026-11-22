@@ -1,4 +1,4 @@
-import { VehicleClass, TollItem, TollBreakdown } from './types';
+import { VehicleClass, TollItem, TollBreakdown, TOLL_RATES_SNAPSHOT } from './types';
 import { PLUS_E1_INTERCHANGES, PLUS_E2_INTERCHANGES, ClosedInterchange } from './closedTollNetwork';
 
 export interface PhysicalTollGate {
@@ -730,6 +730,7 @@ export function calculatePhysicalRouteTolls(
     items,
     vehicleClass,
     note,
-    hasMotorcycleRestriction
+    hasMotorcycleRestriction,
+    ratesUpdatedAt: TOLL_RATES_SNAPSHOT
   };
 }

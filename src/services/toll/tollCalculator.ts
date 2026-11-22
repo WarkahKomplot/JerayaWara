@@ -1,4 +1,4 @@
-import { TollBreakdown, TollItem, VehicleClass } from './types';
+import { TollBreakdown, TollItem, VehicleClass, TOLL_RATES_SNAPSHOT } from './types';
 import { MALAYSIA_TOLL_REGISTRY } from './tollData';
 import { calculatePhysicalRouteTolls, PHYSICAL_TOLL_GATES } from './tollCrossing';
 export { calculatePhysicalRouteTolls, detectGateCrossing, computeRouteOffsets, PHYSICAL_TOLL_GATES } from './tollCrossing';
@@ -144,7 +144,8 @@ export function calculateRouteTolls(plazaKeys: string[], vehicleClass: VehicleCl
     items,
     vehicleClass,
     note,
-    hasMotorcycleRestriction
+    hasMotorcycleRestriction,
+    ratesUpdatedAt: TOLL_RATES_SNAPSHOT
   };
 }
 

@@ -6,12 +6,14 @@ import {
   computeRouteOffsets,
   PHYSICAL_TOLL_GATES
 } from '../../src/services/toll/tollCalculator';
+import { TOLL_RATES_SNAPSHOT } from '../../src/services/toll/types';
 
 describe('Malaysia Toll Calculator', () => {
   it('calculates open system flat toll for car (e.g. MEX Salak Selatan)', () => {
     const result = calculateRouteTolls(['MEX_SALAK_SELATAN'], 'car');
     expect(result.totalCost).toBe(2.00);
     expect(result.items[0].expressway).toBe('MEX E20');
+    expect(result.ratesUpdatedAt).toBe(TOLL_RATES_SNAPSHOT);
   });
 
   it('exempts motorcycle tolls for standard expressways (RM 0.00)', () => {

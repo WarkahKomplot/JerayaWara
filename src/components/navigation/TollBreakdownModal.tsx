@@ -33,6 +33,11 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
                 {lang === 'ms' ? 'Kenderaan: ' : 'Vehicle: '}
                 {t('tollClassCar', lang)}
               </p>
+              <p className="mt-0.5 text-[10px] font-medium text-amber-300/80">
+                {lang === 'ms'
+                  ? `Anggaran sahaja · kadar setakat ${tollBreakdown.ratesUpdatedAt ?? '2026-11'}`
+                  : `Estimate only · rates as of ${tollBreakdown.ratesUpdatedAt ?? '2026-11'}`}
+              </p>
             </div>
           </div>
           <button

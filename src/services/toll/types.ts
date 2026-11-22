@@ -1,3 +1,6 @@
+/** Date the fare tables were last reviewed (YYYY-MM). */
+export const TOLL_RATES_SNAPSHOT = '2026-11';
+
 export type VehicleClass = 'car' | 'motorcycle';
 
 export type PaymentMethod = 'TnG' | 'RFID' | 'SmartTAG';
@@ -17,6 +20,7 @@ export interface TollBreakdown {
   vehicleClass: VehicleClass;
   note?: string;
   hasMotorcycleRestriction?: boolean;
+  ratesUpdatedAt?: string;
 }
 
 export interface TollPlazaDefinition {

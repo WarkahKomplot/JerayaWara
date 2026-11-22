@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "prepare:poi": "python3 scripts/prepare-poi-directory.py"
+    "audit:tolls": "vite-node scripts/audit-tolls.ts",
+    "audit:aes": "vite-node scripts/audit-aes.ts"
   },
   "dependencies": {
     "dexie": "^4.0.10",
@@ -31,6 +32,7 @@
     "tailwindcss": "^3.4.16",
     "typescript": "~5.6.2",
     "vite": "^6.0.1",
+    "vite-node": "^2.1.9",
     "vitest": "^2.1.8"
   }
 }

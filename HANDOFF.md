@@ -1,15 +1,16 @@
-# Handoff — one pending commit (toll geometry-miss fallback)
+# Handoff — one pending commit (toll disclaimer, audits, crash/offline UX)
 
 **Prepared:** 2026-11-22
 **Branch:** `main`
-**Remote `origin/main`:** `e5d6122`
-**Local HEAD:** toll fallback fix — **1 commit ahead, not pushed**
+**Remote `origin/main`:** `6e2f402`
+**Local HEAD:** UX/audit hardening — **1 commit ahead, not pushed**
 **Session baseline:** `a2b0ad7`
 
-The camera and AES fixes are already on GitHub. Only the toll fallback remains:
+The camera, AES and toll fallback fixes are already on GitHub. Only this commit
+remains:
 
 ```bash
-git log --oneline -3   # toll fix, e5d6122, daa83ee
+git log --oneline -3   # UX/audit, 6e2f402, e5d6122
 git push origin main
 ```
 
@@ -18,57 +19,50 @@ Pages).
 
 ---
 
-## Pending commit — toll geometry-miss fallback
+## Pending commit — dated toll disclaimer, audits, crash/offline UX
 
-`fix(toll): keep closed-system fares when geometry misses all canopies`
+`feat(ux): date toll estimates, add data audits and crash/offline safety nets`
 
-### Why a real PLUS trip could cost RM 0.00
+- **Dated toll disclaimer:** `TOLL_RATES_SNAPSHOT = '2026-11'` is attached to every
+  `TollBreakdown`; the toll modal now reads "Estimate only · rates as of 2026-11".
+- **Repeatable audits:** `npm run audit:tolls` prints live OSRM fares, charged items
+  and expected-gate distances for seven corridors. `npm run audit:aes` checks camera
+  table integrity and distance to three common corridors. Both are informational,
+  not CI gates.
+- **Data-integrity tests:** unique toll/AES IDs, Malaysia bounding boxes, plausible
+  rates/limits and registry key alignment.
+- **Dead cleanup:** Dexie `version(4)` drops the never-used `savedPlaces` table;
+  removed the stale Overture scripts (`prepare-poi-directory.py`,
+  `compact-poi.py`, `ingest-pois.ts`) and the `prepare:poi` npm script.
+- **Crash/offline UX:** root `AppErrorBoundary` in `main.tsx` shows a reloadable
+  fallback instead of a white screen; `useOnlineStatus` drives an "Offline — using
+  cached maps and data" banner and feeds the search bar.
 
-Toll estimation first looks for physical gate canopies within 45 m of the route,
-then falls back to keyword evidence. On KL→Ipoh, the Jalan Duta canopy is **184 m**
-off the OSRM alignment and Ipoh Selatan is **3.5 km** off, so geometry found no
-tolls. The merge then skipped the closed-system keyword key because it was
-"geometry's responsibility", producing RM 0.00 for a ~200 km PLUS trip.
+### What the audits now show
 
-### Fix
+- Toll canopies are often far from OSRM geometry (Sg Besi 187 m, Jalan Duta 184 m,
+  Ipoh Selatan 3,507 m, Grand Saga Batu 11 334 m). Closed-system fallback keeps those
+  trips tolled, but canopy-based open plazas remain fragile.
+- None of the 19 AES cameras sit within 250 m of three common test corridors, which
+  explains why navigation-mode (65 m corridor) alerts rarely fire and free-cruising
+  (500 m) alerts can feel early. Camera coordinates need field verification.
 
-When geometry finds no items, keyword evidence is now filtered by trust:
+---
 
-- **Closed-system trip keys** (`PLUS_…`, `LPT_E8_…`) are kept — they depend on the
-  entry/exit pair, not on hitting a canopy coordinate.
-- **Open-plaza keys** are kept only when the canopy is within **800 m** of the
-  route, so an NPE/DUKE keyword kilometres away is not charged.
-- KL→Ipoh now returns **RM 26.50**; two regression tests cover the closed and
-  far-open cases.
-
-### Audit results (live OSRM routes, car Class 1)
-
-| Trip | Engine | Notes |
-|---|---|---|
-| Sg Besi → Seremban | RM 4.10 | Closed E2 pair, plausible |
-| KL → Putrajaya (MEX) | RM 3.50 | MEX canopy detected |
-| KL → Penang (Juru) | RM 43.30 | Closed E1 pair |
-| KL → Johor Bahru (Skudai) | RM 43.10 | Closed E2 pair |
-| KL → Ipoh | RM 26.50 | Was RM 0.00 before this fix |
-| KL → Kuantan (LPT) | RM 32.10 | Published guides cite ~RM 29.10 (LPT closed fare 21.00 vs 19.60; DUKE 1.60 included) |
-| Kajang → Cheras | RM 0.00 | Route uses Lebuhraya Cheras–Kajang, but keyword picks Batu 9 (2.9 km off); route passes Batu 11 at 334 m |
-| Subang → Sunway | RM 0.00 | Route uses NPE, but no canopy within tolerance; may be a genuine toll-free segment |
-| Penang Bridge | RM 5.74 | Table value; recent sources cite RM 8.50 — needs verification |
-
-### Verification
+## Verification
 
 ```
 npx tsc --noEmit → exit 0
-npm test         → 48 files, 216 tests passed
-npm run build    → OK
+npm test         → 52 files, 221 tests passed
+npm run build    → OK; bundle ~232.3 kB (gzip 66.5 kB)
 ```
 
-This fix is unit-tested; the audit used live OSRM geometry. It is not a
+The audits are informational and used live OSRM geometry; nothing here is a
 billing-grade guarantee.
 
 ---
 
-## Already published (origin/main `e5d6122`)
+## Already published (origin/main `6e2f402`)
 
 - `80f82b6` cache ownership / subpath POI / README truth pass
 - `aa5fe1a` empty CI trigger
@@ -78,18 +72,19 @@ billing-grade guarantee.
 - `7c2cd19` Valhalla fallback, circuit breaker, attribution, health check
 - `5186709` cache caps, SW update prompt, geocoding throttle/cache, route cache,
   icons, 21,684-record GeoNames index
-- `fb36f00` dead modules removed, Dexie region/tile tables dropped, `dist/` untracked
+- `fb36f00` dead modules removed, region/tile tables dropped, `dist/` untracked
 - `daa83ee` speed-adaptive 60 fps follow camera
 - `e5d6122` precise AES distances and heading fallback
+- `6e2f402` toll closed-system fallback when geometry misses canopies
 
 ---
 
 ## Remaining follow-ups
 
 - **Toll data audit:** verify gate coordinates and fares against official
-  concessionaire tables (Grand Saga gate selection, LPT closed fare, Penang Bridge),
-  add effective dates and known-trip integration tests.
-- **AES camera coordinates** need field verification; nav corridor is 65 m.
+  concessionaire tables (Grand Saga gate selection, LPT closed fare, Penang Bridge);
+  `npm run audit:tolls` is the starting point.
+- **AES camera coordinates:** field verification; `npm run audit:aes` shows offsets.
 - **Real-device test** of camera loop, pinch/zoom and alert timing.
 - **3D buildings** need the optional OpenFreeMap vector migration.
 - **Speed limits** are always `'estimated'`, so speeding alerts never fire.
