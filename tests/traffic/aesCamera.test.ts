@@ -47,12 +47,12 @@ describe('AES Camera Proximity Detection', () => {
   });
 
   it('detects AES camera when navigating along the exact highway corridor where camera is located', () => {
-    // User is on PLUS E2 Southbound heading towards Kajang AES [101.7451, 2.9812]
-    const userCoord: [number, number] = [101.7445, 2.9870]; // ~650m north on PLUS E2
+    // User is on PLUS E2 Southbound heading towards Kajang AES [101.7426, 2.97434]
+    const userCoord: [number, number] = [101.73994, 2.98008]; // ~700m north on PLUS E2
     const highwayRoute: [number, number][] = [
-      [101.7445, 2.9870],
-      [101.7451, 2.9812], // passes right through the camera!
-      [101.7512, 2.9612]
+      [101.73994, 2.98008],
+      [101.7426, 2.97434], // passes right through the camera!
+      [101.74526, 2.9686]
     ];
 
     const alert = findNearbyAESCamera({
@@ -99,12 +99,12 @@ describe('AES Camera Proximity Detection', () => {
 
   it('ignores opposite carriageway cameras when route travels in the opposite direction', () => {
     // PLUS E2 near Kajang: aes-e2-kajang-sb is SOUTHBOUND only (~155° bearing)
-    // Driver is navigating NORTHBOUND on PLUS E2: from [101.7512, 2.9612] towards [101.7445, 2.9870] (~335° bearing)
-    const userCoord: [number, number] = [101.7480, 2.9712];
+    // Driver is navigating NORTHBOUND on PLUS E2: from [101.74526, 2.9686] towards [101.73994, 2.98008] (~335° bearing)
+    const userCoord: [number, number] = [101.74393, 2.97147];
     const northboundRoute: [number, number][] = [
-      [101.7512, 2.9612],
-      [101.7451, 2.9812],
-      [101.7445, 2.9870]
+      [101.74526, 2.9686],
+      [101.7426, 2.97434],
+      [101.73994, 2.98008]
     ];
 
     const alert = findNearbyAESCamera({
@@ -118,13 +118,13 @@ describe('AES Camera Proximity Detection', () => {
   });
 
   it('clears alert once user has driven past the camera on the active route segment', () => {
-    // Camera is at [101.7451, 2.9812].
-    // Segment runs from [101.7445, 2.9870] (North) to [101.7512, 2.9612] (South).
-    // User has already passed the camera coordinate, currently at [101.7470, 2.9740].
-    const userCoordPastCamera: [number, number] = [101.7470, 2.9740];
+    // Camera is at [101.7426, 2.97434].
+    // Segment runs from [101.73994, 2.98008] (North) to [101.74526, 2.9686] (South).
+    // User has already passed the camera coordinate, currently at [101.74393, 2.97147].
+    const userCoordPastCamera: [number, number] = [101.74393, 2.97147];
     const southboundRoute: [number, number][] = [
-      [101.7445, 2.9870],
-      [101.7512, 2.9612]
+      [101.73994, 2.98008],
+      [101.74526, 2.9686]
     ];
 
     const alert = findNearbyAESCamera({
@@ -139,11 +139,11 @@ describe('AES Camera Proximity Detection', () => {
 
   it('correctly sets isOverSpeed flag when vehicle speed exceeds camera speed limit', () => {
     // Kajang AES has 90 km/h speed limit
-    const userCoord: [number, number] = [101.7445, 2.9870];
+    const userCoord: [number, number] = [101.73994, 2.98008];
     const highwayRoute: [number, number][] = [
-      [101.7445, 2.9870],
-      [101.7451, 2.9812],
-      [101.7512, 2.9612]
+      [101.73994, 2.98008],
+      [101.7426, 2.97434],
+      [101.74526, 2.9686]
     ];
 
     // Driving at 105 km/h in 90 km/h zone

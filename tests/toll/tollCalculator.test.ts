@@ -40,15 +40,15 @@ describe('Malaysia Toll Calculator', () => {
   });
 
   describe('80m Physical Toll Gate Crossing & Bearing Verification', () => {
-    // Plaza Tol Salak Selatan (MEX E20) is at [101.7058, 3.0945], bearing 160° (SSE)
+    // Plaza Tol Salak Selatan (MEX E20) is at [101.71189, 3.11062], bearing 160° (SSE)
     const salakGate = PHYSICAL_TOLL_GATES.find(g => g.id === 'MEX_SALAK_SELATAN')!;
 
     it('detects toll crossing when route cleanly crosses the plaza and continues >= 80m on both sides', () => {
       // Route starting 300m before the gate, driving at 160° through it, and continuing 300m after
       const routeCrossing: [number, number][] = [
-        [101.7048, 3.0970], // ~300m North-Northwest
-        [101.7058, 3.0945], // exactly crosses gate
-        [101.7068, 3.0920]  // ~300m South-Southeast
+        [101.71096, 3.11317], // ~300m North-Northwest
+        [101.71189, 3.11062], // exactly crosses gate
+        [101.71282, 3.10807]  // ~300m South-Southeast
       ];
 
       const offsets = computeRouteOffsets(routeCrossing);
@@ -63,8 +63,8 @@ describe('Malaysia Toll Calculator', () => {
       // A trip ending exactly on the canopy is a genuine paid transit: open
       // barrier plazas are paid at the barrier, closed systems settle there.
       const shortRoute: [number, number][] = [
-        [101.7048, 3.0970],
-        [101.7058, 3.0945] // ends right on the gate canopy
+        [101.71096, 3.11317],
+        [101.71189, 3.11062] // ends right on the gate canopy
       ];
 
       const offsets = computeRouteOffsets(shortRoute);
@@ -77,9 +77,9 @@ describe('Malaysia Toll Calculator', () => {
       // Route dips toward the gate but turns off before crossing — parallel
       // service road within 45m, no passage through the canopy line.
       const touchRoute: [number, number][] = [
-        [101.7058 - 0.001, 3.0945],
-        [101.7058 - 0.0002, 3.0945],
-        [101.7058 - 0.001, 3.0950]
+        [101.71189 - 0.001, 3.11062],
+        [101.71189 - 0.0002, 3.11062],
+        [101.71189 - 0.001, 3.11112]
       ];
       const offsets = computeRouteOffsets(touchRoute);
       const hit = detectGateCrossing(touchRoute, salakGate, offsets);
@@ -89,9 +89,9 @@ describe('Malaysia Toll Calculator', () => {
     it('rejects crossing when bearing does not match toll direction (opposite lane or perpendicular cross-traffic)', () => {
       // Route running East to West across or under the highway (bearing 270°)
       const perpendicularRoute: [number, number][] = [
-        [101.7030, 3.0945],
-        [101.7058, 3.0945],
-        [101.7085, 3.0945]
+        [101.70909, 3.11062],
+        [101.71189, 3.11062],
+        [101.71469, 3.11062]
       ];
 
       const offsets = computeRouteOffsets(perpendicularRoute);
@@ -103,11 +103,11 @@ describe('Malaysia Toll Calculator', () => {
 
     it('calculates physical route tolls for car driving across MEX Salak Selatan and Seri Kembangan', () => {
       const fullMexRoute: [number, number][] = [
-        [101.7040, 3.1000],
-        [101.7058, 3.0945], // Salak Selatan gate
-        [101.7000, 3.0500],
-        [101.6934, 3.0182], // Seri Kembangan gate
-        [101.6900, 2.9900]
+        [101.71096, 3.11317],
+        [101.71189, 3.11062], // Salak Selatan gate
+        [101.69700, 3.06500],
+        [101.68356, 3.01711], // Seri Kembangan gate
+        [101.68403, 3.01444]
       ];
 
       const breakdown = calculatePhysicalRouteTolls(fullMexRoute, 'car');
@@ -119,9 +119,9 @@ describe('Malaysia Toll Calculator', () => {
 
     it('exempts motorcycle tolls across physical Malaysian expressway barriers', () => {
       const fullMexRoute: [number, number][] = [
-        [101.7040, 3.1000],
-        [101.7058, 3.0945],
-        [101.7000, 3.0500]
+        [101.71096, 3.11317],
+        [101.71189, 3.11062],
+        [101.71282, 3.10807]
       ];
 
       const breakdown = calculatePhysicalRouteTolls(fullMexRoute, 'motorcycle');

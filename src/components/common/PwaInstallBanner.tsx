@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Download, X, Share, PlusSquare, Smartphone } from 'lucide-react';
-import { Language } from '../../services/i18n/translations';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface PwaInstallBannerProps {
   isInstallable: boolean;
@@ -43,16 +43,14 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-black text-white">
-                {lang === 'ms' ? 'Pasang Aplikasi JerayaWara' : 'Install JerayaWara PWA'}
+                {t('installTitle', lang)}
               </span>
               <span className="rounded bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-blue-300 border border-blue-400/30">
                 PWA
               </span>
             </div>
             <p className="mt-0.5 text-[11px] leading-tight text-slate-300">
-              {lang === 'ms'
-                ? 'Navigasi skrin penuh tanpa bar carian pelayar & sokongan luar talian pantas.'
-                : 'Full-screen navigation without browser bars & instant offline access.'}
+              {t('installBlurb', lang)}
             </p>
           </div>
         </div>
@@ -74,7 +72,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-blue-500 active:scale-[0.99] transition-all"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{lang === 'ms' ? 'Cara Pasang di iPhone/iPad' : 'Install on iPhone/iPad'}</span>
+            <span>{t('installIosTitle', lang)}</span>
           </button>
         ) : (
           <button
@@ -82,7 +80,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-md hover:bg-blue-500 active:scale-[0.99] transition-all"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{lang === 'ms' ? 'Pasang ke Skrin Utama' : 'Add to Home Screen'}</span>
+            <span>{t('installAddToHome', lang)}</span>
           </button>
         )}
 
@@ -90,7 +88,7 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
           onClick={onDismiss}
           className="rounded-xl border border-slate-700/80 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-all"
         >
-          {lang === 'ms' ? 'Nanti' : 'Later'}
+          {t('installLater', lang)}
         </button>
       </div>
 
@@ -99,11 +97,11 @@ export const PwaInstallBanner: React.FC<PwaInstallBannerProps> = ({
         <div className="mt-2.5 rounded-xl bg-slate-950/90 border border-slate-800 p-2.5 text-[11px] text-slate-300 space-y-1.5 animate-in fade-in duration-200">
           <div className="flex items-center gap-2 text-sky-400 font-bold">
             <Share className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>1. {lang === 'ms' ? 'Tekan butang Kongsi (Share)' : 'Tap the Share button in Safari'}</span>
+            <span>1. {t('installIosStep1', lang)}</span>
           </div>
           <div className="flex items-center gap-2 text-sky-400 font-bold">
             <PlusSquare className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>2. {lang === 'ms' ? 'Pilih "Add to Home Screen"' : 'Select "Add to Home Screen"'}</span>
+            <span>2. {t('installIosStep2', lang)}</span>
           </div>
         </div>
       )}

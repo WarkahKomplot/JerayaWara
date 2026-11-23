@@ -95,7 +95,7 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
           <Camera className={`h-4 w-4 flex-shrink-0 ${aesAlert.isOverSpeed ? 'animate-bounce text-yellow-200' : 'text-white'}`} />
           <div>
             <div className="uppercase tracking-wider text-[11px]">
-              ⚠️ {lang === 'ms' ? (aesAlert.isOverSpeed ? 'KURANGKAN LAJU' : 'AWAS') : (aesAlert.isOverSpeed ? 'SLOW DOWN' : 'CAUTION')}: {getLocalizedCameraName(aesAlert.camera, lang)}
+              ⚠️ {aesAlert.isOverSpeed ? t('aesSlowDown', lang) : t('aesCaution', lang)}: {getLocalizedCameraName(aesAlert.camera, lang)}
             </div>
             <div className={`text-[10px] font-medium ${aesAlert.isOverSpeed ? 'text-yellow-100 font-bold' : 'text-orange-100'}`}>
               {t('cameraDistance', lang)} {aesAlert.distanceMeters}m · {t('cameraLimit', lang)} {aesAlert.camera.speedLimitKmH} {t('speedUnit', lang)}
@@ -108,7 +108,7 @@ export const SpeedometerOverlay: React.FC<SpeedometerOverlayProps> = React.memo(
       {weather?.isRaining && (
         <div className="flex items-center gap-1.5 rounded-xl bg-sky-600/90 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg backdrop-blur border border-sky-400/40">
           <CloudRain className="h-3.5 w-3.5" />
-          <span>{lang === 'ms' ? 'Hujan · Jarakkan Kenderaan' : 'Raining · Keep distance'}</span>
+          <span>{t('rainKeepDistance', lang)}</span>
         </div>
       )}
 

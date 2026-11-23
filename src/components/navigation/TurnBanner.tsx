@@ -11,7 +11,7 @@ import {
   GitFork
 } from 'lucide-react';
 import { ManeuverType } from '../../services/routing/types';
-import { getLocalizedStepInstruction } from '../../services/i18n/translations';
+import { getLocalizedStepInstruction, t } from '../../services/i18n/translations';
 
 export interface TurnBannerProps {
   instruction: string;
@@ -104,7 +104,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
         {/* Turn Guidance Text */}
         <div className="flex-1 min-w-0">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            {voiceLanguage === 'ms' ? 'Dalam' : 'In'} {formatDistance(distanceMeters)}
+            {t('inDistance', voiceLanguage)} {formatDistance(distanceMeters)}
           </div>
           <div className="text-lg font-bold leading-tight text-white truncate">
             {displayedInstruction || instruction}
@@ -134,7 +134,7 @@ export const TurnBanner: React.FC<TurnBannerProps> = React.memo(({
             <button
               onClick={onToggleVoiceLanguage}
               className="flex h-11 px-2.5 items-center justify-center rounded-2xl border bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white transition-all active:scale-95 shadow-md text-xs font-black"
-              title={`Tukar bahasa suara (Terkini: ${voiceLanguage === 'ms' ? 'Bahasa Melayu' : 'English'})`}
+              title={`Tukar bahasa suara (Terkini: ${t('voiceLanguageName', voiceLanguage)})`}
             >
               <span className={voiceLanguage === 'ms' ? 'text-sky-400 font-extrabold' : 'text-slate-500'}>BM</span>
               <span className="mx-0.5 text-slate-600">/</span>

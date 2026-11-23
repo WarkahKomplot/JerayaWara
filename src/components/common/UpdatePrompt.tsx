@@ -1,6 +1,6 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
-import { Language } from '../../services/i18n/translations';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface UpdatePromptProps {
   isVisible: boolean;
@@ -23,13 +23,13 @@ export const UpdatePrompt: React.FC<UpdatePromptProps> = ({
       role="status"
     >
       <RefreshCw className="h-3.5 w-3.5 text-sky-400" />
-      <span>{lang === 'ms' ? 'Versi baharu tersedia' : 'New version available'}</span>
+      <span>{t('updateAvailable', lang)}</span>
       <button
         type="button"
         onClick={onReload}
         className="rounded-lg bg-sky-600 px-2 py-1 text-[11px] font-black text-white transition-colors hover:bg-sky-500"
       >
-        {lang === 'ms' ? 'Muat semula' : 'Reload'}
+        {t('reloadAction', lang)}
       </button>
     </div>
   );

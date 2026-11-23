@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigation, Clock, Route as RouteIcon, Coins, X, Wifi, WifiOff } from 'lucide-react';
 import { RouteResult } from '../../services/routing/types';
 import { TollBreakdown } from '../../services/toll/types';
-import { Language } from '../../services/i18n/translations';
+import { Language, t } from '../../services/i18n/translations';
 
 export interface RoutePreviewSheetProps {
   route: RouteResult | null;
@@ -39,7 +39,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
       <div className="fixed bottom-4 left-1/2 z-40 w-[min(92vw,26rem)] -translate-x-1/2">
         <div className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900/95 border border-slate-700 px-4 py-4 text-sm font-bold text-white shadow-2xl backdrop-blur">
           <Navigation className="h-4 w-4 animate-pulse text-sky-400" />
-          {lang === 'ms' ? 'Mengira laluan...' : 'Calculating route...'}
+          {t('calculatingRoute', lang)}
         </div>
       </div>
     );
@@ -55,15 +55,13 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">{errorMessage}</p>
               <p className="mt-0.5 text-[11px] text-slate-400">
-                {lang === 'ms'
-                  ? 'JerayaWara hanya menggunakan data jalan sebenar — tiada laluan karangan.'
-                  : 'JerayaWara only uses real road data — no fabricated routes.'}
+                {t('realRoadsOnly', lang)}
               </p>
             </div>
             <button
               onClick={onCancel}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white flex-shrink-0"
-              aria-label={lang === 'ms' ? 'Batal' : 'Cancel'}
+              aria-label={t('cancel', lang)}
             >
               <X className="h-4 w-4" />
             </button>
@@ -94,19 +92,15 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
               <p className={`flex items-center gap-1 text-[10px] ${isCached ? 'text-amber-300' : 'text-slate-400'}`}>
                 {isCached ? <WifiOff className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
                 {isCached
-                  ? lang === 'ms'
-                    ? `Laluan cache ${cachedTime}`
-                    : `Cached route ${cachedTime}`
-                  : lang === 'ms'
-                  ? 'Laluan jalan sebenar'
-                  : 'Real road route'}
+                  ? `${t('cachedRouteLabel', lang)} ${cachedTime}`
+                  : t('realRoadRoute', lang)}
               </p>
             </div>
           </div>
           <button
             onClick={onCancel}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white flex-shrink-0"
-            aria-label={lang === 'ms' ? 'Batal' : 'Cancel'}
+            aria-label={t('cancel', lang)}
           >
             <X className="h-4 w-4" />
           </button>
@@ -118,7 +112,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
             <RouteIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
             <div>
               <p className="text-sm font-bold leading-tight">{route.distanceKm} km</p>
-              <p className="text-[10px] text-slate-500">{lang === 'ms' ? 'Jarak' : 'Distance'}</p>
+              <p className="text-[10px] text-slate-500">{t('distanceLabel', lang)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -130,7 +124,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
                   <span className="ml-1 text-[10px] font-semibold text-amber-400">+{trafficDelay}</span>
                 )}
               </p>
-              <p className="text-[10px] text-slate-500">{lang === 'ms' ? 'Masa' : 'ETA'}</p>
+              <p className="text-[10px] text-slate-500">{t('etaLabel', lang)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -139,7 +133,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
               <p className="text-sm font-bold leading-tight">
                 RM {(tolls?.totalCost ?? 0).toFixed(2)}
               </p>
-              <p className="text-[10px] text-slate-500">{lang === 'ms' ? 'Tol' : 'Tolls'}</p>
+              <p className="text-[10px] text-slate-500">{t('tollsLabel', lang)}</p>
             </div>
           </div>
         </div>
@@ -157,9 +151,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
         {isCached && (
           <div className="px-4 pb-2">
             <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 text-[11px] text-amber-300">
-              {lang === 'ms'
-                ? 'Salinan luar talian — laluan mungkin tidak terkini.'
-                : 'Offline copy — the route may be out of date.'}
+              {t('offlineCopyNotice', lang)}
             </p>
           </div>
         )}
@@ -171,7 +163,7 @@ export const RoutePreviewSheet: React.FC<RoutePreviewSheetProps> = ({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-all"
           >
             <Navigation className="h-4 w-4" />
-            {lang === 'ms' ? 'Mula Navigasi' : 'Start Navigation'}
+            {t('startNavigation', lang)}
           </button>
         </div>
       </div>

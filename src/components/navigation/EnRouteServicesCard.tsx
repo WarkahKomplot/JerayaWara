@@ -33,27 +33,17 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
 
   const handleSyncOsmEv = async () => {
     setIsSyncingEv(true);
-    setSyncStatusMsg(lang === 'ms' ? 'Memuat turun stesen EV...' : 'Fetching live EV stations...');
+    setSyncStatusMsg(t('fetchingEvStations', lang));
     try {
       const result = await syncOsmEvStations();
       if (result.success) {
-        setSyncStatusMsg(
-          lang === 'ms'
-            ? `${result.stations.length} ${t('evSyncedSuccess', lang)}`
-            : `${result.stations.length} ${t('evSyncedSuccess', lang)}`
-        );
+        setSyncStatusMsg(`${result.stations.length} ${t('evSyncedSuccess', lang)}`);
         onRefreshAmenities?.();
       } else {
-        setSyncStatusMsg(
-          lang === 'ms'
-            ? 'Stesen luar talian sedia ada'
-            : 'Using cached offline stations'
-        );
+        setSyncStatusMsg(t('usingCachedStations', lang));
       }
     } catch {
-      setSyncStatusMsg(
-        lang === 'ms' ? 'Mod luar talian aktif' : 'Offline mode active'
-      );
+      setSyncStatusMsg(t('offlineModeActive', lang));
     } finally {
       setIsSyncingEv(false);
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -146,7 +136,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
       {activeCategory === 'ev' && (
         <div className="mt-2.5 flex items-center justify-between rounded-xl bg-cyan-950/40 border border-cyan-800/40 px-3 py-1.5 text-cyan-200">
           <span className="text-[10px] text-cyan-300 font-medium truncate pr-2">
-            {syncStatusMsg || (lang === 'ms' ? 'Data OpenStreetMap & PlugShare' : 'OpenStreetMap & PlugShare data')}
+            {syncStatusMsg || t('evDataSources', lang)}
           </span>
           <button
             type="button"
@@ -154,7 +144,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
             onClick={handleSyncOsmEv}
             disabled={isSyncingEv}
             className="inline-flex items-center shrink-0 gap-1 rounded-lg bg-cyan-900/80 hover:bg-cyan-800 px-2 py-1 text-[10px] font-bold text-cyan-200 transition-colors disabled:opacity-50"
-            title={lang === 'ms' ? 'Kemas kini stesen EV daripada Overpass OSM' : 'Sync EV stations from OSM Overpass'}
+            title={t('syncEvFromOsm', lang)}
           >
             <RefreshCw className={`h-3 w-3 ${isSyncingEv ? 'animate-spin' : ''}`} />
             <span>{isSyncingEv ? t('syncingOsmEv', lang) : t('syncOsmEv', lang)}</span>
@@ -206,7 +196,7 @@ export const EnRouteServicesCard: React.FC<EnRouteServicesCardProps> = React.mem
                         rel="noopener noreferrer"
                         data-testid={`plugshare-link-${item.id}`}
                         className="inline-flex items-center gap-1 rounded bg-sky-950 hover:bg-sky-900 border border-sky-700/60 px-1.5 py-0.5 text-[9px] font-bold text-sky-300 transition-colors"
-                        title={lang === 'ms' ? 'Buka ulasan & ketersediaan di PlugShare' : 'Open community check-in & photos on PlugShare'}
+                        title={t('openPlugshare', lang)}
                         onClick={e => e.stopPropagation()}
                       >
                         <ExternalLink className="h-2.5 w-2.5 text-sky-400" />

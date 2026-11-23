@@ -174,7 +174,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'MEX E20',
     operator: 'MEX',
     system: 'open',
-    coordinates: [101.7058, 3.0945],
+    coordinates: [101.71189, 3.11062],
     bearing: 160,
     carRate: 2.00,
     motorcycleRate: 0.00
@@ -185,7 +185,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'MEX E20',
     operator: 'MEX',
     system: 'open',
-    coordinates: [101.6934, 3.0182],
+    coordinates: [101.68356, 3.01711],
     bearing: 170,
     carRate: 2.20,
     motorcycleRate: 0.00
@@ -196,7 +196,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'MEX E20',
     operator: 'MEX',
     system: 'open',
-    coordinates: [101.6685, 2.9465],
+    coordinates: [101.65169, 2.9501],
     bearing: 180,
     carRate: 3.50,
     motorcycleRate: 0.00
@@ -209,7 +209,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'KESAS E5',
     operator: 'KESAS',
     system: 'open',
-    coordinates: [101.6021, 3.0645],
+    coordinates: [101.60829, 3.05871],
     bearing: 90,
     carRate: 2.00,
     motorcycleRate: 0.00
@@ -220,7 +220,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'KESAS E5',
     operator: 'KESAS',
     system: 'open',
-    coordinates: [101.5281, 3.0125],
+    coordinates: [101.52211, 2.99733],
     bearing: 90,
     carRate: 2.00,
     motorcycleRate: 0.00
@@ -233,7 +233,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'DUKE E33',
     operator: 'DUKE',
     system: 'open',
-    coordinates: [101.6555, 3.1874],
+    coordinates: [101.65611, 3.18992],
     bearing: 350,
     carRate: 1.60,
     motorcycleRate: 0.00
@@ -268,7 +268,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'Grand Saga E7',
     operator: 'GRAND_SAGA',
     system: 'open',
-    coordinates: [101.7753, 3.0372],
+    coordinates: [101.77598, 3.04819],
     bearing: 10,
     carRate: 1.30,
     motorcycleRate: 0.00
@@ -373,7 +373,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'NPE E10',
     operator: 'NPE',
     system: 'open',
-    coordinates: [101.6706, 3.0919],
+    coordinates: [101.67067, 3.09305],
     bearing: 250,
     carRate: 2.30,
     motorcycleRate: 0.00
@@ -386,7 +386,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'LEKAS E21',
     operator: 'LEKAS',
     system: 'open',
-    coordinates: [101.8349, 2.9730],
+    coordinates: [101.82601, 2.95737],
     bearing: 130,
     carRate: 3.20,
     motorcycleRate: 0.00
@@ -410,7 +410,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'LDP E11',
     operator: 'LDP',
     system: 'open',
-    coordinates: [101.6212, 3.1652],
+    coordinates: [101.6193, 3.17763],
     bearing: 160,
     carRate: 2.10,
     motorcycleRate: 0.00
@@ -421,7 +421,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'LDP E11',
     operator: 'LDP',
     system: 'open',
-    coordinates: [101.6712, 2.9845],
+    coordinates: [101.63631, 2.98132],
     bearing: 175,
     carRate: 2.10,
     motorcycleRate: 0.00
@@ -452,19 +452,13 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     motorcycleRate: 0.00
   },
 
-  // SMART Tunnel E38
-  {
-    id: 'SMART_TUNNEL',
-    name: 'Plaza Tol Terowong SMART (E38)',
-    expressway: 'SMART E38',
-    operator: 'SMART',
-    system: 'open',
-    coordinates: [101.7125, 3.1252],
-    bearing: 160,
-    carRate: 3.00,
-    motorcycleRate: 0.00,
-    motorcycleProhibited: true
-  },
+  // SMART Tunnel E38 is deliberately NOT a physical gate. Its Sungai Besi toll
+  // canopy sits 0-20 m from the parallel E37 "Lebuhraya Kuala Lumpur-Seremban"
+  // carriageway for the whole corridor (the bore is mapped directly beneath the
+  // surface expressway), so geometry cannot tell tunnel traffic from untolled
+  // E37 traffic and a proximity match fires false charges. The road-name
+  // keyword path in determineRouteTollPlazas matches "Terowong Smart"/"E38"
+  // instead, which only charges routes that actually use the tunnel.
 
   // Penang Bridge 2 (Sultan Abdul Halim Muadzam Shah Bridge, E28) — RM 7.00 class 1
   // Plaza sits at the island-end approach (Batu Maung); toll charged entering the island
@@ -526,7 +520,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.7052, 3.0520],
+    coordinates: [101.70581, 3.03919],
     bearing: 165
   },
   {
@@ -535,7 +529,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.9194, 2.7124],
+    coordinates: [101.91607, 2.71512],
     bearing: 165
   },
   {
@@ -544,7 +538,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [102.2850, 2.2709],
+    coordinates: [102.31042, 2.30036],
     bearing: 145
   },
   {
@@ -553,7 +547,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E2',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [103.6681, 1.5738],
+    coordinates: [103.6457, 1.58218],
     bearing: 150
   },
 
@@ -564,7 +558,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.6615, 3.1762],
+    coordinates: [101.65576, 3.17577],
     bearing: 340
   },
   {
@@ -573,7 +567,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [101.1039, 4.6273],
+    coordinates: [101.14421, 4.58424],
     bearing: 350
   },
   {
@@ -582,7 +576,7 @@ export const PHYSICAL_TOLL_GATES: PhysicalTollGate[] = [
     expressway: 'PLUS E1',
     operator: 'PLUS',
     system: 'closed',
-    coordinates: [100.4505, 5.3223],
+    coordinates: [100.43656, 5.3238],
     bearing: 350
   }
 ];

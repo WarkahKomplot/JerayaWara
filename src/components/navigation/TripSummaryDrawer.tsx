@@ -79,7 +79,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
         <div
           onClick={() => setIsDrawerExpanded(true)}
           className="flex-1 cursor-pointer select-none"
-          title={lang === 'ms' ? 'Ketik untuk butiran lanjut laluan' : 'Tap for full route details'}
+          title={t('tapForRouteDetails', lang)}
         >
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-emerald-400 tracking-tight">
@@ -96,7 +96,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             </span>
           </div>
           <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-            {route.destinationName || (lang === 'ms' ? 'Destinasi' : 'Destination')}
+            {route.destinationName || t('destinationLabel', lang)}
           </div>
         </div>
 
@@ -107,7 +107,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             onClick={() => setIsDrawerExpanded(true)}
             data-testid="expand-trip-drawer"
             className="flex items-center gap-1 rounded-xl bg-slate-800 hover:bg-slate-700 px-2.5 py-2 text-xs font-bold text-slate-300 border border-slate-700 transition-all active:scale-95"
-            title={lang === 'ms' ? 'Papar butiran penuh laluan' : 'View full route summary'}
+            title={t('viewFullSummary', lang)}
           >
             <ChevronUp className="h-4 w-4 text-slate-400" />
             <span className="hidden xs:inline">Info</span>
@@ -118,7 +118,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             onClick={onEndNavigation}
             data-testid="exit-navigation-btn"
             className="flex items-center gap-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 px-3 py-2 text-xs font-bold text-rose-400 border border-rose-500/30 transition-all active:scale-95"
-            title={lang === 'ms' ? 'Tamat Pandu Arah' : 'Exit Navigation'}
+            title={t('exitNavTooltip', lang)}
           >
             <X className="h-4 w-4" />
             <span>{t('exitNavCompact', lang)}</span>
@@ -137,16 +137,16 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
       {/* Top Collapse Button for Expanded Sheet */}
       <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          {lang === 'ms' ? 'Butiran Pandu Arah' : 'Trip Summary'}
+          {t('tripSummaryTitle', lang)}
         </span>
         <button
           type="button"
           onClick={() => setIsDrawerExpanded(false)}
           data-testid="collapse-trip-drawer"
           className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-white px-2 py-0.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 transition-colors"
-          title={lang === 'ms' ? 'Kecilkan butiran laluan' : 'Collapse route summary'}
+          title={t('collapseSummaryTip', lang)}
         >
-          <span>{lang === 'ms' ? 'Kecilkan' : 'Collapse'}</span>
+          <span>{t('collapseAction', lang)}</span>
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
@@ -263,12 +263,10 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <div className="flex items-center gap-2">
               <Fuel className="h-3.5 w-3.5 text-emerald-400" />
               <span className="font-bold text-slate-200">
-                {lang === 'ms'
-                  ? (isServicesExpanded ? 'Stesen Minyak & EV Berdekatan' : 'Stesen Minyak & EV')
-                  : (isServicesExpanded ? 'Nearby Petrol & EV Stations' : 'Petrol & EV Stations')}
+                {isServicesExpanded ? t('servicesNearbyTitle', lang) : t('servicesTitle', lang)}
               </span>
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/30">
-                {amenities?.length || 0} {lang === 'ms' ? 'berdekatan' : 'nearby'}
+                {amenities?.length || 0} {t('amenitiesNearby', lang)}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400">
@@ -308,9 +306,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <div className="flex items-center gap-2">
               <ListOrdered className="h-4 w-4 text-sky-400" />
               <span>
-                {lang === 'ms'
-                  ? `Langkah Laluan & Jalan (${route.steps.length} simpang)`
-                  : `Route Steps & Roads (${route.steps.length} turns)`}
+                {`${t('routeStepsTurns', lang)} (${route.steps.length} ${t('turnsCount', lang)})`}
               </span>
             </div>
             {isStepsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -330,7 +326,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
                 >
                   <div className="flex justify-between text-[10px] text-slate-400 mb-0.5">
                     <span className="font-bold text-sky-400">
-                      {lang === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}
+                      {`${t('stepLabel', lang)} ${idx + 1}`}
                     </span>
                     <span>{step.distanceMeters > 0 ? `${step.distanceMeters >= 1000 ? `${(step.distanceMeters/1000).toFixed(1)} km` : `${step.distanceMeters} m`}` : ''}</span>
                   </div>
@@ -362,7 +358,7 @@ export const TripSummaryDrawer: React.FC<TripSummaryDrawerProps> = React.memo(({
             <button
               onClick={onExportGpx}
               className="flex items-center gap-1.5 rounded-xl bg-slate-800/80 px-3 py-2 text-xs font-bold text-cyan-400 hover:bg-slate-700/80 transition-all border border-slate-700/60 active:scale-95"
-              title={lang === 'ms' ? 'Muat turun laluan sebagai fail GPX' : 'Download route as GPX file'}
+              title={t('downloadGpxTip', lang)}
             >
               <Download className="h-3.5 w-3.5" />
               <span>{t('exportGpx', lang)}</span>

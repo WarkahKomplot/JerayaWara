@@ -30,13 +30,11 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-white">{t('tollModalTitle', lang)}</h3>
               <p className="text-xs text-slate-400">
-                {lang === 'ms' ? 'Kenderaan: ' : 'Vehicle: '}
+                {t('vehicleLabel', lang)}: 
                 {t('tollClassCar', lang)}
               </p>
               <p className="mt-0.5 text-[10px] font-medium text-amber-300/80">
-                {lang === 'ms'
-                  ? `Anggaran sahaja · kadar setakat ${tollBreakdown.ratesUpdatedAt ?? '2026-11'}`
-                  : `Estimate only · rates as of ${tollBreakdown.ratesUpdatedAt ?? '2026-11'}`}
+                {`${t('estimateRatesAsOf', lang)} ${tollBreakdown.ratesUpdatedAt ?? '2026-11'}`}
               </p>
             </div>
           </div>
@@ -59,14 +57,12 @@ export const TollBreakdownModal: React.FC<TollBreakdownModalProps> = ({
 
           {tollBreakdown.items.length === 0 ? (
             <div className="py-6 text-center text-sm text-slate-400">
-              {lang === 'ms'
-                ? 'Tiada tol di sepanjang laluan ini (Laluan Bebas Tol).'
-                : 'No tolls along this route (Toll-Free Route).'}
+              {t('noTollsOnRoute', lang)}
             </div>
           ) : (
             <div className="space-y-2.5">
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {lang === 'ms' ? 'Senarai Plaza Tol' : 'Toll Plaza Breakdown'}
+                {t('tollPlazaList', lang)}
               </div>
               {tollBreakdown.items.map(item => (
                 <div

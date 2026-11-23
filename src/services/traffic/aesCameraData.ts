@@ -109,7 +109,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 110,
     direction: 'Southbound',
     bearing: 165,
-    coordinates: [101.4012, 3.8291],
+    coordinates: [101.42172, 3.83606],
     locationDescription: 'Slim River - Behrang',
     locationDescriptionEn: 'Slim River - Behrang'
   },
@@ -122,7 +122,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 110,
     direction: 'Northbound',
     bearing: 345,
-    coordinates: [101.4014, 3.8295],
+    coordinates: [101.42172, 3.83606],
     locationDescription: 'Behrang - Slim River',
     locationDescriptionEn: 'Behrang - Slim River'
   },
@@ -137,7 +137,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 90,
     direction: 'Southbound',
     bearing: 155,
-    coordinates: [101.7451, 2.9812],
+    coordinates: [101.7426, 2.97434],
     locationDescription: 'Sungai Besi - Kajang',
     locationDescriptionEn: 'Sungai Besi - Kajang'
   },
@@ -163,7 +163,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 110,
     direction: 'Both',
     bearing: 140,
-    coordinates: [102.1951, 2.4215],
+    coordinates: [102.20491, 2.43332],
     locationDescription: 'Simpang Ampat - Ayer Keroh',
     locationDescriptionEn: 'Simpang Ampat - Ayer Keroh'
   },
@@ -176,7 +176,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 110,
     direction: 'Both',
     bearing: 125,
-    coordinates: [102.4312, 2.3112],
+    coordinates: [102.40884, 2.2841],
     locationDescription: 'Ayer Keroh - Jasin',
     locationDescriptionEn: 'Ayer Keroh - Jasin'
   },
@@ -204,7 +204,7 @@ export const MALAYSIA_AES_CAMERAS: AESCamera[] = [
     speedLimitKmH: 110,
     direction: 'Both',
     bearing: 160,
-    coordinates: [101.6321, 2.8712],
+    coordinates: [101.63862, 2.86802],
     locationDescription: 'Putrajaya - Dengkil',
     locationDescriptionEn: 'Putrajaya - Dengkil'
   },

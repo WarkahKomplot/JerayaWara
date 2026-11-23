@@ -38,7 +38,7 @@ import { syncBulkPOIsInStore } from './services/search/bulkPOIDbService';
 import { exportRouteToGPX, downloadGPXFile } from './services/favorites/gpxExporter';
 import { saveFavorite, deleteFavorite } from './services/favorites/favoritesStore';
 import { speakNavigationVoice } from './services/voice/voiceService';
-import { t, getLocalizedStepInstruction } from './services/i18n/translations';
+import { t, tf, getLocalizedStepInstruction } from './services/i18n/translations';
 import { preloadCorridorTiles } from './services/offline/corridorTilePreloader';
 import {
   saveActiveNavSession,
@@ -311,12 +311,8 @@ export function App() {
 
       setRouteError(
         err instanceof RouteUnavailableError
-          ? voiceLanguage === 'ms'
-            ? 'Tiada sambungan internet. Navigasi memerlukan talian.'
-            : 'No internet connection. Navigation requires internet.'
-          : voiceLanguage === 'ms'
-          ? 'Gagal mengira laluan. Sila cuba lagi.'
-          : 'Failed to calculate route. Please try again.'
+          ? t('noInternetRoute', voiceLanguage)
+          : t('routeCalcFailed', voiceLanguage)
       );
     }
   };
@@ -614,12 +610,9 @@ export function App() {
 
   // Side-of-road from OSRM arrive modifier ('left'/'right') stored on the final step
   const lastStep = activeRoute?.steps[activeRoute.steps.length - 1];
-  const destinationSide: 'left' | 'right' | null =
-    lastStep?.id?.startsWith('osrm-step') && (lastStep as any)?.destinationSide === 'left'
-      ? 'left'
-      : lastStep?.id?.startsWith('osrm-step') && (lastStep as any)?.destinationSide === 'right'
-      ? 'right'
-      : null;
+  const destinationSide: 'left' | 'right' | null = lastStep?.id?.startsWith('osrm-step')
+    ? lastStep.destinationSide ?? null
+    : null;
 
   return (
     <>
@@ -642,7 +635,7 @@ export function App() {
                     data-testid="header-language-toggle"
                     aria-label={`Tukar Bahasa / Switch Language (${voiceLanguage.toUpperCase()})`}
                     className="ml-0.5 flex items-center rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600/70 px-1.5 py-0.5 text-[8px] font-black text-amber-300 transition-all active:scale-95 shadow-sm"
-                    title={voiceLanguage === 'ms' ? 'Tukar ke English (EN)' : 'Tukar ke Bahasa Melayu (BM)'}
+                    title={t('switchLangTooltip', voiceLanguage)}
                   >
                     <span>{voiceLanguage === 'ms' ? 'BM' : 'EN'}</span>
                   </button>
@@ -721,9 +714,7 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-amber-600/90 border border-amber-400/60 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur">
                 <WifiOff className="h-4 w-4 flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
-                    ? 'Luar talian — peta dan data cache digunakan.'
-                    : 'Offline — using cached maps and data.'}
+                  {t('offlineBanner', voiceLanguage)}
                 </span>
               </div>
             )}
@@ -734,12 +725,10 @@ export function App() {
                 <Waves className="h-5 w-5 text-cyan-300 flex-shrink-0 animate-bounce" />
                 <div>
                   <div className="text-[11px] uppercase tracking-wider text-cyan-200">
-                    {voiceLanguage === 'ms' ? 'AWAS:' : 'CAUTION:'} {nearbyFloodHotspot.name}
+                    {t('floodCautionPrefix', voiceLanguage)} {nearbyFloodHotspot.name}
                   </div>
                   <div className="text-[10px] font-medium text-cyan-100">
-                    {voiceLanguage === 'ms'
-                      ? 'Kawasan berisiko banjir kilat semasa hujan lebat. Pandu cermat.'
-                      : 'Flash flood risk area during heavy rain. Drive carefully.'}
+                    {t('floodBannerBody', voiceLanguage)}
                   </div>
                 </div>
               </div>
@@ -750,9 +739,7 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-rose-700/95 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur border border-rose-500/40">
                 <Satellite className="h-4 w-4 animate-spin flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
-                    ? 'Isyarat GPS Terputus. Mencari satelit (Terowong atau kanopi tebal).'
-                    : 'GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).'}
+                  {t('gpsLostBanner', voiceLanguage)}
                 </span>
               </div>
             )}
@@ -762,9 +749,7 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-indigo-900/95 border border-indigo-400 px-3.5 py-2 text-xs font-bold text-white shadow-xl animate-pulse">
                 <Radio className="h-4 w-4 text-indigo-300 animate-spin flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
-                    ? 'Mod Terowong: Simulasi pergerakan kenderaan aktif.'
-                    : 'Tunnel Mode: Dead-reckoning corridor simulation active.'}
+                  {t('tunnelModeBanner', voiceLanguage)}
                 </span>
               </div>
             )}
@@ -774,9 +759,7 @@ export function App() {
               <div className="flex items-center gap-2 rounded-xl bg-amber-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow-lg backdrop-blur">
                 <ShieldAlert className="h-4 w-4 flex-shrink-0" />
                 <span>
-                  {voiceLanguage === 'ms'
-                    ? 'Ketepatan GPS menurun. Anggaran kedudukan laluan digunakan.'
-                    : 'GPS accuracy degraded. Simulating corridor dead-reckoning.'}
+                  {t('gpsDegradedBanner', voiceLanguage)}
                 </span>
               </div>
             )}
@@ -787,12 +770,12 @@ export function App() {
                 <MapPin className="h-4 w-4 flex-shrink-0" />
                 <span>
                   {destinationSide
-                    ? voiceLanguage === 'ms'
-                      ? `Destinasi di ${destinationSide === 'left' ? 'kiri' : 'kanan'} jalan: ${activeRoute?.destinationName || 'destinasi'}`
-                      : `Destination on your ${destinationSide}: ${activeRoute?.destinationName || 'destination'}`
-                    : voiceLanguage === 'ms'
-                    ? `Tiba di destinasi: ${activeRoute?.destinationName || 'destinasi'}`
-                    : `Arriving at destination: ${activeRoute?.destinationName || 'destination'}`}
+                    ? tf(destinationSide === 'left' ? 'arriveSideLeft' : 'arriveSideRight', voiceLanguage, {
+                        name: activeRoute?.destinationName || t('destNameFallback', voiceLanguage)
+                      })
+                    : tf('arriveGeneric', voiceLanguage, {
+                        name: activeRoute?.destinationName || t('destNameFallback', voiceLanguage)
+                      })}
                 </span>
               </div>
             )}
@@ -803,12 +786,8 @@ export function App() {
                 <RefreshCw className="h-4 w-4 animate-spin flex-shrink-0" />
                 <span>
                   {isOfflineDetour
-                    ? voiceLanguage === 'ms'
-                      ? 'Tiada sambungan internet. Teruskan mengikut papan tanda.'
-                      : 'No internet connection. Follow road signs to destination.'
-                    : voiceLanguage === 'ms'
-                    ? 'Laluan terpesong. Mengira semula laluan...'
-                    : 'Off route. Recalculating route...'}
+                    ? t('offlineFollowSigns', voiceLanguage)
+                    : t('offRouteBanner', voiceLanguage)}
                 </span>
               </div>
             )}
@@ -872,7 +851,7 @@ export function App() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {voiceLanguage === 'ms' ? 'Langkah Laluan Berperingkat' : 'Route Step By Step'}
+                  {t('routeStepsTitle', voiceLanguage)}
                 </span>
               </div>
 
@@ -889,7 +868,7 @@ export function App() {
                     }`}
                   >
                     <div className="flex justify-between text-[11px] text-slate-400 mb-0.5">
-                      <span>{voiceLanguage === 'ms' ? `Langkah ${idx + 1}` : `Step ${idx + 1}`}</span>
+                      <span>{`${t('stepLabel', voiceLanguage)} ${idx + 1}`}</span>
                       <span>{s.distanceMeters > 0 ? `${s.distanceMeters}m` : ''}</span>
                     </div>
                     <div>{getLocalizedStepInstruction(s, voiceLanguage, activeRoute.destinationName)}</div>

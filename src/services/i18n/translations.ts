@@ -110,7 +110,86 @@ export const UI_TRANSLATIONS = {
     mapRecenter: 'Ikut Lokasi Saya',
     mapToggle3d: 'Paparan 3D',
     mapZoomIn: 'Zum Masuk',
-    mapZoomOut: 'Zum Keluar'
+    mapZoomOut: 'Zum Keluar',
+
+    // Status banners
+    offlineBanner: 'Luar talian — peta dan data cache digunakan.',
+    floodCautionPrefix: 'AWAS:',
+    floodBannerBody: 'Kawasan berisiko banjir kilat semasa hujan lebat. Pandu cermat.',
+    gpsLostBanner: 'Isyarat GPS Terputus. Mencari satelit (Terowong atau kanopi tebal).',
+    tunnelModeBanner: 'Mod Terowong: Simulasi pergerakan kenderaan aktif.',
+    gpsDegradedBanner: 'Ketepatan GPS menurun. Anggaran kedudukan laluan digunakan.',
+    offRouteBanner: 'Laluan terpesong. Mengira semula laluan...',
+    offlineFollowSigns: 'Tiada sambungan internet. Teruskan mengikut papan tanda.',
+    arriveSideLeft: 'Destinasi di kiri jalan: {name}',
+    arriveSideRight: 'Destinasi di kanan jalan: {name}',
+    arriveGeneric: 'Tiba di destinasi: {name}',
+    destNameFallback: 'destinasi',
+
+    // Route panel & errors
+    routeStepsTitle: 'Langkah Laluan Berperingkat',
+    stepLabel: 'Langkah',
+    noInternetRoute: 'Tiada sambungan internet. Navigasi memerlukan talian.',
+    routeCalcFailed: 'Gagal mengira laluan. Sila cuba lagi.',
+
+    // Route preview sheet
+    calculatingRoute: 'Mengira laluan...',
+    realRoadsOnly: 'JerayaWara hanya menggunakan data jalan sebenar — tiada laluan karangan.',
+    cancel: 'Batal',
+    cachedRouteLabel: 'Laluan cache',
+    realRoadRoute: 'Laluan jalan sebenar',
+    distanceLabel: 'Jarak',
+    etaLabel: 'Masa',
+    tollsLabel: 'Tol',
+    offlineCopyNotice: 'Salinan luar talian — laluan mungkin tidak terkini.',
+    startNavigation: 'Mula Navigasi',
+
+    // PWA install banner
+    installTitle: 'Pasang Aplikasi JerayaWara',
+    installBlurb: 'Navigasi skrin penuh tanpa bar carian pelayar & sokongan luar talian pantas.',
+    installIosTitle: 'Cara Pasang di iPhone/iPad',
+    installIosStep1: 'Tekan butang Kongsi (Share)',
+    installIosStep2: 'Pilih "Add to Home Screen"',
+    installAddToHome: 'Pasang ke Skrin Utama',
+    installLater: 'Nanti',
+
+    // Update prompt
+    updateAvailable: 'Versi baharu tersedia',
+    reloadAction: 'Muat semula',
+
+    // Trip summary drawer
+    tapForRouteDetails: 'Ketik untuk butiran lanjut laluan',
+    destinationLabel: 'Destinasi',
+    viewFullSummary: 'Papar butiran penuh laluan',
+    exitNavTooltip: 'Tamat Pandu Arah',
+    tripSummaryTitle: 'Butiran Pandu Arah',
+    collapseSummaryTip: 'Kecilkan butiran laluan',
+    collapseAction: 'Kecilkan',
+    servicesNearbyTitle: 'Stesen Minyak & EV Berdekatan',
+    servicesTitle: 'Stesen Minyak & EV',
+    downloadGpxTip: 'Muat turun laluan sebagai fail GPX',
+
+    // Toll breakdown modal
+    vehicleLabel: 'Kenderaan',
+    estimateRatesAsOf: 'Anggaran sahaja · kadar setakat',
+    noTollsOnRoute: 'Tiada tol di sepanjang laluan ini (Laluan Bebas Tol).',
+    tollPlazaList: 'Senarai Plaza Tol',
+
+    // Speedometer / AES
+    aesSlowDown: 'KURANGKAN LAJU',
+    aesCaution: 'AWAS',
+    rainKeepDistance: 'Hujan · Jarakkan Kenderaan',
+
+    // En-route services card
+    fetchingEvStations: 'Memuat turun stesen EV...',
+    usingCachedStations: 'Stesen luar talian sedia ada',
+    offlineModeActive: 'Mod luar talian aktif',
+    evDataSources: 'Data OpenStreetMap & PlugShare',
+    syncEvFromOsm: 'Kemas kini stesen EV daripada Overpass OSM',
+    openPlugshare: 'Buka ulasan & ketersediaan di PlugShare',
+
+    // Turn banner
+    voiceLanguageName: 'Bahasa Melayu'
   },
   en: {
     // Header & Badges
@@ -219,7 +298,86 @@ export const UI_TRANSLATIONS = {
     mapRecenter: 'Re-center My Location',
     mapToggle3d: 'Toggle 3D View',
     mapZoomIn: 'Zoom In',
-    mapZoomOut: 'Zoom Out'
+    mapZoomOut: 'Zoom Out',
+
+    // Status banners
+    offlineBanner: 'Offline — using cached maps and data.',
+    floodCautionPrefix: 'CAUTION:',
+    floodBannerBody: 'Flash flood risk area during heavy rain. Drive carefully.',
+    gpsLostBanner: 'GPS Signal Lost. Searching for satellites (Tunnel or dense canopy).',
+    tunnelModeBanner: 'Tunnel Mode: Dead-reckoning corridor simulation active.',
+    gpsDegradedBanner: 'GPS accuracy degraded. Simulating corridor dead-reckoning.',
+    offRouteBanner: 'Off route. Recalculating route...',
+    offlineFollowSigns: 'No internet connection. Follow road signs to destination.',
+    arriveSideLeft: 'Destination on your left: {name}',
+    arriveSideRight: 'Destination on your right: {name}',
+    arriveGeneric: 'Arriving at destination: {name}',
+    destNameFallback: 'destination',
+
+    // Route panel & errors
+    routeStepsTitle: 'Route Step By Step',
+    stepLabel: 'Step',
+    noInternetRoute: 'No internet connection. Navigation requires internet.',
+    routeCalcFailed: 'Failed to calculate route. Please try again.',
+
+    // Route preview sheet
+    calculatingRoute: 'Calculating route...',
+    realRoadsOnly: 'JerayaWara only uses real road data — no fabricated routes.',
+    cancel: 'Cancel',
+    cachedRouteLabel: 'Cached route',
+    realRoadRoute: 'Real road route',
+    distanceLabel: 'Distance',
+    etaLabel: 'ETA',
+    tollsLabel: 'Tolls',
+    offlineCopyNotice: 'Offline copy — the route may be out of date.',
+    startNavigation: 'Start Navigation',
+
+    // PWA install banner
+    installTitle: 'Install JerayaWara PWA',
+    installBlurb: 'Full-screen navigation without browser bars & instant offline access.',
+    installIosTitle: 'Install on iPhone/iPad',
+    installIosStep1: 'Tap the Share button in Safari',
+    installIosStep2: 'Select "Add to Home Screen"',
+    installAddToHome: 'Add to Home Screen',
+    installLater: 'Later',
+
+    // Update prompt
+    updateAvailable: 'New version available',
+    reloadAction: 'Reload',
+
+    // Trip summary drawer
+    tapForRouteDetails: 'Tap for full route details',
+    destinationLabel: 'Destination',
+    viewFullSummary: 'View full route summary',
+    exitNavTooltip: 'Exit Navigation',
+    tripSummaryTitle: 'Trip Summary',
+    collapseSummaryTip: 'Collapse route summary',
+    collapseAction: 'Collapse',
+    servicesNearbyTitle: 'Nearby Petrol & EV Stations',
+    servicesTitle: 'Petrol & EV Stations',
+    downloadGpxTip: 'Download route as GPX file',
+
+    // Toll breakdown modal
+    vehicleLabel: 'Vehicle',
+    estimateRatesAsOf: 'Estimate only · rates as of',
+    noTollsOnRoute: 'No tolls along this route (Toll-Free Route).',
+    tollPlazaList: 'Toll Plaza Breakdown',
+
+    // Speedometer / AES
+    aesSlowDown: 'SLOW DOWN',
+    aesCaution: 'CAUTION',
+    rainKeepDistance: 'Raining · Keep distance',
+
+    // En-route services card
+    fetchingEvStations: 'Fetching live EV stations...',
+    usingCachedStations: 'Using cached offline stations',
+    offlineModeActive: 'Offline mode active',
+    evDataSources: 'OpenStreetMap & PlugShare data',
+    syncEvFromOsm: 'Sync EV stations from OSM Overpass',
+    openPlugshare: 'Open community check-in & photos on PlugShare',
+
+    // Turn banner
+    voiceLanguageName: 'English'
   }
 } as const;
 
@@ -228,6 +386,20 @@ export type TranslationKey = keyof typeof UI_TRANSLATIONS['ms'];
 export function t(key: TranslationKey, lang: Language = 'ms'): string {
   const dict = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['ms'];
   return dict[key] || UI_TRANSLATIONS['ms'][key] || key;
+}
+
+/**
+ * Translates `key` and substitutes {placeholder} tokens with the given values.
+ * Placeholders left unfilled are kept as-is so missing data is visible, not silent.
+ */
+export function tf(
+  key: TranslationKey,
+  lang: Language,
+  vars: Record<string, string | number>
+): string {
+  return t(key, lang).replace(/\{(\w+)\}/g, (whole, name: string) =>
+    name in vars ? String(vars[name]) : whole
+  );
 }
 
 /**

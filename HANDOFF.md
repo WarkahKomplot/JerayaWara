@@ -1,93 +1,90 @@
-# Handoff — one pending commit (toll disclaimer, audits, crash/offline UX)
+# Handoff — toll/AES ground-truth audit + repo hygiene
 
-**Prepared:** 2026-11-22
-**Branch:** `main`
-**Remote `origin/main`:** `6e2f402`
-**Local HEAD:** UX/audit hardening — **1 commit ahead, not pushed**
-**Session baseline:** `a2b0ad7`
+**Prepared:** 2026-11-23
+**Branch:** `main` (synced with `origin/main` at `93dd84d`)
+**Working tree:** one uncommitted change set — the data audit below
 
-The camera, AES and toll fallback fixes are already on GitHub. Only this commit
-remains:
-
-```bash
-git log --oneline -3   # UX/audit, 6e2f402, e5d6122
-git push origin main
-```
-
-The push triggers `.github/workflows/deploy.yml` (`npm ci` → `npm test` → build →
-Pages).
+> The previous handoff ("one pending commit") is obsolete: `bcf51bb` was pushed,
+> then `776324d` (README clarity) and `93dd84d` (CI deploy job split) landed on
+> `origin/main`. Nothing is behind.
 
 ---
 
-## Pending commit — dated toll disclaimer, audits, crash/offline UX
+## Uncommitted — OSM ground-truth correction of toll gates and AES cameras
 
-`feat(ux): date toll estimates, add data audits and crash/offline safety nets`
+Toll gate and AES camera coordinates were compared against OpenStreetMap
+`barrier=toll_booth` / `highway=speed_camera` nodes (the same road network OSRM
+routes over). 24 coordinates were wrong — some by 4–8 km.
 
-- **Dated toll disclaimer:** `TOLL_RATES_SNAPSHOT = '2026-11'` is attached to every
-  `TollBreakdown`; the toll modal now reads "Estimate only · rates as of 2026-11".
-- **Repeatable audits:** `npm run audit:tolls` prints live OSRM fares, charged items
-  and expected-gate distances for seven corridors. `npm run audit:aes` checks camera
-  table integrity and distance to three common corridors. Both are informational,
-  not CI gates.
-- **Data-integrity tests:** unique toll/AES IDs, Malaysia bounding boxes, plausible
-  rates/limits and registry key alignment.
-- **Dead cleanup:** Dexie `version(4)` drops the never-used `savedPlaces` table;
-  removed the stale Overture scripts (`prepare-poi-directory.py`,
-  `compact-poi.py`, `ingest-pois.ts`) and the `prepare:poi` npm script.
-- **Crash/offline UX:** root `AppErrorBoundary` in `main.tsx` shows a reloadable
-  fallback instead of a white screen; `useOnlineStatus` drives an "Offline — using
-  cached maps and data" banner and feeds the search bar.
+### Fixes
+
+- **18 of 33 physical toll gates** repositioned onto their real OSM canopies
+  (midpoint of the directional pair where one exists). Worst offenders:
+  `PLUS_E1_GATE_IPOH_SELATAN` (6.5 km off), `LDP_PUCHONG_SELATAN` (8.6 km),
+  `MEX_PUTRAJAYA` (1.9 km), `PLUS_E2_GATE_AYER_KEROH` (4.3 km),
+  `GRAND_SAGA_BATU_11` (1.2 km).
+- **6 of 19 AES cameras** repositioned where OSM names the same site or cites the
+  same KM marker (`KM 214.4 Alor Gajah`, `KM 184.2 Jasin`, `AES Slim River`,
+  `AWAS ELITE`, `AES Kajang`).
+- **`SMART_TUNNEL` removed from `PHYSICAL_TOLL_GATES`.** Its Sungai Besi canopy
+  sits 0–20 m from the parallel E37 "Lebuhraya Kuala Lumpur–Seremban" for the
+  whole corridor (the E38 bore is mapped directly beneath the surface
+  expressway), so proximity detection fired on untolled E37 traffic. The
+  road-name keyword path charges it instead, and only when the route really uses
+  "Terowong Smart"/E38.
 
 ### What the audits now show
 
-- Toll canopies are often far from OSRM geometry (Sg Besi 187 m, Jalan Duta 184 m,
-  Ipoh Selatan 3,507 m, Grand Saga Batu 11 334 m). Closed-system fallback keeps those
-  trips tolled, but canopy-based open plazas remain fragile.
-- None of the 19 AES cameras sit within 250 m of three common test corridors, which
-  explains why navigation-mode (65 m corridor) alerts rarely fire and free-cruising
-  (500 m) alerts can feel early. Camera coordinates need field verification.
-
----
-
-## Verification
-
 ```
-npx tsc --noEmit → exit 0
-npm test         → 52 files, 221 tests passed
-npm run build    → OK; bundle ~232.3 kB (gzip 66.5 kB)
+Kajang -> Cheras     RM 0.00 -> RM 1.30   (GRAND_SAGA_BATU_11 now at 0 m)
+Sg Besi -> Seremban  gate 187 m -> 26 m
+KL -> Ipoh           Jalan Duta 184 m -> 29 m
+AES Sg Besi->Seremban  none < 250 m -> aes-e2-kajang-sb at 18 m
+AES KL -> Penang       none < 250 m -> slimriver-sb/nb at 0 m
+0 route(s) returned RM 0 despite toll keywords
 ```
 
-The audits are informational and used live OSRM geometry; nothing here is a
-billing-grade guarantee.
+The Kajang→Cheras **RM 0.00 was a real billing bug**: the route genuinely uses
+the tolled `Lebuhraya Cheras–Kajang` (E7) and crosses the Batu 11 canopy, but
+the gate coordinate sat 1.2 km south of it.
 
----
+### Verification
 
-## Already published (origin/main `6e2f402`)
+```
+npx tsc --noEmit  -> exit 0
+npm test          -> 52 files, 221 tests passed
+npm run build     -> OK (app bundle 237.7 kB / gzip 68.2 kB)
+npm run audit:tolls -> see above
+npm run audit:aes   -> see above
+```
 
-- `80f82b6` cache ownership / subpath POI / README truth pass
-- `aa5fe1a` empty CI trigger
-- `e7822f4` car-only mode
-- `41d5d13` z16–18 corridor preloading with streaming
-- `c46de40` simulated region-pack downloader removed
-- `7c2cd19` Valhalla fallback, circuit breaker, attribution, health check
-- `5186709` cache caps, SW update prompt, geocoding throttle/cache, route cache,
-  icons, 21,684-record GeoNames index
-- `fb36f00` dead modules removed, region/tile tables dropped, `dist/` untracked
-- `daa83ee` speed-adaptive 60 fps follow camera
-- `e5d6122` precise AES distances and heading fallback
-- `6e2f402` toll closed-system fallback when geometry misses canopies
+Test fixtures in `tests/toll/tollCalculator.test.ts` and
+`tests/traffic/aesCamera.test.ts` were rebuilt around the corrected coordinates,
+preserving each case's intent (bearing match, 80 m continuation, touch-and-reverse
+rejection, past-camera clearing).
+
+### Repo hygiene (same change set)
+
+- `.superpowers/` (brainstorm server logs, PIDs, `.last-token`) untracked and
+  gitignored. **Note:** `.last-token` is a 64-hex string still present in git
+  history — if it was ever a real credential, rotate it and consider a history
+  purge; removing it from the tree does not scrub old commits.
+- `HANDOFF.md` rewritten (this file).
 
 ---
 
 ## Remaining follow-ups
 
-- **Toll data audit:** verify gate coordinates and fares against official
-  concessionaire tables (Grand Saga gate selection, LPT closed fare, Penang Bridge);
-  `npm run audit:tolls` is the starting point.
-- **AES camera coordinates:** field verification; `npm run audit:aes` shows offsets.
+- **13 AES cameras have no OSM counterpart** and keep approximate coordinates:
+  `kualamuda`, `sungaidua`, `bktgantang-nb/sb`, `gopeng-sb`, `bangi-nb`, `pagoh`,
+  `fed-subang`, `fed-pj`, `skve`, `silk-kajang`, `karak-gombak`, `lpt-lanchang`.
+  They need field verification. `npm run audit:aes` reports offsets.
+- **Toll rates** are still a 2026-11 snapshot; verify against official
+  concessionaire tables (`npm run audit:tolls` prints live OSRM fares).
+- **Speed limits** are always `'estimated'`, so speeding alerts never fire. A
+  curated public expressway limit table would let high-confidence alerts fire.
 - **Real-device test** of camera loop, pinch/zoom and alert timing.
 - **3D buildings** need the optional OpenFreeMap vector migration.
-- **Speed limits** are always `'estimated'`, so speeding alerts never fire.
 - **POI index refresh is manual** (script + `POI_INDEX_VERSION` bump).
 - **Offline map is corridor-only**; route planning needs connectivity.
 - **Valhalla demo** is slow and has no SLA.
