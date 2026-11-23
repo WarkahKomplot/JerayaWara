@@ -1,16 +1,15 @@
 # Handoff — toll/AES ground-truth audit + repo hygiene
 
 **Prepared:** 2026-11-23
-**Branch:** `main` (synced with `origin/main` at `93dd84d`)
-**Working tree:** one uncommitted change set — the data audit below
+**Branch:** `main` (synced with `origin/main` at `0a00f73`)
+**Working tree:** clean, all changes published to `origin/main`
 
-> The previous handoff ("one pending commit") is obsolete: `bcf51bb` was pushed,
-> then `776324d` (README clarity) and `93dd84d` (CI deploy job split) landed on
-> `origin/main`. Nothing is behind.
+> The toll/AES ground-truth audit, full i18n coverage, and repo hygiene landed in commit `0a00f73`
+> and are published to GitHub (`origin/main`). The GitHub Pages deployment workflow completed successfully.
 
 ---
 
-## Uncommitted — OSM ground-truth correction of toll gates and AES cameras
+## Completed — OSM ground-truth correction of toll gates and AES cameras
 
 Toll gate and AES camera coordinates were compared against OpenStreetMap
 `barrier=toll_booth` / `highway=speed_camera` nodes (the same road network OSRM
